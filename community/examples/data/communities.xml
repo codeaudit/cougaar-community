@@ -112,6 +112,10 @@
       <Attribute ID="EntityType"   Value="Agent"  />
       <Attribute ID="Role"         Value="Member" />
     </Entity>
+    <Entity Name="MiniTestConfigEnclave-COMM"  >
+      <Attribute ID="EntityType"   Value="Community"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
   </Community>
 
   <Community Name="MiniTestConfigEnclave-COMM" >
