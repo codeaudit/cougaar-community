@@ -80,6 +80,9 @@ public class CommunityManager {
   private static final String URN_PREFIX_AND_NID = URN_PREFIX + ":" +
                                                    NAMESPACE_IDENTIFIER + ":";
 
+  // Timeout for calls to WhitePagesService
+  private static final long WPS_TIMEOUT = 60000;
+
   // Defines frequency of White Pages read to verify that this agent is still
   // manager for community
   private static final long TIMER_INTERVAL = 60000;
@@ -148,126 +151,155 @@ public class CommunityManager {
    */
   public void processRequest(CommunityManagerRequest cmr) {
     if (logger.isDebugEnabled())
-      logger.debug("CommunityManagerRequest." + cmr.getRequestTypeAsString() +
+      logger.debug("CommunityManagerRequest:" + cmr.getRequestTypeAsString() +
         " community=" + cmr.getCommunityName() +
         " source=" + cmr.getSource());
     String communityName = cmr.getCommunityName();
-    MessageAddress requester = cmr.getSource();
     RelayAdapter ra = getManagedCommunityRelayAdapter(communityName);
-    if (ra != null) {
-      CommunityDescriptorImpl cd = (CommunityDescriptorImpl)ra.getContent();
-      switch (cmr.getRequestType()) {
-        case CommunityManagerRequest.JOIN:
-          if (cmr.getEntity() != null) {
-            //boolean requesterIsJoiner = (cmr.getEntity().getName().equals(requester.toString()));
-            //boolean joinerInCommunity = cd.getCommunity().hasEntity(cmr.getEntity().getName());
-            //boolean requesterInCommunity = cd.getCommunity().hasEntity(requester.toString());
-            //if (requesterIsJoiner || (requesterInCommunity && !joinerInCommunity)) {
-              String entitiesBeforeAdd = "";
+    if (ra == null) {
+      if (agentId.equals(findManager(communityName))) {
+        // This agent has likely been killed/restarted before CommunityDescriptor was
+        // persisted.
+        // A new CommunityDescriptor relay needs to be created
+        logger.debug("Re-creating CommunityDescriptor:" +
+                  " community=" + communityName +
+                  " reason=restart prior to persist");
+        CommunityDescriptor cd = new CommunityDescriptorImpl(agentId,
+            new CommunityImpl(communityName),
+            uidService.nextUID());
+        ra = new RelayAdapter(cd.getSource(), cd, cd.getUID());
+        ra.addTarget(agentId);
+        logger.debug("PublishAdd CommunityDescriptor:" +
+                     " targets=" + RelayAdapter.targetsToString(ra) +
+                     " community=" + cd.getCommunity().getName() +
+                     " entities=" + entityNames(cd.getCommunity().getEntities()) +
+                     " cdUid=" + cd.getUID() +
+                     " raUid=" + ra.getUID());
+        processRequest(ra, cmr);
+        bbs.publishAdd(ra);
+        updateTimestamp(communityName);
+      } else {
+        logger.error("RelayAdapter is null:" +
+                     " community=" + cmr.getCommunityName() +
+                     " source=" + cmr.getSource() +
+                     " request=" + cmr.getRequestTypeAsString());
+      }
+    } else {
+      processRequest(ra, cmr);
+      // Update clients CommunityDescriptor
+      updateCommunityDescriptor(communityName);
+    }
+  }
+
+  private void processRequest (RelayAdapter ra, CommunityManagerRequest cmr) {
+    MessageAddress requester = cmr.getSource();
+    CommunityDescriptorImpl cd = (CommunityDescriptorImpl) ra.getContent();
+    switch (cmr.getRequestType()) {
+      case CommunityManagerRequest.JOIN:
+        if (cmr.getEntity() != null) {
+          //boolean requesterIsJoiner = (cmr.getEntity().getName().equals(requester.toString()));
+          //boolean joinerInCommunity = cd.getCommunity().hasEntity(cmr.getEntity().getName());
+          //boolean requesterInCommunity = cd.getCommunity().hasEntity(requester.toString());
+          //if (requesterIsJoiner || (requesterInCommunity && !joinerInCommunity)) {
+          String entitiesBeforeAdd = "";
+          if (logger.isDebugEnabled()) {
+            entitiesBeforeAdd = entityNames(cd.getCommunity().getEntities());
+          }
+          cd.getCommunity().addEntity(cmr.getEntity());
+          if (logger.isDebugEnabled()) {
+            logger.debug("Add entity: " +
+                         " community=" + cd.getName() +
+                         " entity=" + cmr.getEntity().getName() +
+                         " before=" + entitiesBeforeAdd +
+                         " after=" +
+                         entityNames(cd.getCommunity().getEntities()));
+          }
+          cd.setChangeType(CommunityChangeEvent.REMOVE_ENTITY);
+          cd.setChangeType(CommunityChangeEvent.ADD_ENTITY);
+          cd.setWhatChanged(cmr.getEntity().getName());
+          ra.addTarget(cmr.getSource());
+          //}
+        }
+        break;
+      case CommunityManagerRequest.LEAVE:
+        if (cd.getCommunity().hasEntity(requester.toString()) &&
+            cmr.getEntity() != null &&
+            cd.getCommunity().hasEntity(cmr.getEntity().getName())) {
+          String entitiesBeforeRemove = "";
+          if (logger.isDebugEnabled()) {
+            entitiesBeforeRemove = entityNames(cd.getCommunity().getEntities());
+          }
+          cd.getCommunity().removeEntity(cmr.getEntity().getName());
+          if (logger.isDebugEnabled()) {
+            logger.debug("Removing entity: " +
+                         " community=" + cd.getName() +
+                         " entity=" + cmr.getEntity().getName() +
+                         " before=" + entitiesBeforeRemove +
+                         " after=" +
+                         entityNames(cd.getCommunity().getEntities()));
+          }
+          cd.setChangeType(CommunityChangeEvent.REMOVE_ENTITY);
+          cd.setWhatChanged(cmr.getEntity().getName());
+        }
+        break;
+      case CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR:
+        ra.addTarget(cmr.getSource());
+        break;
+      case CommunityManagerRequest.MODIFY_ATTRIBUTES:
+        if (cd.getCommunity().hasEntity(requester.toString())) {
+          if (cd.getCommunity().getName().equals(cmr.getEntity().getName())) {
+            // modify community attributes
+            Attributes attrs = cd.getCommunity().getAttributes();
+            if (logger.isDebugEnabled()) {
+              logger.debug("Modifying community attributes: " +
+                           " community=" + cd.getName() +
+                           " before=" + attrsToString(attrs));
+            }
+            applyAttrMods(attrs, cmr.getAttributeModifications());
+            if (logger.isDebugEnabled()) {
+              logger.debug("Modifying community attributes: " +
+                           " community=" + cd.getName() +
+                           " after=" + attrsToString(attrs));
+            }
+            cd.setChangeType(CommunityChangeEvent.
+                             COMMUNITY_ATTRIBUTES_CHANGED);
+            cd.setWhatChanged(cd.getCommunity().getName());
+          } else {
+            // modify attributes of a community entity
+            Entity entity = cd.getCommunity().getEntity(cmr.getEntity().
+                getName());
+            if (entity != null) {
+              Attributes attrs = entity.getAttributes();
               if (logger.isDebugEnabled()) {
-                entitiesBeforeAdd = entityNames(cd.getCommunity().getEntities());
-              }
-              cd.getCommunity().addEntity(cmr.getEntity());
-              if (logger.isDebugEnabled()) {
-                logger.debug("Add entity: " +
+                logger.debug("Modifying entity attributes: " +
                              " community=" + cd.getName() +
                              " entity=" + cmr.getEntity().getName() +
-                             " before=" + entitiesBeforeAdd +
-                             " after=" +
-                             entityNames(cd.getCommunity().getEntities()));
-              }
-              cd.setChangeType(CommunityChangeEvent.REMOVE_ENTITY);
-              cd.setChangeType(CommunityChangeEvent.ADD_ENTITY);
-              cd.setWhatChanged(cmr.getEntity().getName());
-              ra.addTarget(cmr.getSource());
-            //}
-          }
-          break;
-        case CommunityManagerRequest.LEAVE:
-          if (cd.getCommunity().hasEntity(requester.toString()) &&
-              cmr.getEntity() != null &&
-              cd.getCommunity().hasEntity(cmr.getEntity().getName())) {
-            String entitiesBeforeRemove = "";
-           if (logger.isDebugEnabled()) {
-             entitiesBeforeRemove = entityNames(cd.getCommunity().getEntities());
-           }
-           cd.getCommunity().removeEntity(cmr.getEntity().getName());
-           if (logger.isDebugEnabled()) {
-             logger.debug("Removing entity: " +
-                          " community=" + cd.getName() +
-                          " entity=" + cmr.getEntity().getName() +
-                          " before=" + entitiesBeforeRemove +
-                          " after=" +
-                          entityNames(cd.getCommunity().getEntities()));
-           }
-           cd.setChangeType(CommunityChangeEvent.REMOVE_ENTITY);
-           cd.setWhatChanged(cmr.getEntity().getName());
-          }
-          break;
-        case CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR:
-          ra.addTarget(cmr.getSource());
-          break;
-        case CommunityManagerRequest.MODIFY_ATTRIBUTES:
-          if (cd.getCommunity().hasEntity(requester.toString())) {
-            if (cd.getCommunity().getName().equals(cmr.getEntity().getName())) {
-              // modify community attributes
-              Attributes attrs = cd.getCommunity().getAttributes();
-              if (logger.isDebugEnabled()) {
-                logger.debug("Modifying community attributes: " +
-                             " community=" + cd.getName() +
                              " before=" + attrsToString(attrs));
               }
               applyAttrMods(attrs, cmr.getAttributeModifications());
               if (logger.isDebugEnabled()) {
-                logger.debug("Modifying community attributes: " +
+                logger.debug("Modifying entity attributes: " +
                              " community=" + cd.getName() +
+                             " entity=" + cmr.getEntity().getName() +
                              " after=" + attrsToString(attrs));
               }
-              cd.setChangeType(CommunityChangeEvent.
-                               COMMUNITY_ATTRIBUTES_CHANGED);
-              cd.setWhatChanged(cd.getCommunity().getName());
-            }
-            else {
-              // modify attributes of a community entity
-              Entity entity = cd.getCommunity().getEntity(cmr.getEntity().
-                  getName());
-              if (entity != null) {
-                Attributes attrs = entity.getAttributes();
-                if (logger.isDebugEnabled()) {
-                  logger.debug("Modifying entity attributes: " +
-                               " community=" + cd.getName() +
-                               " entity=" + cmr.getEntity().getName() +
-                               " before=" + attrsToString(attrs));
-                }
-                applyAttrMods(attrs, cmr.getAttributeModifications());
-                if (logger.isDebugEnabled()) {
-                  logger.debug("Modifying entity attributes: " +
-                               " community=" + cd.getName() +
-                               " entity=" + cmr.getEntity().getName() +
-                               " after=" + attrsToString(attrs));
-                }
-                cd.setChangeType(CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED);
-                cd.setWhatChanged(entity.getName());
-              }
+              cd.setChangeType(CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED);
+              cd.setWhatChanged(entity.getName());
             }
           }
-          break;
-      }
-      cmr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
-                                                cd.getCommunity()));
-      if (logger.isDebugEnabled()) {
-        logger.debug("Publishing response to CommunityManagerRequest" +
-                     " target=" + cmr.getSource() +
-                     " request=" + cmr.getRequestTypeAsString() +
-                     " id=" + cmr.getUID() +
-                     " response=" + cmr.getResponse());
-      }
-      bbs.publishChange(cmr);
-      // Update clients CommunityDescriptor
-      updateCommunityDescriptor(cd.getName());
-    } else {
-      logger.error("RelayAdapter is null");
+        }
+        break;
     }
+    cmr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
+                                        cd.getCommunity()));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Publishing response to CommunityManagerRequest" +
+                   " target=" + cmr.getSource() +
+                   " request=" + cmr.getRequestTypeAsString() +
+                   " id=" + cmr.getUID() +
+                   " response=" + cmr.getResponse());
+    }
+    bbs.publishChange(cmr);
   }
 
   private void updateCommunityDescriptor(String communityName) {
@@ -307,12 +339,13 @@ public class CommunityManager {
    * @return MessageAddress to agent registered as community manager
    */
   public MessageAddress findManager(String communityName) {
+    //logger.debug("findManager: community=" + communityName);
     MessageAddress communityManager = null;
     if (communityName != null) {
       WhitePagesService wps =
         (WhitePagesService) serviceBroker.getService(this, WhitePagesService.class, null);
       try {
-        AddressEntry ae[] = wps.get(communityName);
+        AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
         if (ae.length > 0) {
           communityManager = extractAgentIdFromURI(ae[0].getAddress());
         }
@@ -331,6 +364,7 @@ public class CommunityManager {
    * @param communityName Community to manage
    */
   public void assertCommunityManagerRole(String communityName) {
+    logger.debug("assertCommunityManagerRole: agent=" + agentId.toString() + " community=" + communityName);
     WhitePagesService wps =
         (WhitePagesService) serviceBroker.getService(this, WhitePagesService.class, null);
     URI cmUri = null;
@@ -345,28 +379,29 @@ public class CommunityManager {
                            Cert.NULL,
                            Long.MAX_VALUE);
       MessageAddress communityManager = findManager(communityName);
+
       // Bind this agent as manager for community
       if (communityManager != null) {
         //logger.error("Invalid request to create multiple CommunityManagers " +
         //  "for community " + communityName);
-        wps.rebind(communityAE);
+        wps.rebind(communityAE, WPS_TIMEOUT);
       } else {
         try {
-          wps.bind(communityAE);
-        } catch (Exception ex) { // probably due to another agent binding since our check
-          logger.info(
+          wps.bind(communityAE, WPS_TIMEOUT);
+        } catch (Throwable ex) { // probably due to another agent binding since our check
+          logger.debug(
               "Unable to bind agent as community manager, attempting rebind:" +
               " error=" + ex.getMessage() +
               " agent=" + agentId +
               " community=" + communityName);
-          wps.rebind(communityAE);
+          wps.rebind(communityAE, WPS_TIMEOUT);
         }
       }
       logger.debug("Managing community " + communityName);
     } catch (URISyntaxException use) {
       logger.error("Invalid community manager URI: uri=" + cmUri);
-    } catch (Exception ex) {
-      logger.error("Unable to bind agent as community manager:" +
+    } catch (Throwable ex) {
+      logger.error("Unable to (re)bind agent as community manager:" +
                    " error=" + ex.getMessage() +
                    " agent=" + agentId +
                    " community=" + communityName);
@@ -487,23 +522,27 @@ public class CommunityManager {
     public ManagerCheckTimer (long delay) {
       expirationTime = delay + System.currentTimeMillis();
     }
-    public void expire () {
+
+    public void expire() {
       if (!expired) {
         try {
-          wps = (WhitePagesService)serviceBroker.getService(this,
-                                                            WhitePagesService.class,
-                                                            null);
+          wps = (WhitePagesService) serviceBroker.getService(this,
+              WhitePagesService.class,
+              null);
           bbs.openTransaction();
-          for (Iterator it = bbs.query(communityDescriptorPredicate).iterator(); it.hasNext();) {
-            RelayAdapter ra = (RelayAdapter)it.next();
-            String communityName = ((CommunityDescriptor)ra.getContent()).getName();
-            AddressEntry ae[] = wps.get(communityName);
+          for (Iterator it = bbs.query(communityDescriptorPredicate).iterator();
+               it.hasNext(); ) {
+            RelayAdapter ra = (RelayAdapter) it.next();
+            String communityName = ( (CommunityDescriptor) ra.getContent()).
+                getName();
+            AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
             if (ae.length > 0) {
-              MessageAddress communityManager = extractAgentIdFromURI(ae[0].getAddress());
+              MessageAddress communityManager = extractAgentIdFromURI(ae[0].
+                  getAddress());
               if (!communityManager.equals(agentId)) {
-                logger.info("No longer community manager:" +
-                            " community=" + communityName +
-                            " newManager=" + communityManager);
+                logger.debug("No longer community manager:" +
+                             " community=" + communityName +
+                             " newManager=" + communityManager);
                 bbs.publishRemove(ra);
               }
             }
@@ -513,24 +552,24 @@ public class CommunityManager {
           // expiration time set in the CommunityPlugin resend to refresh
           // client caches.
           long now = (new Date()).getTime();
-          for (Iterator it = communityTimestamps.entrySet().iterator(); it.hasNext();) {
-            Map.Entry me = (Map.Entry)it.next();
-            String communityName = (String)me.getKey();
-            long timestamp = ((Date)me.getValue()).getTime();
-            long FUDGE = 1 * 60 * 1000;  // Allowance for transmission delay
-                                         // due to busy system, etc.
-            if (now + TIMER_INTERVAL + SEND_INTERVAL + FUDGE > timestamp + CommunityPlugin.CACHE_EXPIRATION) {
-              updateCommunityDescriptor(communityName);
-            }
+          for (Iterator it = communityTimestamps.entrySet().iterator();
+               it.hasNext(); ) {
+            Map.Entry me = (Map.Entry) it.next();
+            String communityName = (String) me.getKey();
+            long timestamp = ( (Date) me.getValue()).getTime();
+            long FUDGE = 1 * 60 * 1000; // Allowance for transmission delay
+            // due to busy system, etc.
           }
 
-          as = (AlarmService)serviceBroker.getService(this,
-                                                      AlarmService.class,
-                                                      null);
+          as = (AlarmService) serviceBroker.getService(this,
+              AlarmService.class,
+              null);
           as.addRealTimeAlarm(new ManagerCheckTimer(TIMER_INTERVAL));
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           e.printStackTrace();
-        } finally {
+        }
+        finally {
           bbs.closeTransaction();
           expired = true;
           if (as != null) {
