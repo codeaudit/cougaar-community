@@ -42,7 +42,7 @@ public class ModifyAttributes
    * @param entityName     Name of entity, if null the attributes are applied
    *                       to the community
    * @param mods           Attribute modifications
-   * @param crl            Listener to be notified
+   * @param uid            Unique identifier
    */
   public ModifyAttributes(String                    communityName,
                           String                    entityName,

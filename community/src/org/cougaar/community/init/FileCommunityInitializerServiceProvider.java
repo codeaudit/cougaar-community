@@ -74,6 +74,8 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
   /**
    * Get Collection of all CommunityConfig objects from XML file.  Uses
    * standard Cougaar config finder to locate XML file.
+   * @param xmlFileName XML file containing community definitions
+   * @return Collection of CommunityConfig objects
    */
   private static Collection getCommunityConfigsFromFile(String xmlFileName) {
     File communityFile = ConfigFinder.getInstance().locateFile(xmlFileName);
@@ -127,6 +129,9 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
    * Get Collection of CommunityConfig objects for named entity.  Uses
    * standard Cougaar config finder to locate XML file.  If entityName is null
    * all communities are returned.
+   * @param xmlFileName XML file containing community definitions
+   * @param entityName Name of member
+   * @return Collection of CommunityConfig objects
    */
   private static Collection getCommunityConfigsFromFile(String xmlFileName, String entityName) {
     Collection allCommunities = getCommunityConfigsFromFile(xmlFileName);
@@ -140,7 +145,7 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
     return communitiesWithEntity;
   }
 
-  /**
+  /*
    * For testing.  Loads CommunityConfigs from XML File or database
    * and prints to screen.
    * @param args

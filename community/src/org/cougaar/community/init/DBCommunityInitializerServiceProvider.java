@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 1997-2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -197,7 +197,7 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
       return configMap.values();
     }
 
-  /**
+  /*
    * For testing.
    */
   public static void main(String args[]) throws Exception {
@@ -231,7 +231,7 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
     DBInitializerService dbInit = new DBInitializerServiceImpl(trialId);
 
     // load my db community-init-service
-    DBCommunityInitializerServiceProvider commInitSP = 
+    DBCommunityInitializerServiceProvider commInitSP =
       new DBCommunityInitializerServiceProvider(dbInit);
     sb.addService(CommunityInitializerService.class, commInitSP);
 

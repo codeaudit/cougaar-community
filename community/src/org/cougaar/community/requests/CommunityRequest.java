@@ -93,8 +93,8 @@ public class CommunityRequest implements java.io.Serializable, UniqueObject {
   /**
    * Returns true if CommunityRequests have same request type
    * and target community.
-   * @param o
-   * @return
+   * @param o CommunityRequest to compare
+   * @return true if CommunityRequests have same request type
    */
   public boolean equals(Object o) {
     if (!(o instanceof CommunityRequest)) return false;
