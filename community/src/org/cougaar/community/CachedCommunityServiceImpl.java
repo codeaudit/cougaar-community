@@ -88,7 +88,6 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         setAlarmService(as);
         initialize();
         load();
-        CachedCommunityServiceImpl.this.start();
       }
     };
     initThread.start();
@@ -100,7 +99,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
   public void setupSubscriptions() {
     changeNotifications =
       (IncrementalSubscription)getBlackboardService(serviceBroker)
-	.subscribe(changeNotificationPredicate);
+	    .subscribe(changeNotificationPredicate);
   }
 
   /**
