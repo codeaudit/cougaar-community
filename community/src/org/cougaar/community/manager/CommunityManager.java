@@ -47,6 +47,8 @@ import org.cougaar.core.service.wp.WhitePagesService;
 import org.cougaar.core.agent.service.alarm.Alarm;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -312,27 +314,37 @@ public class CommunityManager {
         (WhitePagesService)serviceBroker.getService(this,
                                                     WhitePagesService.class,
                                                     null);
-      try {
+        URI cmUri = null;
+        try {
+          cmUri = new java.net.URI(URN_PREFIX + ":" +
+                                            NAMESPACE_IDENTIFIER + ":" +
+                                            agentId);
         AddressEntry communityAE =
           new AddressEntry(communityName,
                            Application.getApplication("community"),
-                           new java.net.URI(URN_PREFIX + ":" +
-                                            NAMESPACE_IDENTIFIER + ":" +
-                                            agentId),
+                           cmUri,
                            Cert.NULL,
                            Long.MAX_VALUE);
         MessageAddress communityManager = findManager(communityName);
+        // Bind this agent as manager for community
         if (communityManager != null) {
           //logger.error("Invalid request to create multiple CommunityManagers " +
           //  "for community " + communityName);
           wps.rebind(communityAE);
         } else {
-          wps.bind(communityAE);
+          try {
+            wps.bind(communityAE);
+          } catch (Exception ex) { // probably due to another agent binding since our check
+            logger.info("Unable to bind agent as community manager, attempting rebind:" +
+                        " error=" + ex.getMessage() +
+                        " agent=" + agentId +
+                        " community=" + communityName);
+            wps.rebind(communityAE);
+          }
         }
         communityManager = agentId;
         CommunityDescriptor cd = new CommunityDescriptorImpl(agentId, community, uidService.nextUID());
         RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, cd.getUID());
-        //RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, uidService.nextUID());
         myManagingCommunities.put(communityName, ra);
         logger.debug("Managing community " + communityName);
         ra.addTarget(agentId);
@@ -343,8 +355,13 @@ public class CommunityManager {
                      " cdUid=" + cd.getUID() +
                      " raUid=" + ra.getUID());
         bbs.publishAdd(ra);
+      } catch (URISyntaxException use) {
+        logger.error("Invalid community manager URI: uri=" + cmUri);
       } catch (Exception ex) {
-       ex.printStackTrace();
+        logger.error("Unable to bind agent as community manager:" +
+                    " error=" + ex.getMessage() +
+                    " agent=" + agentId +
+                    " community=" + communityName, ex);
       } finally {
         serviceBroker.releaseService(this, WhitePagesService.class, wps);
       }
