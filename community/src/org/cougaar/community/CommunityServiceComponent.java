@@ -34,7 +34,6 @@ import org.cougaar.core.mts.MessageAddress;
 
 import org.cougaar.core.node.InitializerService;
 import org.cougaar.core.node.CommunityConfig;
-import org.cougaar.core.node.CommunityConfigUtils;
 
 import org.cougaar.core.service.LoggingService;
 
