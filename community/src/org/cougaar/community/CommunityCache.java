@@ -53,8 +53,8 @@ import javax.naming.directory.Attributes;
 public class CommunityCache implements CommunityServiceConstants {
 
   protected Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
-  protected Map communities = new HashMap();
-  protected Map listenerMap = new HashMap();
+  protected Map communities = Collections.synchronizedMap(new HashMap());
+  protected Map listenerMap = Collections.synchronizedMap(new HashMap());
   protected ThreadService threadService;
   protected long expirationPeriod = DEFAULT_CACHE_EXPIRATION;
 
@@ -221,12 +221,8 @@ public class CommunityCache implements CommunityServiceConstants {
     }
   }
 
-  public String toString() {
-    String communityNames = null;
-    synchronized (communities) {
-      communityNames = communities.keySet().toString();
-    }
-    return "CommunityCache contents=" + communityNames;
+  public synchronized String toString() {
+    return "CommunityCache: contents=" + communities.keySet().toString();
   }
 
   public synchronized String toXML() {
@@ -417,7 +413,7 @@ public class CommunityCache implements CommunityServiceConstants {
    * Determines if a local copy exists for all nested communities from a
    * specified root community.
    */
-  private boolean allDescendentsFound(Community community) {
+  private synchronized boolean allDescendentsFound(Community community) {
     Collection nestedCommunities =
         community.search("(Role=Member)", Community.COMMUNITIES_ONLY);
     for (Iterator it = nestedCommunities.iterator(); it.hasNext();) {
