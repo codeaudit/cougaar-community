@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Communities [
+<!ELEMENT Communities (Community+)>
+<!ELEMENT Community (Attribute+, Entity*)>
+<!ATTLIST Community Name CDATA #REQUIRED>
+<!ELEMENT AttributeID EMPTY>
+<!ATTLIST AttributeID ID CDATA #REQUIRED>
+<!ATTLIST AttributeID Access (manager|member|associate|world) #IMPLIED>
+<!ELEMENT Entity (Attribute*)>
+<!ATTLIST Entity Name CDATA #REQUIRED>
+<!ELEMENT Attribute EMPTY>
+<!ATTLIST Attribute ID CDATA #REQUIRED>
+<!ATTLIST Attribute Value CDATA #REQUIRED>
+]>
+<Communities>
+  <Community Name='TEST-COMM' >
+    <Attribute ID='CommunityType' Value='Test' />
+    <!-- <Attribute ID='CommunityManager' Value='Agent4' /> -->
+    <Entity Name='Agent1' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent2' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent3' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent4' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='NESTED-TEST-COMM' >
+      <Attribute ID='EntityType' Value='Community' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+  </Community>
+  <Community Name='NESTED-TEST-COMM' >
+    <Attribute ID='CommunityType' Value='Test' />
+    <Attribute ID='CommunityManager' Value='Agent8' />
+    <Entity Name='Agent5' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent6' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent7' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+    <Entity Name='Agent8' >
+      <Attribute ID='EntityType' Value='Agent' />
+      <Attribute ID='Role' Value='Member' />
+    </Entity>
+  </Community>
+</Communities>

@@ -4,7 +4,7 @@
 <!--     Ultralog Community Components                    -->
 <!-- ==================================================== -->
 
-<project name="community" default="simpledemo" basedir=".">
+<project name="community" default="build" basedir=".">
 
   <!-- set global properties for this build -->
   <property environment="env"/>
@@ -33,20 +33,26 @@
     <mkdir dir="${lib}"/>
   </target>
 
-  <target name="build" depends="init, compile, compile-examples, compile-regress, jar"
+  <target name="build" depends="init, compile, compile-regress, test, jar"
           description="Build jar file from source" >
     <mkdir dir="${classes}"/>
+  </target>
+
+  <target name="1nodetest" depends="compile" description="Run 1 node cougaar society" >
+    <exec dir="${basedir}/configs" executable="sh">
+      <arg line="run.sh" />
+    </exec>
   </target>
 
   <target name="compile" description="Compile source code">
     <!-- Compile the java code into ${classes} -->
     <mkdir dir="${classes}" />
-    <javac srcdir="${src}" source="1.4" destdir="${classes}"
-           debug="on">
+    <javac srcdir="${src}" source="1.4" destdir="${classes}" debug="on">
       <classpath>
         <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
+          <exclude name="community.jar"/>
         </fileset>
         <fileset dir="${cougaar}/sys">
           <include name="**/*.jar"/>
@@ -55,32 +61,14 @@
     </javac>
   </target>
 
-  <target name="compile-examples" description="Compile example source code">
-    <!-- Compile the java code into ${classes} -->
+  <target name="compile-regress" description="Compile test source code">
     <mkdir dir="${classes}" />
-    <javac srcdir="${examples}" source="1.4" destdir="${classes}"
-           debug="on">
+    <javac srcdir="${regress}" source="1.4" destdir="${classes}" debug="on">
       <classpath>
         <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-    </javac>
-  </target>
-
-  <target name="compile-regress" description="Compile example source code">
-    <!-- Compile the java code into ${classes} -->
-    <mkdir dir="${classes}" />
-    <javac srcdir="${regress}" source="1.4" destdir="${classes}"
-           debug="on">
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <exclude name="community.jar"/>
         </fileset>
         <fileset dir="${cougaar}/sys">
           <include name="**/*.jar"/>
@@ -151,152 +139,10 @@
     />
   </target>
 
-  <!-- Runs automated unit/integration -->
-    <target name="test" depends="compile" description="Run unit tests">
-    <antcall target="node" >
-      <param name="configpath" value="$$CWD/configs/test;$$CWD/configs/common;${configpath}" />
-      <param name="node" value="UnitTestNode" />
-    </antcall>
-  </target>
-
-  <!-- Runs simple ABA demo using minitestconfig society -->
-  <target name="simpledemo" depends="compile, compile-examples"
-          description="Runs community ABA demo using minitestconfig society">
-    <antcall target="node" >
-      <param name="node" value="MiniNode" />
-      <param name="configpath" value="$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs multi node ABA demo-->
-  <target name="demo1" depends="compile, compile-examples"
-          description="Starts node with 1BDE, MCCGlobalMode and 3-69-ARBN">
-    <antcall target="node" >
-      <param name="node" value="MiniNode1" />
-      <param name="configpath" value="$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs multi node ABA demo-->
-  <target name="demo2" depends="compile, compile-examples"
-          description="Starts node with 3ID (3ID is community manager)">
-    <antcall target="node" >
-      <param name="node" value="MiniNode2" />
-      <param name="configpath" value="$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs multi node ABA demo-->
-  <target name="demo3" depends="compile, compile-examples"
-          description="Starts node with 3-69-ARBN">
-    <antcall target="node" >
-      <param name="node" value="MiniNode3" />
-      <param name="configpath" value="$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs multi node ABA demo-->
-  <target name="demo4" depends="compile, compile-examples"
-          description="Starts node with 1BDE and MCCGlobalMode">
-    <antcall target="node" >
-      <param name="node" value="MiniNode4" />
-      <param name="configpath" value="$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs ABA tests using minitestconfig society -->
-  <target name="abatest" depends="compile" description="Run ABA tests using minitestconfig">
-    <antcall target="node" >
-      <param name="node" value="MiniNode" />
-      <param name="configpath" value="$$CWD/configs/test;$$CWD/configs/minitestconfig;$$CWD/configs/common;$$INSTALL/configs/minitestconfig;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Test nested community functions -->
-  <target name="nestedcommunitytest" depends="compile" description="Run nested community tests">
-    <antcall target="makeagents" >
-      <param name="node" value="TestNode" />
-    </antcall>
-    <antcall target="node" >
-      <param name="node" value="TestNode" />
-      <param name="configpath" value="${workspace}/configs;$$CWD/configs/test;$$CWD/configs/common;${configpath}" />
-    </antcall>
-  </target>
-
-  <target name="abacompletetest" depends="compile" description="Run nested community tests">
-    <antcall target="makeagents" >
-      <param name="node" value="TestNode" />
-    </antcall>
-    <antcall target="node" >
-      <param name="node" value="TestNode" />
-      <param name="configpath" value="${workspace}/configs;$$CWD/configs/test;$$CWD/configs/common;${configpath}" />
-    </antcall>
-  </target>
-
-  <!-- Runs node -->
-  <target name="node">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+  <target name="test" depends="compile, compile-regress" description="Run JUnit tests">
+    <!-- <junit printsummary="yes" fork="yes" dir="">
       <classpath>
-        <pathelement location="${cougaar}/lib/bootstrap.jar"/>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="${configpath}"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="${loggerconfig}"/>
-      <sysproperty key="org.cougaar.core.agent.heartbeat" value="false"/>
-      <sysproperty key="org.cougaar.core.agent.showTraffic" value="false"/>
-      <sysproperty key="org.cougaar.node.name" value="${node}"/>
-      <sysproperty key="org.cougaar.thread.running.max" value="-1"/>
-      <sysproperty key="org.cougaar.core.persistence.clear" value="${persistenceClear}"/>
-      <sysproperty key="org.cougaar.core.persistence.enable" value="${persistenceEnabled}"/>
-      <sysproperty key="org.cougaar.core.persistence.lazyInterval" value="${persistenceInterval}"/>
-      <arg line="org.cougaar.core.node.Node"/>
-    </java>
-  </target>
-
-  <!-- Creates multiple test agents -->
-  <target name="makeagents">
-    <mkdir dir="${workspace}/configs" />
-    <delete file="${workspace}/configs/${node}.ini" />
-    <copy file="configs/test/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
-    <antcall target="makeagent" ><param name="agentnumber" value="01"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="02"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="03"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="04"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="05"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="06"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="07"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="08"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="09"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="10"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="11"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="12"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="13"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="14"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="15"/></antcall>
-  </target>
-
-    <!-- Creates a test agent -->
-  <target name="makeagent">
-    <delete  file="${workspace}/configs/Agent${agentnumber}.ini" />
-    <delete  file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <copy    file="configs/test/AgentTemplate.ini" tofile="${workspace}/configs/Agent${agentnumber}.ini" />
-    <copy    file="configs/test/AgentTemplate-prototype-ini.dat" tofile="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <replace file="${workspace}/configs/${node}.ini" token="#cluster=Agent${agentnumber}" value="cluster=Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}.ini"               token="AgentName" value="Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" token="AgentName" value="Agent${agentnumber}"/>
-  </target>
-
-  <!-- Imports community descriptions into Configuration database from xml file-->
-  <target name="dbimport" description="Imports community xml file to database">
-    <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.util.ConfigDbUtils">
-      <classpath>
-        <pathelement location="./lib/community.jar"/>
+        <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
         </fileset>
@@ -304,18 +150,21 @@
           <include name="**/*.jar"/>
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <arg line="import file=${xmlfile} assembly=${assembly} db=replace"/>
-    </java>
-  </target>
-
-  <!-- Exports community descriptions from Configuration database to xml file-->
-  <target name="dbexport" description="Exports community descriptions from database">
+      <formatter type="plain" />
+      <batchtest>
+        <fileset dir="${regress}">
+          <include name="**/*Test.class" />
+        </fileset>
+      </batchtest>
+    </junit> -->
     <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.util.ConfigDbUtils">
+      maxmemory="300m"
+      classname="org.cougaar.community.test.AllTests">
+      <jvmarg value="-showversion"/>
+      <jvmarg value="-Xms100m"/>
+      <jvmarg value="-server"/>
       <classpath>
-        <pathelement location="./lib/community.jar"/>
+        <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
         </fileset>
@@ -323,42 +172,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <arg line="export file=${xmlfile} assembly=${assembly}"/>
     </java>
   </target>
 
-  <!-- Creates a test agent for non-static community -->
-  <target name="makeAgentForDynamicCommunity">
-    <delete  file="${workspace}/configs/Agent${agentnumber}.ini" />
-    <delete  file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <copy    file="configs/test/AgentTemplateForDynamicCommunity.ini" tofile="${workspace}/configs/Agent${agentnumber}.ini" />
-    <copy    file="configs/test/AgentTemplate-prototype-ini.dat" tofile="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <replace file="${workspace}/configs/${node}.ini" token="#cluster=Agent${agentnumber}" value="cluster=Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}.ini"               token="AgentName" value="Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" token="AgentName" value="Agent${agentnumber}"/>
-  </target>
-
-  <target name="makeAgentsForDynamicCommunity">
-    <mkdir dir="${workspace}/configs" />
-    <delete file="${workspace}/configs/${node}.ini" />
-    <copy file="configs/test/NodeTemplateForDynamicCommunity.ini" tofile="${workspace}/configs/${node}.ini" />
-    <antcall target="makeAgentForDynamicCommunity" ><param name="agentnumber" value="20"/></antcall>
-    <antcall target="makeAgentForDynamicCommunity" ><param name="agentnumber" value="21"/></antcall>
-    <antcall target="makeAgentForDynamicCommunity" ><param name="agentnumber" value="22"/></antcall>
-    <antcall target="makeAgentForDynamicCommunity" ><param name="agentnumber" value="23"/></antcall>
-    <antcall target="makeAgentForDynamicCommunity" ><param name="agentnumber" value="24"/></antcall>
-  </target>
-
-  <!-- Test ABA when no static community defined -->
-  <target name="DynamicCommunityTest">
-    <antcall target="makeAgentsForDynamicCommunity">
-      <param name="node" value="TestNode" />
-    </antcall>
-    <antcall target="node" >
-      <param name="node" value="TestNode" />
-      <param name="configpath" value="${workspace}/configs;$$CWD/configs/test;$$CWD/configs/common;${configpath}" />
-    </antcall>
-  </target>
 </project>
