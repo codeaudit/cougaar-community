@@ -150,7 +150,7 @@ public class CommunityCache implements CommunityServiceConstants {
     if (community == null) return Collections.EMPTY_SET;
     if (recursive) {
       Set matches = new HashSet();
-      recursiveSearch(community, filter, qualifier, matches);
+      recursiveSearch(community, filter, qualifier, matches, new HashSet());
       return matches;
     } else {  // Recursive search
       return community.search(filter, qualifier);
@@ -222,9 +222,9 @@ public class CommunityCache implements CommunityServiceConstants {
   }
 
   public String toString() {
-    Set communityNames = Collections.EMPTY_SET;
+    String communityNames = null;
     synchronized (communities) {
-      communityNames = communities.keySet();
+      communityNames = communities.keySet().toString();
     }
     return "CommunityCache contents=" + communityNames;
   }
@@ -321,7 +321,7 @@ public class CommunityCache implements CommunityServiceConstants {
 
   private void fireChangeNotifications(Community current, Community updated) {
     if (logger.isDetailEnabled()) {
-      logger.detail("fireChangeNotifications: community=" + updated == null ? "null" : updated.getName());
+      logger.detail("fireChangeNotifications: community=" + (updated == null ? "null" : updated.getName()));
     }
     //Community community = get(updated.getName()); // a copy for Change Event
     if (updated == null) {  // new community
@@ -431,8 +431,10 @@ public class CommunityCache implements CommunityServiceConstants {
   private void recursiveSearch(Community community,
                                String filter,
                                int qualifier,
-                               Set matches) {
+                               Set matches,
+                               Set visited) {
     if (community != null) {
+      visited.add(community.getName());  // avoid endless loop caused by circular references
       Collection entities = community.search(filter, qualifier);
       if (logger.isDetailEnabled()) {
         logger.detail("recursiveSearch:" +
@@ -447,8 +449,8 @@ public class CommunityCache implements CommunityServiceConstants {
         if (entity instanceof Community) {
           String nestedCommunityName = entity.getName();
           Community nestedCommunity = get(nestedCommunityName);
-          if (nestedCommunity != null) {
-            recursiveSearch(nestedCommunity, filter, qualifier, matches);
+          if (nestedCommunity != null && !visited.contains(nestedCommunity.getName())) {
+            recursiveSearch(nestedCommunity, filter, qualifier, matches, visited);
           }
         }
       }
