@@ -192,9 +192,23 @@ public class YellowPagesViewer extends JPanel
           for(NamingEnumeration nes = attributes.getAll(); nes.hasMore();)
           {
             try{
+              String str;
               Attribute attr = (Attribute)nes.next();
-              String str = attr.getID() + " " + (String)attr.get();
+              if(attr.size() == 1)
+                str = attr.getID() + " " + (String)attr.get();
+              else
+                str = attr.getID();
               DefaultMutableTreeNode nvnode = new DefaultMutableTreeNode(str);
+              if(attr.size() > 1)
+              {
+                for(NamingEnumeration subattrs = attr.getAll(); subattrs.hasMore();)
+                {
+                  String subattr = (String)subattrs.next();
+                  DefaultMutableTreeNode subattrNode = new DefaultMutableTreeNode(subattr);
+                  nvnode.add(subattrNode);
+                  nodes.add(subattrNode);
+                }
+              }
               attrs.add(nvnode);
               nodes.add(nvnode);
             }catch(NoSuchElementException e){} //in case the attribute doesn't have a value

@@ -119,6 +119,7 @@
   </Community>
 
   <Community Name="MiniTestConfigEnclave-COMM" >
+    <Attribute ID="CommunityType"    Value="Domain" />
     <Attribute ID="CommunityType"    Value="Robustness" />
     <Attribute ID="CommunityManager" Value="" />
     <Entity Name="1BDE" >
