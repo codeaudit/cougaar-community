@@ -23,15 +23,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.w3c.dom.Element;
-import org.w3c.dom.Document;
-
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.relay.Relay;
 import org.cougaar.core.util.UID;
 import org.cougaar.core.util.UniqueObject;
-import org.cougaar.core.util.XMLize;
-import org.cougaar.core.util.XMLizable;
 
 /**
  * Implementation of CommunityChangeNotification.
@@ -39,7 +34,7 @@ import org.cougaar.core.util.XMLizable;
  * Extenders are responsible for defining content semantics.
  **/
 abstract public class CommunityChangeNotificationAdapter
-  implements CommunityChangeNotification, XMLizable, Cloneable {
+  implements CommunityChangeNotification, Cloneable {
 
   private transient Set myTargetSet = null;
 
@@ -256,18 +251,6 @@ abstract public class CommunityChangeNotificationAdapter
   public int updateContent(Object content, Token token) {
     return (contentChanged((CommunityChangeNotificationAdapter) content) ?
             Relay.CONTENT_CHANGE : Relay.NO_CHANGE);
-  }
-
-  // XMLizable interface
-  /** getXML - add the Alert to the document as an XML Element and return the
-   *
-   * BOZO - not currently handling XML
-   *
-   * @param doc Document to which XML Element will be added
-   * @return Element
-   **/
-  public Element getXML(Document doc) {
-    return XMLize.getPlanObjectXML(this, doc);
   }
 
   protected Object clone() throws CloneNotSupportedException {
