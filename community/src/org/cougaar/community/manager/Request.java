@@ -21,32 +21,33 @@
 
 package org.cougaar.community.manager;
 
+import java.util.Set;
 import javax.naming.directory.ModificationItem;
 
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.relay.Relay;
+
 import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.CommunityResponseListener;
+import org.cougaar.community.CommunityServiceConstants;
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.util.UniqueObject;
 
 /**
- * Requests action to be performed by Community Manger.
+ * Blackboard Relay used by CommunityService to send request to remote
+ * Community Manager.  This interface should only be used by Community
+ * Service implementations, it is not intended for use by clients.
  **/
-public interface CommunityManagerRequest
-  extends Relay.Target, UniqueObject {
-
-  public static final int UNDEFINED                    = -1;
-  public static final int JOIN                         = 0;
-  public static final int LEAVE                        = 1;
-  public static final int GET_COMMUNITY_DESCRIPTOR     = 2;
-  public static final int RELEASE_COMMUNITY_DESCRIPTOR = 3;
-  public static final int MODIFY_ATTRIBUTES            = 4;
+public interface Request extends UniqueObject, CommunityServiceConstants {
 
   public String getCommunityName();
+
   public void setRequestType(int reqType);
   public int getRequestType();
-  public String getRequestTypeAsString();
-  public void setSource(MessageAddress addr);
+  public String getRequestTypeAsString(int type);
+  public MessageAddress getSource();
+
+  public void addCommunityResponseListener(CommunityResponseListener crl);
+  public Set getCommunityResponseListeners();
 
   public void setEntity(Entity entity);
   public Entity getEntity();
@@ -55,5 +56,6 @@ public interface CommunityManagerRequest
   public ModificationItem[] getAttributeModifications();
 
   public void setResponse(CommunityResponse resp);
+  public Object getResponse();
 
 }

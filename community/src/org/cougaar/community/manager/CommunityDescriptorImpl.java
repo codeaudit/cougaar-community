@@ -21,15 +21,12 @@
 
 package org.cougaar.community.manager;
 
-import java.util.ArrayList;
-
 import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.CommunityImpl;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.persist.NotPersistable;
 import org.cougaar.core.relay.Relay;
 import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.util.UID;
 
 /**
@@ -38,16 +35,15 @@ import org.cougaar.core.util.UID;
 public class CommunityDescriptorImpl
   implements CommunityDescriptor, java.io.Serializable, NotPersistable {
 
-  private MessageAddress source;
-  private Community community;
-  private UID uid;
-  private int changeType;
-  private String whatChanged;
-
+  protected MessageAddress source;
+  protected Community community;
+  protected UID uid;
 
   /**
    * Constructor.
-   * @param communityName  Name of  community
+   * @param source MessageAddress of sender
+   * @param community Associated Community
+   * @param uid Unique identifier
    */
   public CommunityDescriptorImpl(MessageAddress source,
                                  Community community,
@@ -55,13 +51,10 @@ public class CommunityDescriptorImpl
     this.source = source;
     this.community = community;
     this.uid = uid;
-    this.changeType = CommunityChangeEvent.ADD_COMMUNITY;
-    this.whatChanged = community.getName();
   }
 
   /**
    * Gets the community.
-   *
    * @return Community
    */
   public Community getCommunity() {
@@ -70,20 +63,6 @@ public class CommunityDescriptorImpl
 
   public String getName() {
     return community.getName();
-  }
-
-  public void setChangeType(int changeType) {
-    this.changeType = changeType;
-  }
-  public int getChangeType() {
-    return changeType;
-  }
-
-  public void setWhatChanged(String name) {
-    this.whatChanged = name;
-  }
-  public String getWhatChanged() {
-    return whatChanged;
   }
 
   //
@@ -99,11 +78,7 @@ public class CommunityDescriptorImpl
 
   public int updateContent(Object content, Relay.Token token) {
     CommunityDescriptor cd = (CommunityDescriptorImpl)content;
-    Community updatedCommunity = cd.getCommunity();
-    setWhatChanged(cd.getWhatChanged());
-    setChangeType(cd.getChangeType());
-    this.community.setAttributes(updatedCommunity.getAttributes());
-    ((CommunityImpl)this.community).setEntities(new ArrayList(updatedCommunity.getEntities()));
+    community = (Community)((CommunityImpl)cd.getCommunity()).clone();
     return Relay.CONTENT_CHANGE;
   }
 
@@ -127,7 +102,6 @@ public class CommunityDescriptorImpl
 
   /**
    * Returns a string representation
-   *
    * @return String - a string representation
    **/
   public String toString() {

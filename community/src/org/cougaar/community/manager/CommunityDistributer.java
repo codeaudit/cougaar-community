@@ -31,31 +31,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.cougaar.community.CommunityImpl;
 import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.RelayAdapter;
+import org.cougaar.community.CommunityUpdateListener;
+import org.cougaar.community.BlackboardClient;
 import org.cougaar.core.agent.service.alarm.Alarm;
-import org.cougaar.core.blackboard.BlackboardClientComponent;
 import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.component.ServiceAvailableEvent;
+import org.cougaar.core.component.ServiceAvailableListener;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.AlarmService;
-import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.SchedulerService;
 import org.cougaar.core.service.UIDService;
-import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.service.wp.AddressEntry;
 import org.cougaar.core.service.wp.Callback;
 import org.cougaar.core.service.wp.Response;
 import org.cougaar.core.service.wp.WhitePagesService;
 
+import org.cougaar.core.util.UID;
+
 /**
  * Helper class used to distribute new/updated CommunityDescriptor objects to
- * interested agents.
+ * interested nodes and agents.
  */
-public class CommunityDistributer extends BlackboardClientComponent {
+public class CommunityDistributer {
 
   private long updateInterval;
   private long cacheExpiration;
@@ -66,20 +69,28 @@ public class CommunityDistributer extends BlackboardClientComponent {
   private UIDService uidService;
   private LoggingService logger;
   private WakeAlarm wakeAlarm;
+  private CommunityUpdateListener updateListener;
+  private BlackboardClient blackboardClient;
+  private BindingSite bindingSite;
+  private MessageAddress agentId;
+  private AlarmService alarmService;
+
+  private Map communities;
 
   // Map of DescriptorEntry objects.  Allows multiple communities to be
   // managed.
   private Map descriptors = Collections.synchronizedMap(new HashMap());
   class DescriptorEntry {
+    String name;
     RelayAdapter ra;
-    CommunityDescriptor cd;
     Set nodeTargets = Collections.synchronizedSet(new HashSet());
     Set unresolvedAgents = Collections.synchronizedSet(new HashSet());
     long lastSent = 0;
     boolean didChange = true;
-    int changeType;
-    String whatChanged;
     boolean doRemove = false;
+    DescriptorEntry(String name) {
+      this.name = name;
+    }
   }
 
   /**
@@ -90,57 +101,78 @@ public class CommunityDistributer extends BlackboardClientComponent {
    *                        update frequency
    * @param nodesOnly       True if CommunityDescriptors are only sent to node
    *                        agents
+   * @param cul             Listener object to receive community descriptor updates
+   * @param bc              BlackboardClient
+   * @param communities     Communities managed by CommunityManager
+   *
    */
-  public CommunityDistributer(BindingSite bs,
-                              long updateInterval,
-                              long cacheExpiration,
-                              boolean nodesOnly) {
-    setBindingSite(bs);
+  public CommunityDistributer(BindingSite             bs,
+                              long                    updateInterval,
+                              long                    cacheExpiration,
+                              boolean                 nodesOnly,
+                              CommunityUpdateListener cul,
+                              BlackboardClient        bc,
+                              Map                     communities) {
+    this.communities = communities;
+    this.bindingSite = bs;
     this.cacheExpiration = cacheExpiration;
     this.updateInterval = updateInterval;
     this.nodesOnly = nodesOnly;
-    serviceBroker = getServiceBroker();
-    setAgentIdentificationService(
-        (AgentIdentificationService) serviceBroker.getService(this,
-        AgentIdentificationService.class, null));
-    logger = (LoggingService) serviceBroker.getService(this, LoggingService.class, null);
-    logger = org.cougaar.core.logging.LoggingServiceWithPrefix.add(logger,
-        agentId + ": ");
-    initialize();
-    load();
-    start();
+    this.updateListener = cul;
+    this.blackboardClient = bc;
+    this.serviceBroker = getServiceBroker();
+    this.agentId = getAgentId();
+    this.logger =
+        (LoggingService)serviceBroker.getService(this, LoggingService.class, null);
+    this.alarmService =
+        ((AlarmService)serviceBroker.getService(this, AlarmService.class, null));
+    this.whitePagesService =
+      (WhitePagesService)serviceBroker.getService(this, WhitePagesService.class, null);
+    initUidService();
+  }
+
+  protected ServiceBroker getServiceBroker() {
+    return bindingSite.getServiceBroker();
+  }
+
+  protected MessageAddress getAgentId() {
+    AgentIdentificationService ais =
+        (AgentIdentificationService)getServiceBroker().getService(this,
+        AgentIdentificationService.class, null);
+    MessageAddress addr = ais.getMessageAddress();
+    getServiceBroker().releaseService(this, AgentIdentificationService.class, ais);
+    return addr;
   }
 
   /**
-   * Loads required services.
+   * Initialize UIDService using ServiceAvailableListener if service not
+   * immediately available.
    */
-  public void load() {
-    setSchedulerService(
-      (SchedulerService)getServiceBroker().getService(this, SchedulerService.class, null));
-    setAlarmService((AlarmService)serviceBroker.getService(this, AlarmService.class, null));
-    setBlackboardService(
-      (BlackboardService)getServiceBroker().getService(this, BlackboardService.class, null));
-    whitePagesService =
-      (WhitePagesService)serviceBroker.getService(this, WhitePagesService.class, null);
-    uidService =
-      (UIDService)serviceBroker.getService(this, UIDService.class, null);
-    super.load();
-  }
-
-  public void setupSubscriptions() { }
-
-  public void execute() {
-    if ((wakeAlarm != null) &&
-        ((wakeAlarm.hasExpired()))) {
-      resolveAgents();
-      publishDescriptors();
-      wakeAlarm = new WakeAlarm(now() + updateInterval);
-      alarmService.addRealTimeAlarm(wakeAlarm);
+  private void initUidService() {
+    ServiceBroker sb = getServiceBroker();
+    if (sb.hasService(org.cougaar.core.service.UIDService.class)) {
+      uidService = (UIDService)sb.getService(this, UIDService.class, null);
+    } else {
+      sb.addServiceListener(new ServiceAvailableListener() {
+        public void serviceAvailable(ServiceAvailableEvent sae) {
+          if (sae.getService().equals(UIDService.class)) {
+            uidService = (UIDService)getServiceBroker().getService(this, UIDService.class, null);
+          }
+        }
+      });
     }
   }
 
   /**
-   * Publishes pending CommunityDescriptor Relays to local blackboard.
+   * Get Unique identifier.
+   * @return Unique ID
+   */
+  protected UID getUID() {
+    return uidService != null ? uidService.nextUID() : null;
+  }
+
+  /**
+   * Publishes pending CommunityDescriptors.
    */
   private void publishDescriptors() {
     long now = now();
@@ -150,42 +182,53 @@ public class CommunityDistributer extends BlackboardClientComponent {
     }
     for (Iterator it = l.iterator(); it.hasNext();) {
       DescriptorEntry de = (DescriptorEntry) it.next();
-      if (logger.isDebugEnabled()) {
-        logger.debug("publishDescriptors:" +
-                     " community=" + de.cd.getName() +
-                     " ra=" + de.ra +
-                     " doRemove=" + de.doRemove +
-                     " didChange=" + de.didChange);
-      }
+      //CommunityImpl community = (CommunityImpl)de.cd.getCommunity();
+      CommunityImpl community =
+          (CommunityImpl)((CommunityImpl)communities.get(de.name)).clone();
+      community.setLastUpdate(now);
+      ((CommunityDescriptorImpl)de.ra.getContent()).community = community;
       if (de.lastSent == 0) {
         if (!de.nodeTargets.isEmpty()) {
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
           de.didChange = false;
           de.lastSent = now;
-          blackboard.publishAdd(de.ra);
-          if (logger.isDebugEnabled()) {
-            logger.debug("publishAdd: " + de.ra);
+          if (blackboardClient != null) {
+            blackboardClient.publish(de.ra, BlackboardClient.ADD);
+            if (logger.isDebugEnabled()) {
+              logger.debug("publishAdd: " + de.ra +
+                           " size=" + ((CommunityDescriptor)de.ra.getContent()).getCommunity().getEntities().size());
+            }
+          }
+          if (de.nodeTargets.contains(agentId)) {
+            updateListener.updateCommunity((CommunityImpl)community.clone());
           }
         }
       } else {
-        if (!de.didChange) {
-        }
-        if ( (de.didChange && (now > (de.lastSent + updateInterval))) ||
-            (now > de.lastSent + cacheExpiration)) {
+        if ((de.didChange && (now > (de.lastSent + updateInterval))) ||
+            (now > (de.lastSent + cacheExpiration))) {
           // publish changed descriptor
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
-          ((CommunityDescriptorImpl) de.cd).setChangeType(de.didChange ? de.changeType : -1);
-          ((CommunityDescriptorImpl) de.cd).setWhatChanged(de.didChange ? de.whatChanged : null);
           de.didChange = false;
-          de.lastSent = now();
-          blackboard.publishChange(de.ra);
-          if (logger.isDebugEnabled()) {
-            logger.debug("publishChange: " + de.ra);
+          de.lastSent = now;
+          if (blackboardClient != null) {
+            blackboardClient.publish(de.ra, BlackboardClient.CHANGE);
+            if (logger.isDebugEnabled()) {
+              logger.debug("publishChange: " + de.ra +
+                           " size=" + ((CommunityDescriptor)de.ra.getContent()).getCommunity().getEntities().size());
+            }
+          }
+          if (de.nodeTargets.contains(agentId)) {
+            updateListener.updateCommunity((CommunityImpl)community.clone());
           }
         } else {
           if (de.doRemove) { // remove descriptor
-            blackboard.publishRemove(de.ra);
-            descriptors.remove(de.cd.getName());
+            if (blackboardClient != null) {
+              blackboardClient.publish(de.ra, BlackboardClient.REMOVE);
+            }
+            if (de.nodeTargets.contains(agentId)) {
+              updateListener.removeCommunity((CommunityImpl)community.clone());
+            }
+            descriptors.remove(de.name);
             if (logger.isDebugEnabled()) {
               logger.debug("publishRemove: " + de.ra);
             }
@@ -197,16 +240,15 @@ public class CommunityDistributer extends BlackboardClientComponent {
 
   /**
    * Enable automatic update of CommunityDescriptors for named community.
-   * @param community  Community to update
+   * @param communityName  Community to update
    * @param agents     Initial set of targets
    */
-  protected void add(Community community, Set agents) {
-    String communityName = community.getName();
+  protected void add(String communityName, Set agents) {
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de == null) {
-      de = new DescriptorEntry();
-      de.cd = new CommunityDescriptorImpl(agentId, community, uidService.nextUID());
-      de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
+      de = new DescriptorEntry(communityName);
+      CommunityDescriptorImpl cd = new CommunityDescriptorImpl(agentId, null, getUID());
+      de.ra = new RelayAdapter(agentId, cd, cd.getUID());
       descriptors.put(communityName, de);
       addTargets(communityName, agents);
     }
@@ -221,15 +263,13 @@ public class CommunityDistributer extends BlackboardClientComponent {
    * @param ra  RelayAdapter associated with previously created CommunityDescriptor
    */
   protected void add(RelayAdapter ra) {
-    CommunityDescriptor cd = (CommunityDescriptor)ra.getContent();
+    CommunityDescriptorImpl cd = (CommunityDescriptorImpl)ra.getContent();
     String communityName = cd.getName();
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de == null) {
-      de = new DescriptorEntry();
-      de.cd = cd;
+      de = new DescriptorEntry(communityName);
       de.ra = ra;
       descriptors.put(communityName, de);
-      de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
       addTargets(communityName, ra.getInterestedAgents());
     }
     if (wakeAlarm == null) {
@@ -262,7 +302,8 @@ public class CommunityDistributer extends BlackboardClientComponent {
       de.ra.getInterestedAgents().addAll(targets);
       Set agentsToAdd = new HashSet(targets);
       for (Iterator it = agentsToAdd.iterator(); it.hasNext(); ) {
-        findNodeTargets((MessageAddress)it.next(), communityName);
+        String targetName = (String)it.next();
+        findNodeTargets(MessageAddress.getMessageAddress(targetName), communityName);
       }
     }
   }
@@ -273,8 +314,8 @@ public class CommunityDistributer extends BlackboardClientComponent {
    * @param agentNames  Targets to remove
    */
   protected void removeTargets(String communityName, Set agentNames) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("removeTargets:" +
+    if (logger.isDetailEnabled()) {
+      logger.detail("removeTargets:" +
                    " community=" + communityName +
                    " agents=" + agentNames);
     }
@@ -318,12 +359,29 @@ public class CommunityDistributer extends BlackboardClientComponent {
   /**
    * Notify targets of a change in community state.
    * @param communityName  Name of changed community
+   */
+  protected void update(String communityName) {
+    if (logger.isDetailEnabled()) {
+      logger.detail("update:" +
+                   " community=" + communityName);
+    }
+    DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
+    if (de != null) {
+      de.didChange = true;
+      wakeAlarm.expire();
+    }
+  }
+
+  /**
+   * Notify targets of a change in community state.
+   * @param communityName  Name of changed community
    * @param type  Type of change
    * @param what  Entity affected by change
+   * @deprecated
    */
   protected void update(String communityName, int type, String what) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("update:" +
+    if (logger.isDetailEnabled()) {
+      logger.detail("update:" +
                    " community=" + communityName +
                    " type=" + CommunityChangeEvent.getChangeTypeAsString(type) +
                    " whatChanged=" + what);
@@ -331,27 +389,27 @@ public class CommunityDistributer extends BlackboardClientComponent {
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
       de.didChange = true;
-      de.changeType = type;
-      de.whatChanged = what;
       wakeAlarm.expire();
     }
   }
 
   /**
    * Get CommunityDescriptor associated with named community.
-   * @param communityName
+   * @param communityName Name of community
    * @return  CommunityDescriptor for community
    */
   protected CommunityDescriptor get(String communityName) {
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
-    return de != null ? de.cd : null;
+    return de != null ? (CommunityDescriptor)de.ra.getContent() : null;
   }
 
   /**
    * Find an agents node by looking in WhitePages.  Add node address to
    * Relay target set.
+   * @param agentId  MessageAddress of agent
+   * @param communityName Name of associated community
    */
-  private void findNodeTargets(final MessageAddress agentName,
+  private void findNodeTargets(final MessageAddress agentId,
                                final String communityName) {
     Callback cb = new Callback() {
       public void execute(Response resp) {
@@ -372,13 +430,13 @@ public class CommunityDistributer extends BlackboardClientComponent {
                   }
                 }
               } else {
-                if (logger.isDebugEnabled()) {
-                  logger.debug("AddressEntry is null: agent=" + agentName);
+                if (logger.isDetailEnabled()) {
+                  logger.detail("AddressEntry is null: agent=" + agentId);
                 }
                 DescriptorEntry de = (DescriptorEntry) descriptors.get(
                     communityName);
                 if (de != null) {
-                  de.unresolvedAgents.add(agentName);
+                  de.unresolvedAgents.add(agentId);
                 }
               }
             } catch (Exception ex) {
@@ -392,7 +450,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
         }
       }
     };
-    whitePagesService.get(agentName.toString(), "topology", cb);
+    whitePagesService.get(agentId.toString(), "topology", cb);
   }
 
   // Find node for any agents which are still unresolved.
@@ -410,12 +468,16 @@ public class CommunityDistributer extends BlackboardClientComponent {
           de.unresolvedAgents.clear();
         }
         for (Iterator it1 = agents.iterator(); it1.hasNext();) {
-          findNodeTargets((MessageAddress)it1.next(), de.cd.getName());
+          findNodeTargets((MessageAddress)it1.next(), de.name);
         }
       }
     }
   }
 
+  /**
+   * Returns current time as a long.
+   * @return long Current time
+   */
   private long now() {
     return System.currentTimeMillis();
   }
@@ -424,6 +486,10 @@ public class CommunityDistributer extends BlackboardClientComponent {
     return "CommunityDistributer: descriptors=" + descriptors.size();
   }
 
+  /**
+   * Timer used to periodically send CommunityDescriptors to interested
+   * nodes/agents.
+   */
   private class WakeAlarm implements Alarm {
   private long expiresAt;
   private boolean expired = false;
@@ -436,7 +502,10 @@ public class CommunityDistributer extends BlackboardClientComponent {
   public synchronized void expire() {
     if (!expired) {
       expired = true;
-      blackboard.signalClientActivity();
+      resolveAgents();
+      publishDescriptors();
+      wakeAlarm = new WakeAlarm(now() + updateInterval);
+      alarmService.addRealTimeAlarm(wakeAlarm);
     }
   }
   public boolean hasExpired() {
