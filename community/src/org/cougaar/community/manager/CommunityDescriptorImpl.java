@@ -103,7 +103,7 @@ public class CommunityDescriptorImpl
     CommunityDescriptor cd = (CommunityDescriptorImpl)content;
     Community updatedCommunity = cd.getCommunity();
     this.community.setAttributes(updatedCommunity.getAttributes());
-    ((CommunityImpl)this.community).setEntities(updatedCommunity.getEntities());
+    ((CommunityImpl)this.community).setEntities(new ArrayList(updatedCommunity.getEntities()));
     return Relay.CONTENT_CHANGE;
   }
 
