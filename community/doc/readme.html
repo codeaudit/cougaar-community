@@ -1,0 +1,549 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Community Service</title>
+  <meta http-equiv="content-type"
+ content="text/html; charset=ISO-8859-1">
+</head>
+<body>
+<h1>Community Service</h1>
+<h2>1. &nbsp;Overview</h2>
+Communities provide a way of segmenting societies into distinct groups
+of entities organized for specific purposes. &nbsp;A typical use of
+communities is to define a group of agents that will be used as a
+destination address  for a Blackboard Relay. &nbsp;In addition to
+providing a way to define simple  groups of agents, communities and
+their associated entities may also be associated  with attributes that
+can be used to select a specific community member or  subgroup. &nbsp;
+For instance, given the community defined below, an Attribute  Based
+Address (ABA) could be defined to send a Relay to all members in
+CommunityA using the "Role=Member" criteria. &nbsp;Alternately, the ABA
+could be addressed  to those members having the "Role=Role-A" attribute
+in which case only Agent-2 and Agent-3 would receive the Relay.<br>
+<br>
+<small><code>&nbsp; &lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>
+&nbsp; &lt;Communities&gt;<br>
+&nbsp; &nbsp; &lt;Community Name="CommunityA"&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-1"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-2"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role"
+Value="Role-A" /&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;/Entity&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-3"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Role-A"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Role-C"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-4"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Role-B"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Role-C"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+&nbsp; &nbsp; &lt;/Community&gt;<br>
+&nbsp; &lt;/Communities&gt;<br>
+</code></small> <br>
+In addition to agents, communities may also include other communities.
+The example below shows an XML configuration for a nested community.
+&nbsp;In this example CommunityA contains 4 agents and one nested
+community (CommunityB). &nbsp;Community B contains 2 member agents and
+it also has a nested community (CommunityC) which contains 2 agents.
+&nbsp;The search capabilities provided by the Community Service support
+both single-level and recursive searches. &nbsp;Using this example a
+search for member agents in CommunityA would return
+[Agent-1,Agent-2,Agent-3,Agent-4] if the <i>recursiveSearch </i>parameter
+was set to false. &nbsp;If the parameter was set to true all 8 agents
+contained in CommunityA, CommunityB, and CommunityC would be returned.
+&nbsp;Note that when using ABAs a recusive search is automatically
+performed in agent selection.<br>
+<br>
+<small><code>&nbsp; &lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>
+&nbsp; &lt;Communities&gt;<br>
+&nbsp; &nbsp; &lt;Community Name="CommunityA"&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-1"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-2"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;/Entity&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-3"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-4"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+</code><code> &nbsp; &nbsp; &nbsp; &lt;Entity Name="CommunityB"&gt;<br>
+</code><code> &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute
+ID="EntityType" Value="Community" /&gt;<br>
+</code><code> &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role"
+Value="Member" /&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+</code><code> &nbsp; &nbsp; &lt;/Community&gt;<br>
+</code><code> &nbsp; &nbsp; &lt;Community Name="CommunityB"&gt;<br>
+</code><code>&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-5"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+</code><code>&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-6"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+</code><code></code><code> &nbsp; &nbsp; &nbsp; &lt;Entity
+Name="CommunityC"&gt;<br>
+</code><code> &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute
+ID="EntityType" Value="Community" /&gt;<br>
+</code><code> &nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role"
+Value="Member" /&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+</code><code> &nbsp;</code><code> &nbsp; &lt;/Community&gt;<br>
+</code><code></code><code> &nbsp; &nbsp; &lt;Community
+Name="CommunityC"&gt;<br>
+</code><code>&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-7"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+</code><code>&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-8"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+</code><code></code><code></code><code></code><code> &nbsp;</code><code>
+&nbsp; &lt;/Community&gt;<br>
+</code><code> &nbsp; &lt;/Communities&gt;</code><br>
+</small>
+<h2>2. &nbsp;Forming communities</h2>
+<h3>2.1. &nbsp;Startup communities</h3>
+During society startup communities may automatically be created using a
+startup configuration. &nbsp;Depending on how the socieity is started,
+the community configuration is either obtained from the CSMART
+configuration database or an XML file found on the Cougaar config path.
+&nbsp;When running from CSMART the community definition associated with
+the experiment to be run is used. &nbsp;If running a society from ".ini"
+or ".xml" society definition files a "communities.xml" file is located
+using the Cougaar config path and used to create/populate startup
+communities.<br>
+<h3>2.2. &nbsp;Ad-hoc communities</h3>
+In addition to the initial communities defined in a startup
+configuration, communities may also be created at run time. &nbsp;The
+Community Service API provides <span style="font-style: italic;">join</span>
+and <span style="font-style: italic;">leave</span> operations supporting
+the capability to dynamically create and populate communities. &nbsp;For
+example, suppose that Agent-1 wanted to create a new community (i.e.,
+CommunityX), it simply needs to publish an
+org.cougaar.community.request.JoinCommunity object to its blackboard.
+&nbsp;If CommunityX did not exist it would be created and Agent-1 would
+automatically be added to the community and associated with the
+"Role=Member" attribute. &nbsp;If the community already had already been
+created by another agent, the Join request would be forwarded to the
+communities Community Manager and Agent-1 would be added to the
+community.<br>
+<h3>2.3. &nbsp;Community definition</h3>
+Communities are defined using a couple simple constructs. &nbsp;<br>
+<ul>
+  <li>At the top-level a Community consists of a unique name, zero or
+more attributes, and zero or more child entities.</li>
+  <li>Each child entity has a unique name and is associated with zero
+or more attributes. &nbsp;Child entities are described using their
+associated attributes. &nbsp;The attributes "EntityType" and "Role" have
+special meaning when constructing communities. &nbsp;The attribute
+"EntityType" will define whether the entity is an agent or a nested
+community. &nbsp;The value for this attribute should either be "Agent"
+or "Community". &nbsp;If the attribute is not specified the value
+"Agent" is assumed. &nbsp;Similarily, the attribute "Role" is used to
+identify the type of relationship(s) that the child entity has with the
+parent community. &nbsp;In most cases the value "Member" witll be
+associated with the "Role" attribute signifying that the entity is a
+member of the parent community. &nbsp;No default values are assigned to
+"Role" attributes. &nbsp;This value must be specified if the Role
+attribute is to be used in a search filter.</li>
+  <li>Community and entity ttributes are defined using the
+javax.naming.directory class which defines an attribute set consisting
+of zero or more javax.naming.directory.Attribute instances. &nbsp;An
+Attribute consists of an identifier and zero or more values.&nbsp;</li>
+</ul>
+The folowing code fragment defines the DTD rules for defining a
+community in XML.<br>
+<div style="margin-left: 40px;"><small><code> &lt;?xml version="1.0"
+encoding="UTF-8"?&gt;</code></small><br>
+<small><code> &lt;!DOCTYPE Communities [</code></small><br>
+<small><code> &lt;!ELEMENT Communities (Community+)&gt;</code></small><br>
+<small><code> &lt;!ELEMENT Community (Attribute*, Entity*)&gt;</code></small><br>
+<small><code> &lt;!ATTLIST Community Name CDATA #REQUIRED&gt;</code></small><br>
+<small><code></code></small><small><code></code></small><small><code>&lt;!ELEMENT
+Entity (Attribute*)&gt;</code></small><br>
+<small><code> &lt;!ATTLIST Entity Name CDATA #REQUIRED&gt;</code></small><small><code></code></small><br>
+<small><code> &lt;!ELEMENT Attribute EMPTY&gt;</code></small><br>
+<small><code> &lt;!ATTLIST Attribute ID CDATA #REQUIRED&gt;</code></small><br>
+<small><code> &lt;!ATTLIST Attribute Value CDATA #REQUIRED&gt;</code></small><br>
+<small><code> ]&gt;</code></small><br>
+<small><code> </code></small></div>
+<h2>3. &nbsp;Community API</h2>
+This section defines the programming inferface for interactiing with
+the community services. &nbsp;A user may interact with the community
+infrastructure using a blackboard publish/subscribe based interface or
+may elect to use the methods provided by the CommunityService interface
+(org.cougaar.core.service.community.CommunityService).<br>
+<h3>3.1. &nbsp;Blackboard Publish/Subscribe Interface</h3>
+Using this mechanism all interaction with the community service
+infrastructure is performed via the publication of CommunityRequest
+sub-classes to the agents local blackboard. &nbsp;These requests are
+handled by the CommunityPlugin which performs all remote operations with
+the White Pages and associated Community Managers required to process
+the request. &nbsp;The results of the request are returned in a
+CommunityResponse object that is contained in the original request.
+&nbsp;The basic steps involved in a community request are described
+below:
+<ol>
+  <li>Requester subscribes to CommunityRequest changes.</li>
+  <li>Requester creates an appropriate CommunityRequest (such as a
+JoinCommunity request) and does a publishAdd to blackboard to initiate
+processing.</li>
+  <li>The CommunityPlugin receives the request and processes. &nbsp;In
+most cases this involves interaction with the White Pages and one or
+more remote Community Managers. &nbsp;Once the required processing has
+been completed by the CommunityPlugin, a CommunityResponse is added to
+the original request and a publishChange is performed to notify the
+requester.</li>
+  <li>The requester receives notification of the request completion via
+its CommunityRequest subscription. &nbsp;The results are obtained using
+the requests "getResponse" method which returns a CommunityResponse
+object containing the request status and an applicable content object.
+&nbsp;For most requests this will be an instance of the
+org.cougaar.core.service.community.Community class.</li>
+  <li>Once the response has been retrieved, the requester should do a
+publishRemove to remove the request from the blackboard.</li>
+  <li>For those requests returning a Community object the
+CommunityPlugin will also add a reference to this object to the local
+blackboard. &nbsp;The blackboard copy will be automatically updated as
+changes occur in the associated community. &nbsp; Components requiring
+asynchronous notification of changes in parent communities or
+communities of interest need only subscribe to changes in blackboard
+Community objects.<br>
+  </li>
+</ol>
+<h4>3.1.1. &nbsp;Community descriptor objects </h4>
+An org.cougaar.core.service.community.Community object is added to the
+blackboard for each community with which an agent has an association.
+&nbsp;One kind of association is a community membership. &nbsp;When an
+agent joins a community, either explicitly via a JoinCommunity request
+or implicitly via a startup cummunity, a Community object describing the
+community is automatically added to the requesters blackboard.
+&nbsp;This Community class contains information about the community
+including identification of all entities (agents and nested communities)
+that make up the community and their attributes. &nbsp;Another common
+association is a community that is used in an ABA. &nbsp;When a Relay is
+published with an ABA, the Community object(s) required to completely
+resolve the ABA are automatically retrieved from the applicable
+Community Managers and placed on the local blackboard. &nbsp;A component
+may also request the retrieval of a Community object from its Community
+Manager using the GetCommunity request. &nbsp;Once a Community object
+has been obtained from the Community Manager the contents are
+automatically updated whenever changes occur in the associated
+community. &nbsp;Components requiring notifications of changes in parent
+communities or in communities of interest simply need to subscribe to
+changes in Community objects.<br>
+<h4>3.1.2. &nbsp;Community requests</h4>
+The package org.cougaar.community.requests contains the following
+classes that are used to request specific community operations:<br>
+<br>
+<table border="1" style="width: 100%;" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="width: 150px;">Request Type</th>
+      <th style="vertical-align: middle; width: 60%;">Description</th>
+      <th style="vertical-align: top; width: 40%;">Response Content</th>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-style: italic;">CreateCommunity</span><br>
+      </td>
+      <td style="vertical-align: top;">Request to create a community.
+&nbsp;If the target community already exists a copy of the existing
+Community object describing the communtiy is returned in the response.
+&nbsp;If the community does not exist it is created and the requester
+becomes the community manager. &nbsp;The requester is not automatically
+added as a community member. &nbsp; If the requester wishes to be a
+member of the created community the JoinCommunity request should be
+used to create/join the community in a single request.<br>
+      </td>
+      <td style="vertical-align: top;">CommunityResponse containing
+request status and Community object of community</td>
+    </tr>
+    <tr>
+      <td width="150" style="font-style: italic;">JoinCommunity</td>
+      <td style="vertical-align: top;" width="80%">Request to join (and
+optionally create) a community. &nbsp;If the target community currently
+exists the JoinCommunity request is forwarded to community manager for
+dispositioning. &nbsp;If the target community does not exist when the
+request is submitted, the requesting agent may optionally create the
+community and become the Community Manager. &nbsp;After an entity (agent
+or community) is added to a community, the Community Manager will update
+the JoinCommunity request with a CommunityResponse indicating the result
+of the request. &nbsp;In this version of the Community Service all join
+requests are honored. &nbsp;Future versions a community may be
+associated with a Membership Manager that will be capable evaluating
+join requests and granting/denying membership based on community
+specific criteria. &nbsp;The response will also contain a Community that
+fully describes the attributes and entities associated with the
+community. &nbsp;After a new member is added to the community the
+Community Manager updates the Community objects previously published to
+the blackboards of all community members and interested agents. </td>
+      <td style="vertical-align: top;">CommunityResponse containing
+request status and Community object of joined community<br>
+      </td>
+    </tr>
+    <tr>
+      <td width="150" style="font-style: italic;">LeaveCommunity</td>
+      <td style="vertical-align: top;" width="80%">Request to leave a
+community. &nbsp;The LeaveCommunity request is forwarded to the
+CommunityManager for processing. &nbsp;As with the JoinCommunity
+request, a CommunityResponse object is added to the initial request by
+the Community Manager when completed and the Community objects on
+member/interested agent blackboards are updated to reflect the
+membership change.<br>
+      </td>
+      <td style="vertical-align: top;">CommunityResponse containing
+request status and Community object of community </td>
+    </tr>
+    <tr>
+      <td width="150" style="font-style: italic;">ModifyAttributes</td>
+      <td style="vertical-align: top;" width="80%">Request to modify
+the attributes of a community or child entity. &nbsp;The
+ModifyAttributes request is forwarded to the CommunityManager for
+processing. &nbsp;As with the JoinCommunity and LeaveCommunity requests,
+a CommunityResponse object is added to the initial request by the
+Community Manager when completed and the Community objects on
+member/interested agent blackboards are updated to reflect the attribute
+change. </td>
+      <td style="vertical-align: top;">CommunityResponse containing
+request status and Community object of target community </td>
+    </tr>
+    <tr>
+      <td width="150" style="font-style: italic;">SearchCommunity</td>
+      <td style="vertical-align: top;" width="80%">Request to search a
+community for entities matching specified search criteria. &nbsp;The
+criteria includes a JNDI filter consisting of a logical expression that
+defines the entity attributes to be matched. &nbsp;Other criteria
+includes a results qualifier that defines the type of entitiies to be
+selected (i.e., agents only) and a Recurse flag that specifies whether
+the search should be applied to nested communities. </td>
+      <td style="vertical-align: top;">Set of Entity objects matching
+criteria<br>
+      </td>
+    </tr>
+    <tr>
+      <td width="150" style="font-style: italic;">GetCommunity</td>
+      <td style="vertical-align: top;" width="80%">Request to obtain a
+Community object from the communities Community Manager. &nbsp;The
+Community object is returned in the CommunityReponse that is added to
+the original request. &nbsp;In addition, the Community Manager will
+remotely add the Community object to the requesters blackboard and
+update it as changes occur.<br>
+      </td>
+      <td style="vertical-align: top;">Community object of target
+community or null if community could not be found in timeout period<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<ol>
+</ol>
+<h3>3.2. &nbsp;CommunityService interface</h3>
+In addition to the publish/subscribe interface described in section
+3.1, community service operations may also be performed using the
+org.cougaar.core.service.community.CommunityService interface that can
+be obtained from a components Service Broker. &nbsp;The CommunityService
+interface provides a set of methods that directly correspond to the
+Community Request objects described in section 3.1.2. &nbsp;All methods
+are implemented as non-blocking calls. &nbsp;Responses are returned
+using a callback to a CommunityResponseListener instance. &nbsp;For
+backwards compatibility &nbsp;all methods contained in the previous
+(Name Server based) CommunityService implementation are still supported
+(although deprecated) and provide a blocking alternative to these
+operations. &nbsp;The use of the blocking methods is strongly
+discouraged and the deprecated methods will likely be removed from the
+CommunityService interface in Cougaar 10.6.<br>
+<h3>3.3. &nbsp;Community search filter syntax &nbsp;</h3>
+<span style="font-style: italic;">Information in this section was
+extracted from Sun's JNDI Tutorial (</span><a
+ href="http://java.sun.com/products/jndi/tutorial/basics/directory/filter.html">http://java.sun.com/products/jndi/tutorial/basics/directory/filter.html</a><span
+ style="font-style: italic;">).</span><br>
+<br>
+The search filter syntax is basically a logical expression in prefix
+notation (that is, the logical operator appears before its arguments).
+The following table lists the symbols used for creating filters.
+<p>
+<table border="1" cellpadding="3" width="85%">
+  <tbody>
+    <tr>
+      <th width="30%">Symbol</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td> &amp; </td>
+      <td> conjunction (i.e., <em>and</em> -- all in list must be true) </td>
+    </tr>
+    <tr>
+      <td> | </td>
+      <td> disjunction (i.e., <em>or</em> -- one or more alternatives
+must be true) </td>
+    </tr>
+    <tr>
+      <td> ! </td>
+      <td> negation (i.e., <em>not</em> -- the item being negated must
+not be true) </td>
+    </tr>
+    <tr>
+      <td> = </td>
+      <td> equality (according to the matching rule of the attribute) </td>
+    </tr>
+    <tr>
+      <td> ~= </td>
+      <td> approximate equality (according to the matching rule of the
+attribute) </td>
+    </tr>
+    <tr>
+      <td> &gt;= </td>
+      <td> greater than (according to the matching rule of the
+attribute) </td>
+    </tr>
+    <tr>
+      <td> &lt;= </td>
+      <td> less than (according to the matching rule of the attribute) </td>
+    </tr>
+    <tr>
+      <td> =* </td>
+      <td> presence (i.e., the entry must have the attribute but its
+value is irrelevant) </td>
+    </tr>
+    <tr>
+      <td> * </td>
+      <td> wildcard (indicates zero or more characters can occur in that
+position); used when specifying attribute values to match </td>
+    </tr>
+    <tr>
+      <td> \ </td>
+      <td> escape (for escaping '*', '(', or ')' when they occur inside
+an attribute value) </td>
+    </tr>
+  </tbody>
+</table>
+</p>
+<p> Each item in the filter is composed using an attribute identifier
+and either an attribute value or symbols denoting the attribute value.
+For example, the item <tt>"Role=Member"</tt> means that the <tt>"Role"</tt>
+attribute must have the attribute value <tt>"Member" </tt>and the item <tt>"FuelProvider=*"</tt>
+indicates that the <tt>"FuelProvider"</tt> attribute must be present. </p>
+<p> Each item must be enclosed within a set of parentheses, as in <tt>"(Role=Member)"</tt>.
+These items are composed using logical operators such as "&amp;"
+(conjunction) to create logical expressions, as in <tt>"(&amp;
+(Role=Member) (FuelProvider=*))"</tt>. </p>
+<p> Each logical expression can be further composed of other items that
+themselves are logical expressions, as in <tt>"(| (&amp; (Role=Member)
+(FuelProvider=*)) (Unit=L*))"</tt>. This last example is requesting
+either entries that have both a <tt>"Role"</tt> attribute of <tt>"Member"</tt>
+and the <tt>"FuelProvider"</tt> attribute or entries whose <tt>"Unit"</tt>
+attribute begins with the letter "L." </p>
+<p> For a complete description of the syntax, see <a
+ href="http://www.ietf.org/rfc/rfc2254.txt">RFC 2254</a>. </p>
+<h3>3.4. &nbsp;Activation of community service support</h3>
+The only requirement for using community services is that the
+org.cougaar.community.CommunityPlugin must be loaded in all agents
+wishing to participate in a community-enabled society. <br>
+<h2>4. &nbsp;Community Managers</h2>
+A community manager is associated with each community. &nbsp;The
+community manager is responsible for maintaining the master copy of the
+Community instance used to define the communities entities and
+attributes. &nbsp;The community manager is also responsible for
+dessiminating a copy of this Community descriptor to child agents and
+other interested agents (for instance agents that use the community as
+an ABA target). &nbsp;Each community has a single community manager.
+&nbsp;The community manager may be explictily specified or may be
+dynamically selected at runtime. &nbsp;To explicitly specify a community
+manager the community-level attribute "CommunityManager" should be set
+to the name of the designated agent. &nbsp;For instance, in the
+following example Agent-1 is the designated community manager for
+CommunityA. &nbsp;If the CommunityManager attribute is not specified the
+first member agent that is started will assume this role.<br>
+<br>
+<small><code>&nbsp; &lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>
+&nbsp; &lt;Communities&gt;<br>
+&nbsp; &nbsp; &lt;Community Name="CommunityA"&gt;<br>
+</code></small><small><code> &nbsp; &nbsp;&nbsp; &nbsp;&lt;Attribute
+ID="CommunityManager" Value="Agent-1" /&gt;<br>
+</code></small><small><code> &nbsp; &nbsp; &nbsp; &lt;Entity
+Name="Agent-1"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-2"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;/Entity&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-3"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-4"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+&nbsp; &nbsp; &lt;/Community&gt;<br>
+&nbsp; &lt;/Communities&gt;<br>
+<br>
+</code></small> If a community manager should be dynamically selected
+from a subset of the community members, the attribute "CanBeManager" can
+be associated with individual member agents to indicate whether the
+agent is capable of being the community manager. &nbsp;The value of
+"False" or "No" is used to inhibit selection of an agent. &nbsp;If the
+attribute is not specified its value is assumed to be "True". &nbsp;For
+instance, in the following example the community manager for CommunityA
+will be selected from agents 1 and 3. <br>
+<br>
+<small><code>&nbsp; &lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>
+&nbsp; &lt;Communities&gt;<br>
+&nbsp; &nbsp; &lt;Community Name="CommunityA"&gt;</code></small><small><code> <br>
+</code></small><small><code> &nbsp; &nbsp; &nbsp; &lt;Entity
+Name="Agent-1"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-2"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+</code></small><small><code> &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;
+&lt;Attribute ID="CanBeManager" Value="False" /&gt;<br>
+</code></small><small><code> &nbsp;&nbsp; &nbsp;&nbsp; &lt;/Entity&gt;<br>
+&nbsp;&nbsp; &nbsp;&nbsp; &lt;Entity Name="Agent-3"&gt;<br>
+&nbsp; &nbsp; &nbsp;&nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+</code></small><small><code> &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;
+&lt;Attribute ID="CanBeManager" Value="True" /&gt;<br>
+</code></small><small><code></code></small><small><code> &nbsp; &nbsp;
+&nbsp; &lt;/Entity&gt;<br>
+&nbsp; &nbsp; &nbsp; &lt;Entity Name="Agent-4"&gt;<br>
+&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &lt;Attribute ID="Role" Value="Member"
+/&gt;<br>
+</code></small><small><code> &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;
+&lt;Attribute ID="CanBeManager" Value="False" /&gt;<br>
+</code></small><small><code></code></small><small><code> &nbsp;
+&nbsp;&nbsp; &nbsp;&lt;/Entity&gt;<br>
+&nbsp; &nbsp; &lt;/Community&gt;<br>
+&nbsp; &lt;/Communities&gt;</code></small><br>
+<h2><br>
+</h2>
+</body>
+</html>
