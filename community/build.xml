@@ -152,6 +152,9 @@
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
         </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
