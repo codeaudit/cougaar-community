@@ -425,7 +425,7 @@
     <!-- ========================================================== -->
     <!-- Compiles the Module Code			                -->
     <!-- ========================================================== -->	
-    <target name="compile" depends="prepare, defrunner, really-compile, rmic-source"
+    <target name="compile" depends="prepare, defrunner, custom.codegen, really-compile, rmic-source"
 	    description="Compile the source Code"> </target>
 
     <!-- See if the jarfile needs recompiling -->
@@ -475,6 +475,12 @@
     </target>
     <target name="really.install" depends="install.jar, install.lib">
     </target>
+    <target name="custom.codegen" if="has.custom.xml">
+      <ant antfile="${custom.xml}" dir="${MODSOURCE}" target="codegen" inheritAll="true"/>
+    </target>
+    <target name="custom.clean" if="has.custom.xml">
+      <ant antfile="${custom.xml}" dir="${MODSOURCE}" target="clean" inheritAll="true"/>
+    </target>
     <target name="pre.install" if="has.custom.xml">
       <ant antfile="${custom.xml}" dir="${MODSOURCE}" target="pre.install" inheritAll="true"/>
     </target>
@@ -505,7 +511,7 @@
     <!-- ========================================================== -->
     <!-- Clean up all built code                    	-->
     <!-- ========================================================== -->
-    <target name="clean" depends="clean-gencode" description="Delete compiled code">
+    <target name="clean" depends="clean-gencode, custom.clean" description="Delete compiled code">
       <delete dir="${module.classes}" />
       <delete>
 	<fileset dir="${target.dir}" includes="**/${module.jar}" />
