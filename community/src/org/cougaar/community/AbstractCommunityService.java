@@ -190,7 +190,8 @@ public abstract class AbstractCommunityService
     }
     switch (entityType) {
       case AGENT:
-        final Agent agent = new AgentImpl(agentName, entityAttrs);
+        final Agent agent =
+            new AgentImpl(entityName != null ? entityName : agentName, entityAttrs);
         final CommunityResponseListener wcrl =
             wrapResponse(Request.JOIN, crl, communityName, agent);
         if (createIfNotFound) {
