@@ -102,6 +102,8 @@ public class CommunityDescriptorImpl
   public int updateContent(Object content, Relay.Token token) {
     CommunityDescriptor cd = (CommunityDescriptorImpl)content;
     Community updatedCommunity = cd.getCommunity();
+    setWhatChanged(cd.getWhatChanged());
+    setChangeType(cd.getChangeType());
     this.community.setAttributes(updatedCommunity.getAttributes());
     ((CommunityImpl)this.community).setEntities(new ArrayList(updatedCommunity.getEntities()));
     return Relay.CONTENT_CHANGE;

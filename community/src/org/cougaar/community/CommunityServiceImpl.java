@@ -488,7 +488,8 @@ public class CommunityServiceImpl extends BlackboardClientComponent
           Collection ancestors = cache.getNestedCommunityNames(community);
           for (Iterator it = ancestors.iterator(); it.hasNext(); ) {
             String nestedCommunityName = (String) it.next();
-            if (cache.getListeners(nestedCommunityName).isEmpty()) {
+            if (cache.contains(nestedCommunityName) &&
+                cache.getListeners(nestedCommunityName).isEmpty()) {
               Community nestedCommunity = cache.get(nestedCommunityName);
               if (!nestedCommunity.hasEntity(agentId.toString())) {
                 queueCommunityRequest(new ReleaseCommunity(nestedCommunityName,

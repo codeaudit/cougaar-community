@@ -161,6 +161,7 @@ public class CommunityManagerRequestImpl
       case CommunityManagerRequest.LEAVE: return "LEAVE";
       case CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR: return "GET_COMMUNITY_DESCRIPTOR";
       case CommunityManagerRequest.MODIFY_ATTRIBUTES: return "MODIFY_ATTRIBUTES";
+      case CommunityManagerRequest.RELEASE_COMMUNITY_DESCRIPTOR: return "RELEASE_COMMUNITY_DESCRIPTOR";
     }
     return "INVALID_VALUE";
   }
@@ -173,7 +174,10 @@ public class CommunityManagerRequestImpl
   public String toString() {
     return "request=" + getRequestTypeAsString() +
            " community=" + communityName +
-           " entity=" + (entity == null ? "null" : entity.getName());
+           " entity=" + (entity == null ? "null" : entity.getName()) +
+           " resp=" + resp +
+           " source=" + this.getSource() +
+           " uid=" + uid;
   }
 
   public boolean equals(Object o) {
@@ -192,9 +196,33 @@ public class CommunityManagerRequestImpl
       if ((mods == null && cmrAttrMods != null) ||
           (mods != null && cmrAttrMods == null))
         return false;
-      if (mods != null && !mods.equals(cmrAttrMods))
-          return false;
+      if (mods != null) {
+        if (!modsEqual(mods, cmrAttrMods)) return false;
+      }
     return true;
+  }
+
+  /**
+   * Compares to ModificationItem arrays.
+   * @param m1 ModificationItem array 1
+   * @param m2 ModificationItem array 2
+   * @return True if arrays are equivalent
+   */
+  private boolean modsEqual(ModificationItem[] m1, ModificationItem[] m2) {
+    if (m1.length != m2.length) return false;
+    boolean isEqual = true;
+    for (int i = 0; i < m1.length; i++) {
+      if (isEqual == false) break;
+      isEqual = false;
+      for (int j = 0; j < m2.length; j++) {
+        if (m1[i].getModificationOp() == m2[j].getModificationOp() &&
+            m1[i].getAttribute() != null && m1[i].getAttribute().equals(m2[j].getAttribute())) {
+          isEqual = true;
+          break;
+        }
+      }
+    }
+    return isEqual;
   }
 
 }

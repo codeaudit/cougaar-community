@@ -91,7 +91,7 @@ public class CommunityPlugin extends ComponentPlugin {
 
   // Defines how often the CommunityRequestQueue is checked for pending requests
   public static final String CMR_TIMER_INTERVAL_PROPERTY = "org.cougaar.community.request.interval";
-  private static long CMR_TIMER_INTERVAL = 10 * 1000;
+  private static long CMR_TIMER_INTERVAL = 30 * 1000;
 
   // Defines duration between updates from community manager before a cache
   // refresh is requested.
@@ -249,10 +249,10 @@ public class CommunityPlugin extends ComponentPlugin {
     // Periodically check request queue and validate community memberships
     if ((wakeAlarm != null) &&
         ((wakeAlarm.hasExpired()))) {
+      checkForBBOrphans();
       checkRequestQueues();
       validateCommunityMemberships();
       validateCompletedRequests();
-      //logger.info("queuedManagerRequests=" + cmrQueue.size() + " " + cache.getStats());
     }
 
     // Gets CommunityDescriptors from community managers.  A CommunityDescriptor
@@ -281,12 +281,12 @@ public class CommunityPlugin extends ComponentPlugin {
     // CommunityRelayPredicate.  This additional logic is needed because an
     // agent cannot be both the source and target of a Relay.
     Collection communityManagerRequests = communityManagerRequestSub.getChangedCollection();
-    for (Iterator it = communityManagerRequests.iterator(); it.hasNext();) {
-      CommunityManagerRequest cmr = (CommunityManagerRequest)it.next();
-      if (cmr.getSource() == null) {  // is this agent also the source?
-        if (cmr.getResponse() != null) {      // if so, this must be a response
-          processCommunityManagerResponse(cmr, (CommunityResponse)cmr.getResponse());
-        }
+    for (Iterator it = communityManagerRequests.iterator(); it.hasNext(); ) {
+      CommunityManagerRequest cmr = (CommunityManagerRequest) it.next();
+      //logger.debug("CommunityResponse: CommunityManagerRequest=" + cmr);
+      if (cmr.getResponse() != null) { // if so, this must be a response
+        processCommunityManagerResponse(cmr, (CommunityResponse) cmr.getResponse());
+        blackboard.publishRemove(cmr);
       }
     }
 
@@ -318,45 +318,79 @@ public class CommunityPlugin extends ComponentPlugin {
       } else if (ra.getContent() instanceof CommunityManagerRequest) {
         // CommunityManagerRequest response
         CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
-        processCommunityManagerResponse(cmr, (CommunityResponse)ra.getResponse());
+        if (ra.getResponse() != null) {
+          processCommunityManagerResponse(cmr, (CommunityResponse) ra.getResponse());
+          blackboard.publishRemove(ra);
+        }
       }
     }
+
     communityRelays = communityRelaySub.getRemovedCollection();
     for (Iterator it = communityRelays.iterator(); it.hasNext();) {
       RelayAdapter ra = (RelayAdapter)it.next();
       if (ra.getTargets().contains(agentId)) {
         Object content = ra.getContent();
         if (content instanceof CommunityManagerRequest) {
-          //processRemovedCommunityManagerRequest((CommunityManagerRequest)content);
         } else if(content instanceof CommunityDescriptor){
           processRemovedCommunityDescriptor((CommunityDescriptor)content);
         }
       }
     }
 
-    // Get community requests published by local components.  Either process the
-    // request using Community info in local cache or queue request
-    // for appropriate community manager.  The query method is used rather than
-    // a subscription due to a problem documented in bug 3371.  See comments
-    // for "isNewRequest" method for additional details.
-    Collection communityRequests = blackboard.query(communityRequestPredicate);
-    if (!communityRequests.isEmpty()) {
-      for (Iterator it = communityRequests.iterator(); it.hasNext();) {
-        CommunityRequest cr = (CommunityRequest)it.next();
-        if (cr.getResponse() == null && isNewRequest(cr)) {
-          processCommunityRequest(cr);
+    // Get community requests published by local components.
+    Collection communityRequests = communityRequestSub.getAddedCollection();
+    for (Iterator it = communityRequests.iterator(); it.hasNext(); ) {
+      CommunityRequest cr = (CommunityRequest) it.next();
+      processCommunityRequest(cr);
+    }
+  }
+
+  /**
+   * Check blackboard for orphaned requests/responses.  Occassionally subscriptions
+   * don't get triggered when BB objects are added/changed resulting in orphaned
+   * objects.  The problem is believed to be caused by some sort of BBClientComponent
+   * interaction between the CommunityPlugin and CommunityServiceImpl.  This
+   * problem will need to be addressed in Cougaar-11.  In the meantime the
+   * solution is to periodically check the BB for these orphaned objects.
+   */
+  private void checkForBBOrphans() {
+    // CommunityManagerRequest responses
+    for (Iterator it = blackboard.query(communityManagerRequestPredicate).iterator(); it.hasNext(); ) {
+      CommunityManagerRequest cmr = (CommunityManagerRequest) it.next();
+      if (cmr.getResponse() != null) { // if so, this must be a response
+        processCommunityManagerResponse(cmr, (CommunityResponse) cmr.getResponse());
+        blackboard.publishRemove(cmr);
+      }
+    }
+    // CommunityDescriptor updates
+    for (Iterator it = blackboard.query(communityDescriptorPredicate).iterator(); it.hasNext();) {
+      processChangedCommunityDescriptor((CommunityDescriptor)it.next());
+    }
+    // CommunityRequests
+    for (Iterator it = blackboard.query(communityRequestPredicate).iterator(); it.hasNext(); ) {
+      CommunityRequest cr = (CommunityRequest) it.next();
+      if (cr.getResponse() == null && isNewRequest(cr)) {
+        processCommunityRequest(cr);
+      }
+    }
+    for (Iterator it = blackboard.query(communityRelayPredicate).iterator(); it.hasNext();) {
+      RelayAdapter ra = (RelayAdapter)it.next();
+      if (ra.getContent() instanceof CommunityDescriptor &&
+          ra.getTargets().contains(agentId)) {
+        processChangedCommunityDescriptor((CommunityDescriptor)ra.getContent());
+      } else if (ra.getContent() instanceof CommunityManagerRequest) {
+        // CommunityManagerRequest response
+        CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
+        if (ra.getResponse() != null) {
+          processCommunityManagerResponse(cmr, (CommunityResponse) ra.getResponse());
+          blackboard.publishRemove(ra);
         }
       }
     }
-
   }
 
   /* Determines if a CommunityRequest on blackboard is new.  Used in conjunction
-   with BB "query" method to mimic "getAddedCollection" capability.  This mechanism
-   is used to correct bug 3371 (albiet in a rather ugly way) which was caused
-   by orphaned requests that were published by CommunityServiceImpl but never
-   picked up by this plugins subscription.  The awkward CommunityServiceImpl
-   to Community Plugin interface requires refactoring to eliminate this problem.*/
+   with BB "query" method to mimic "getAddedCollection" capability. */
   private boolean isNewRequest(CommunityRequest cr) {
     CommunityManagerRequestQueue.Entry[] queueEntries =
         cmrQueue.get(CommunityManagerRequestQueue.ALL);
@@ -400,20 +434,19 @@ public class CommunityPlugin extends ComponentPlugin {
       ////////////////////////////////////////////////////
       // Remove Community descriptor from cache
       ////////////////////////////////////////////////////
-      if (cr instanceof ReleaseCommunity) {
-        ReleaseCommunity rc = (ReleaseCommunity) cr;
-        if (cache.contains(rc.getCommunityName()) &&
-            !cache.get(rc.getCommunityName()).hasEntity(agentId.toString())) {
-          CommunityManagerRequest cmr =
-              new CommunityManagerRequestImpl(agentId,
-                                              gcd.getCommunityName(),
-                                              CommunityManagerRequest.
-                                              RELEASE_COMMUNITY_DESCRIPTOR,
-                                              null,
-                                              null,
-                                              uidService.nextUID());
-          queueCommunityManagerRequest(cmr, gcd, gcd.getTimeout());
-        }
+    } else if (cr instanceof ReleaseCommunity) {
+      ReleaseCommunity rc = (ReleaseCommunity) cr;
+      if (cache.contains(rc.getCommunityName()) &&
+          !cache.get(rc.getCommunityName()).hasEntity(agentId.toString())) {
+        CommunityManagerRequest cmr =
+            new CommunityManagerRequestImpl(agentId,
+                                            rc.getCommunityName(),
+                                            CommunityManagerRequest.
+                                            RELEASE_COMMUNITY_DESCRIPTOR,
+                                            null,
+                                            null,
+                                            uidService.nextUID());
+        queueCommunityManagerRequest(cmr, rc, rc.getTimeout());
       }
       ////////////////////////////////////////////////////
       // Create Community
@@ -806,6 +839,9 @@ public class CommunityPlugin extends ComponentPlugin {
                   removeCommunityManagerRequest(cqe.cmr.getUID());
                 }
                 break;
+              case CommunityManagerRequest.RELEASE_COMMUNITY_DESCRIPTOR:
+                removeCommunityManagerRequest(cqe.cmr.getUID());
+                break;
             }
           }
         }
@@ -834,10 +870,10 @@ public class CommunityPlugin extends ComponentPlugin {
                      " id=" + cmr.getUID() +
                      (cqe == null ? " cqe=null" : " cqe.cr=" + cqe.cr));
       }
-      if (cqe != null) {
-        switch (resp.getStatus()) {
-          case CommunityResponse.SUCCESS:
-            updateCommunityDescriptor((CommunityDescriptor)resp.getContent());
+      switch (resp.getStatus()) {
+        case CommunityResponse.SUCCESS:
+          updateCommunityDescriptor( (CommunityDescriptor) resp.getContent());
+          if (cqe != null) {
             final String communityName = cmr.getCommunityName();
             cqe.status = CommunityManagerRequestQueue.COMPLETED;
             cqe.timeout = System.currentTimeMillis() + 60000;
@@ -845,32 +881,42 @@ public class CommunityPlugin extends ComponentPlugin {
               if (myUIDs.contains(cqe.cr.getUID())) {
                 myUIDs.remove(cmr.getUID());
                 blackboard.publishRemove(cqe.cr);
-              } else {
+              }
+              else {
                 cqe.cr.setResponse(new CommunityResponseImpl(resp.SUCCESS,
                     ( (CommunityDescriptor) resp.getContent()).getCommunity()));
                 publishResponse(cqe.cr);
                 cqe.listenerNotified = true;
               }
             }
-            break;
-          case CommunityResponse.FAIL:
-            removeCommunityManagerRequest(cmr.getUID());
-            if (cqe.cr != null) {
-              cqe.cr.setResponse(new CommunityResponseImpl(resp.FAIL, null));
-              publishResponse(cqe.cr);
-            }
-            break;
-        }
+          }
+          break;
+        case CommunityResponse.TIMEOUT:
+          if (cqe != null) {
+            reQueueCommunityManagerRequest(cqe.cmr, cqe.cr, cqe.timeout);
+          }
+          break;
+        case CommunityResponse.FAIL:
+          removeCommunityManagerRequest(cmr.getUID());
+          if (cqe != null && cqe.cr != null) {
+            cqe.cr.setResponse(new CommunityResponseImpl(resp.FAIL, null));
+            publishResponse(cqe.cr);
+          }
+          break;
       }
     }
   }
 
   protected void processNewCommunityDescriptor(CommunityDescriptor cd) {
     if (logger.isDebugEnabled()) {
-      logger.debug("Received added CommunityDescriptor" +
-        " source=" + cd.getSource() +
-        " target=" + agentId +
-        " community=" + cd.getName());
+      logger.debug("Received new CommunityDescriptor" +
+                   " source=" + cd.getSource() +
+                   " target=" + agentId +
+                   " community=" + cd.getName() +
+                   " type=" + (cd.getChangeType() < 0
+                               ? "NO_CHANGE"
+                               : CommunityChangeEvent.getChangeTypeAsString(cd.getChangeType())) +
+                   " what=" + cd.getWhatChanged());
     }
     updateCommunityDescriptor(cd);
   }
@@ -878,49 +924,49 @@ public class CommunityPlugin extends ComponentPlugin {
   protected void processChangedCommunityDescriptor(CommunityDescriptor cd) {
     if (logger.isDebugEnabled()) {
       logger.debug("Received changed CommunityDescriptor" +
-        " source=" + cd.getSource() +
-        " target=" + agentId +
-        " community=" + cd.getName() +
-        " type=" + CommunityChangeEvent.getChangeTypeAsString(cd.getChangeType()) +
-        " whatChanged=" + cd.getWhatChanged());
+                   " source=" + cd.getSource() +
+                   " target=" + agentId +
+                   " community=" + cd.getName() +
+                   " type=" + (cd.getChangeType() < 0
+                               ? "NO_CHANGE"
+                               : CommunityChangeEvent.getChangeTypeAsString(cd.getChangeType())) +
+                   " what=" + cd.getWhatChanged());
     }
     updateCommunityDescriptor(cd);
   }
 
   private void updateCommunityDescriptor(CommunityDescriptor cd) {
+    checkParentAttributes();
     Community community = cd.getCommunity();
     getCommunityDescriptorsForDescendents(community);
     if (cache.contains(community.getName())) {
-      cache.communityChanged(new CommunityChangeEvent(community,
-                                                      cd.getChangeType(),
-                                                      cd.getWhatChanged()));
-
-      //blackboard.publishChange(cache.get(community.getName()));
+        cache.communityChanged(new CommunityChangeEvent(community,
+           cd.getChangeType(),
+           cd.getWhatChanged()));
     } else {
-      cache.communityChanged(new CommunityChangeEvent(community,
-                                                      CommunityChangeEvent.ADD_COMMUNITY,
-                                                      community.getName()));
-      //blackboard.publishAdd(cache.get(community.getName()));
+        cache.communityChanged(new CommunityChangeEvent(community,
+            CommunityChangeEvent.ADD_COMMUNITY,
+            community.getName()));
     }
     if (communityDescriptorRequests.containsKey(community.getName())) {
-      List gcListeners = (List)communityDescriptorRequests.remove(community.getName());
-      for (Iterator it1 = gcListeners.iterator(); it1.hasNext();) {
-        GetCommunityEntry gce = (GetCommunityEntry)it1.next();
-        if (gce.crl != null) gce.crl.getResponse((CommunityResponse)cd.getResponse());
+      List gcListeners = (List) communityDescriptorRequests.remove(community.
+          getName());
+      for (Iterator it1 = gcListeners.iterator(); it1.hasNext(); ) {
+        GetCommunityEntry gce = (GetCommunityEntry) it1.next();
+        if (gce.crl != null)
+          gce.crl.getResponse( (CommunityResponse) cd.getResponse());
         blackboard.publishRemove(gce.cr);
       }
     }
   }
 
   private void applyUpdate(CommunityChangeEvent cce) {
+    //logger.debug("applyUpdate");
     Community community = cce.getCommunity();
     blackboard.openTransaction();
     validateCompletedRequests();
     updateSearchRequests(community.getName());
     validateCommunityContents(community);
-    if (cce.getType() == cce.ADD_COMMUNITY) {
-      addParentAttribute(community);
-    }
     blackboard.closeTransaction();
   }
 
@@ -1172,35 +1218,44 @@ public class CommunityPlugin extends ComponentPlugin {
    * nested community to parent.
    * @param community
    */
-  private void addParentAttribute(Community community) {
-    List parents = cache.getAncestorNames(community.getName(), false);
-    logger.detail("Community " + community.getName() + " has " + parents.size() + " parents");
-    if (!parents.isEmpty()) {
-      Attribute parentAttr = community.getAttributes().get("Parent");
-      if (parentAttr == null || !attrContainsAll(parentAttr, parents)) {
-        ModificationItem mods[] = new ModificationItem[1];
-        if (parentAttr == null) {
-          logger.detail("addParentAttribute: Parent attribute is null");
-          parentAttr = new BasicAttribute("Parent");
-          for (Iterator it = parents.iterator(); it.hasNext();) {
-            parentAttr.add(it.next());
+  private void checkParentAttributes() {
+    //logger.debug("checkParentAttributes");
+    Set allCommunities = cache.listAll();
+    for (Iterator it = allCommunities.iterator(); it.hasNext(); ) {
+      Community community = cache.get((String)it.next());
+      List parents = cache.getAncestorNames(community.getName(), false);
+      if (!parents.isEmpty()) {
+        Attribute parentAttr = community.getAttributes().get("Parent");
+        if (parentAttr == null || !attrContainsAll(parentAttr, parents)) {
+          ModificationItem mods[] = new ModificationItem[1];
+          if (parentAttr == null) {
+            parentAttr = new BasicAttribute("Parent");
+            for (Iterator it1 = parents.iterator(); it1.hasNext(); ) {
+              parentAttr.add(it1.next());
+            }
+            mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, parentAttr);
+          } else {
+            for (Iterator it1 = parents.iterator(); it1.hasNext(); ) {
+              String parentName = (String) it1.next();
+              if (!parentAttr.contains(parentName))
+                parentAttr.add(parentName);
+            }
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
+                                           parentAttr);
           }
-          mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, parentAttr);
-        } else {
-          for (Iterator it = parents.iterator(); it.hasNext();) {
-            String parentName = (String)it.next();
-            if (!parentAttr.contains(parentName)) parentAttr.add(parentName);
-          }
-          mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, parentAttr);
+          logger.debug("addParentAttribute:" +
+                       " community=" + community.getName() +
+                       " parent(s)=" + parents);
+          CommunityManagerRequest cmr =
+              new CommunityManagerRequestImpl(agentId,
+                                              community.getName(),
+                                              CommunityManagerRequest.
+                                              MODIFY_ATTRIBUTES,
+                                              null,
+                                              mods,
+                                              uidService.nextUID());
+          queueCommunityManagerRequest(cmr, null, -1);
         }
-        CommunityManagerRequest cmr =
-          new CommunityManagerRequestImpl(agentId,
-                                          community.getName(),
-                                          CommunityManagerRequest.MODIFY_ATTRIBUTES,
-                                          null,
-                                          mods,
-                                          uidService.nextUID());
-        queueCommunityManagerRequest(cmr, null, -1);
       }
     }
   }
@@ -1294,7 +1349,7 @@ public class CommunityPlugin extends ComponentPlugin {
     // Check for an existing equivalent request.  If found, remove prior
     // request if no listener waiting for response
     CommunityManagerRequestQueue.Entry existingRequest = cmrQueue.get(cmr);
-    if (existingRequest != null && (existingRequest.cr == null)) {
+    if (existingRequest != null && existingRequest.cr == null) {
       removeCommunityManagerRequest(existingRequest.cmr.getUID());
     }
     CommunityManagerRequestQueue.Entry cqe = cmrQueue.add(cmr, cr, timeout);
@@ -1647,7 +1702,7 @@ public class CommunityPlugin extends ComponentPlugin {
           // There shouldn't be any (can cause a ClassCastException in
           // RelayLP).  Only check wheck when DEBUG is enabled
           if (logger.isDebugEnabled()) {
-            Collection existingRequests = findExsitingRequests(cqe.cmr.getUID());
+            Collection existingRequests = findExistingRequests(cqe.cmr.getUID());
             if (!existingRequests.isEmpty()) {
               logger.warn("Existing request found on blackboard: " + existingRequests);
             }
@@ -1730,7 +1785,7 @@ public class CommunityPlugin extends ComponentPlugin {
    * @param uid
    * @return
    */
-  private Collection findExsitingRequests(UID uid) {
+  private Collection findExistingRequests(UID uid) {
     Collection found = new ArrayList();
     Collection requests = blackboard.query(communityManagerRequestPredicate);
     for (Iterator it = requests.iterator(); it.hasNext(); ) {
@@ -1754,17 +1809,23 @@ public class CommunityPlugin extends ComponentPlugin {
   private void removeCommunityManagerRequest(UID uid) {
     logger.debug("removeCommunityManagerRequest: uid=" + uid);
     CommunityManagerRequestQueue.Entry cqe = cmrQueue.remove(uid);
-    for (Iterator it = findExsitingRequests(uid).iterator(); it.hasNext();) {
+    for (Iterator it = findExistingRequests(uid).iterator(); it.hasNext();) {
       Object requestToRemove = it.next();
+      CommunityResponse resp = null;
+      if (requestToRemove instanceof CommunityManagerRequest) {
+        resp = (CommunityResponse)((CommunityManagerRequest)requestToRemove).getResponse();
+      } else if (requestToRemove instanceof RelayAdapter) {
+        resp = (CommunityResponse)((RelayAdapter)requestToRemove).getResponse();
+      }
       blackboard.publishRemove(requestToRemove);
-      logger.debug("publishRemove:" + requestToRemove);
+      logger.debug("publishRemove:" + requestToRemove + " resp=" + resp);
     }
   }
 
   private void publishResponse(CommunityRequest cr) {
     queueChange(cr);
-    if (logger.isDetailEnabled()) {
-      logger.detail("Updating CommunityRequest:" +
+    if (logger.isDebugEnabled()) {
+      logger.debug("Updating CommunityRequest:" +
                    " source=" + agentId +
                    " request=" + cr.getRequestType() +
                    " community=" + cr.getCommunityName() +
@@ -1783,7 +1844,7 @@ public class CommunityPlugin extends ComponentPlugin {
     synchronized (changeQueue) {
       changeQueue.add(obj);
     }
-    blackboard.signalClientActivity();
+    //blackboard.signalClientActivity();
   }
 
   /**

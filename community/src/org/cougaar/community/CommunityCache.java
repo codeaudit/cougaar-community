@@ -121,6 +121,10 @@ public class CommunityCache
     return communities.containsKey(name);
   }
 
+  public synchronized Set listAll() {
+    return new HashSet(communities.keySet());
+  }
+
    /**
    * Searches community map for all ancestors of specified entity.
    * @param entityName
@@ -369,6 +373,7 @@ public class CommunityCache
    * @param l  Listener to be removed
    */
   protected void removeListener(CommunityChangeListener l) {
+    logger.debug("removeListener: community=" + l.getCommunityName());
     synchronized (listenerMap) {
       Set listeners = (Set)listenerMap.get(l.getCommunityName());
       if (listeners == null) {
@@ -399,9 +404,6 @@ public class CommunityCache
 
   public synchronized void communityChanged(CommunityChangeEvent cce) {
     Community affectedCommunity = cce.getCommunity();
-    if (logger.isDebugEnabled()) {
-      logger.debug(cacheId+": " + cce.toString());
-    }
     switch(cce.getType()) {
       case CommunityChangeEvent.ADD_COMMUNITY:
         add(affectedCommunity);
@@ -409,19 +411,24 @@ public class CommunityCache
       case CommunityChangeEvent.REMOVE_COMMUNITY:
         remove(affectedCommunity.getName());
         break;
-      case CommunityChangeEvent.ADD_ENTITY:
-      case CommunityChangeEvent.REMOVE_ENTITY:
-      case CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED:
-      case CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED:
+      default:
         CacheEntry ce = (CacheEntry)communities.get(affectedCommunity.getName());
         if (ce != null) {
           ce.timeStamp = new Date();
           ((CommunityImpl)ce.community).setAttributes(affectedCommunity.getAttributes());
           ((CommunityImpl)ce.community).setEntities(affectedCommunity.getEntities());
+        } else {
+          logger.warn("Update requested on non-existent community: community=" +
+                      affectedCommunity.getName());
         }
         break;
     }
-    notifyListeners(cce);
+    if (cce.getType() >= 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(cacheId+": " + cce.toString());
+      }
+      notifyListeners(cce);
+    }
   }
 
   class CacheEntry {

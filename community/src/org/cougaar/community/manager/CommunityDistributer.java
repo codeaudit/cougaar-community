@@ -75,6 +75,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
     CommunityDescriptor cd;
     Set agentTargets = Collections.synchronizedSet(new HashSet());
     Set nodeTargets = Collections.synchronizedSet(new HashSet());
+    Set unresolvedAgents = Collections.synchronizedSet(new HashSet());
     long lastSent = 0;
     boolean didChange = true;
     int changeType;
@@ -132,6 +133,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
   public void execute() {
     if ((wakeAlarm != null) &&
         ((wakeAlarm.hasExpired()))) {
+      resolveAgents();
       publishDescriptors();
       wakeAlarm = new WakeAlarm(now() + updateInterval);
       alarmService.addRealTimeAlarm(wakeAlarm);
@@ -149,11 +151,11 @@ public class CommunityDistributer extends BlackboardClientComponent {
     }
     for (Iterator it = l.iterator(); it.hasNext();) {
       DescriptorEntry de = (DescriptorEntry) it.next();
-      //logger.debug("publishDescriptors:" +
-      //             " community=" + de.cd.getName() +
-      //             " ra=" + de.ra +
-      //             " doRemove=" + de.doRemove +
-      //             " didChange=" + de.didChange);
+      logger.debug("publishDescriptors:" +
+                   " community=" + de.cd.getName() +
+                   " ra=" + de.ra +
+                   " doRemove=" + de.doRemove +
+                   " didChange=" + de.didChange);
       if (de.ra == null) { // publish new descriptor
         if (!de.nodeTargets.isEmpty()) {
           de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
@@ -166,13 +168,15 @@ public class CommunityDistributer extends BlackboardClientComponent {
           }
         }
       } else {
-        if ( (de.didChange && now > de.lastSent + updateInterval) ||
+        if (!de.didChange) {
+        }
+        if ( (de.didChange && (now > (de.lastSent + updateInterval))) ||
             (now > de.lastSent + cacheExpiration)) {
           // publish changed descriptor
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.agentTargets);
+          ((CommunityDescriptorImpl) de.cd).setChangeType(de.didChange ? de.changeType : -1);
+          ((CommunityDescriptorImpl) de.cd).setWhatChanged(de.didChange ? de.whatChanged : null);
           de.didChange = false;
-          ( (CommunityDescriptorImpl) de.cd).setChangeType(de.changeType);
-          ( (CommunityDescriptorImpl) de.cd).setWhatChanged(de.whatChanged);
           de.lastSent = now();
           blackboard.publishChange(de.ra);
           if (logger.isDebugEnabled()) {
@@ -267,6 +271,9 @@ public class CommunityDistributer extends BlackboardClientComponent {
    * @param agentNames  Targets to remove
    */
   protected void removeTargets(String communityName, Set agentNames) {
+    logger.debug("removeTargets:" +
+                 " community=" + communityName +
+                 " agents=" + agentNames);
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
       de.agentTargets.removeAll(agentNames);
@@ -360,6 +367,11 @@ public class CommunityDistributer extends BlackboardClientComponent {
                 }
               } else {
                 logger.debug("AddressEntry is null: agent=" + agentName);
+                DescriptorEntry de = (DescriptorEntry) descriptors.get(
+                    communityName);
+                if (de != null) {
+                  de.unresolvedAgents.add(agentName);
+                }
               }
             } catch (Exception ex) {
               logger.error("Exception in addNodeToTargets:", ex);
@@ -373,8 +385,33 @@ public class CommunityDistributer extends BlackboardClientComponent {
     whitePagesService.get(agentName.toString(), "topology", cb);
   }
 
+  // Find node for any agents which are still unresolved.
+  private void resolveAgents() {
+    List l;
+    synchronized (descriptors) {
+      l = new ArrayList(descriptors.values());
+    }
+    for (Iterator it = l.iterator(); it.hasNext();) {
+      DescriptorEntry de = (DescriptorEntry) it.next();
+      if (!de.unresolvedAgents.isEmpty()) {
+        List agents;
+        synchronized (descriptors) {
+          agents = new ArrayList(de.unresolvedAgents);
+          de.unresolvedAgents.clear();
+        }
+        for (Iterator it1 = agents.iterator(); it1.hasNext();) {
+          findNodeTargets((MessageAddress)it1.next(), de.cd.getName());
+        }
+      }
+    }
+  }
+
   private long now() {
     return System.currentTimeMillis();
+  }
+
+  public String getStats() {
+    return "CommunityDistributer: descriptors=" + descriptors.size();
   }
 
   private class WakeAlarm implements Alarm {
