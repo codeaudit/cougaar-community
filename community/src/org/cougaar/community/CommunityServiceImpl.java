@@ -154,6 +154,12 @@ public class CommunityServiceImpl extends ComponentPlugin
         if (log.isDebugEnabled())
             log.debug("Community '" + communityName + "' added to Name Server");
         success = true;
+      } catch (NameAlreadyBoundException nabe) {
+        // Ignore these exeptions, on occassion another agent will create
+        // the context after we've tested for it existence but before we
+        // create it
+        //log.error("Exception adding community '" + communityName +
+        //"' to Name Server, " + ne, ne);
       } catch (NamingException ne) {
         log.error("Exception adding community '" + communityName +
         "' to Name Server, " + ne, ne);
@@ -265,7 +271,7 @@ public class CommunityServiceImpl extends ComponentPlugin
       return true;
     } catch (Exception ex) {
       log.error("Exception adding entity '" + entityName + "' to community '" +
-        communityName + "', " + ex, ex);
+        communityName + "', " + ex);
     }
     return false;
   }
@@ -835,8 +841,12 @@ public class CommunityServiceImpl extends ComponentPlugin
           public void run() {
             try {
               DomainService domainService = getDomainService(serviceBroker);
-              CommunityChangeNotificationFactory ccnFactory=
-                ((CommunityChangeNotificationFactory) domainService.getFactory("community"));
+              CommunityChangeNotificationFactory ccnFactory = null;
+              while (ccnFactory == null) {
+                ccnFactory =
+                  ((CommunityChangeNotificationFactory)domainService.getFactory("community"));
+                if (ccnFactory == null) Thread.sleep(500);
+              }
               BlackboardService bbs = getBlackboardService(serviceBroker);
               CommunityChangeNotification ccn =
                 ccnFactory.newCommunityChangeNotification(communityName, agentId);
