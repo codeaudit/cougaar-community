@@ -35,13 +35,17 @@ import org.cougaar.core.service.AlarmService;
 import org.cougaar.core.agent.service.alarm.Alarm;
 
 import org.cougaar.core.service.community.*;
+import javax.naming.directory.*;
 
 /**
  * This plugin tests the use of ABAs and Relays.
  */
 public class ABATestPlugin extends SimplePlugin {
 
-  private static final String communityName = "MiniTestConfig-COMM";
+  private static Map responders = new HashMap();
+  private static int ctr = 0;
+
+  private static String communityName = "MiniTestConfig-COMM";
   private LoggingService log;
   private CommunityService cs;
   private BlackboardService bbs = null;
@@ -52,16 +56,33 @@ public class ABATestPlugin extends SimplePlugin {
 
   private String sender;
 
+  public static synchronized int addResponder(String name) {
+    if (!responders.containsKey(name)) {
+      responders.put(name, new Integer(++ctr));
+    }
+    return ((Integer)responders.get(name)).intValue();
+  }
+
+  public static synchronized void clearResponders() {
+    responders = new HashMap();
+  }
+
+  public static synchronized int getResponderCount() {
+    return responders.size();
+  }
+
   public void setParameter(Object obj) {
     List args = (List)obj;
-    if (args.size() == 1)
-      sender = (String)args.get(0);
+    if (args.size() > 0)
+      communityName = (String)args.get(0);
   }
 
   protected void setupSubscriptions() {
 
     log =  (LoggingService) getBindingSite().getServiceBroker().
       getService(this, LoggingService.class, null);
+
+    //log.info("communityName=" + communityName + " sender=" + sender);
 
     DomainService domainService =
       (DomainService) getBindingSite().getServiceBroker().getService(this, DomainService.class, null);
@@ -74,25 +95,38 @@ public class ABATestPlugin extends SimplePlugin {
 
     myAgent = getClusterIdentifier();
 
+    // Find name of community manager
+    String communityManager = null;
+    if (communityName != null && communityName.trim().length() > 0) {
+      Attributes attrs = cs.getCommunityAttributes(communityName);
+      Attribute attr = attrs.get("CommunityManager");
+      try {
+        if (attr != null) communityManager = (String)attr.get();
+      } catch (javax.naming.NamingException ne) {
+        log.error("Exception getting CommunityManager attribute, " + ne);
+      }
+    }
+
     // Subscribe to TestRelays
     testRelaySub =
       (IncrementalSubscription)getBlackboardService()
 	      .subscribe(testRelayPredicate);
 
-    if (sender != null && sender.equals(myAgent.toString())) {
+    if (communityManager != null && communityManager.equals(myAgent.toString())) {
 
       myTestRelay =
         testRelayFactory.newTestRelay("TestRelay published: agent=" +
           myAgent.toString() + " to=" + communityName, myAgent);
       myTestRelay.addTarget(new AttributeBasedAddress(communityName, "Role", "Member"));
-      log.info("TestRelay published: type=added source=" + myAgent +
-        " community=" + communityName + " Role=Member");
+      //log.info("TestRelay published: type=added source=" + myAgent +
+      //  " community=" + communityName + " Role=Member");
+      clearResponders();
+      log.info("TestRelay published");
       publishAdd(myTestRelay);
 
       //sendRelay(true);
-      // Set timer to published changed relay at some point in future
-      getAlarmService().addRealTimeAlarm(new WakeupAlarm(10000));
-      getAlarmService().addRealTimeAlarm(new WakeupAlarm(20000));
+      //getAlarmService().addRealTimeAlarm(new WakeupAlarm(120000));
+      //getAlarmService().addRealTimeAlarm(new WakeupAlarm(20000));
     }
   }
 
@@ -110,8 +144,8 @@ public class ABATestPlugin extends SimplePlugin {
       for (Iterator it = agents.iterator(); it.hasNext();) {
         tr.addTarget((ClusterIdentifier)it.next());
       }
-      log.info("TestRelay published: type=added source=" + myAgent +
-        " targets=" + targetsToString(tr) + " Role=Member");
+      //log.info("TestRelay published: type=added source=" + myAgent +
+      //  " targets=" + targetsToString(tr) + " Role=Member");
     }
     publishAdd(tr);
   }
@@ -120,14 +154,16 @@ public class ABATestPlugin extends SimplePlugin {
     Enumeration enum  = testRelaySub.getAddedList();
     while (enum.hasMoreElements()) {
       TestRelay tr = (TestRelay)enum.nextElement();
-      log.info("TestRelay received: type=added dest=" + myAgent +
-        " source=" + tr.getSource());
+      //log.info("TestRelay received: type=added dest=" + myAgent +
+      //  " source=" + tr.getSource());
+      log.info("  " + addResponder(myAgent.toString()) + " - " + myAgent);
     }
     enum  = testRelaySub.getChangedList();
     while (enum.hasMoreElements()) {
       TestRelay tr = (TestRelay)enum.nextElement();
-      log.info("TestRelay received: type=changed dest=" + myAgent +
-        " source=" + tr.getSource());
+      //log.info("TestRelay received: type=changed dest=" + myAgent +
+      //  " source=" + tr.getSource());
+      log.info("  " + addResponder(myAgent.toString()) + " - " + myAgent);
     }
   }
 
@@ -189,10 +225,19 @@ public class ABATestPlugin extends SimplePlugin {
       if (!expired) {
         try {
           openTransaction();
-          log.info("TestRelay published: type=changed source=" + myAgent +
-            " community=" + communityName + " Role=Member");
-          publishChange(myTestRelay);
+          //log.info("TestRelay published: type=changed source=" + myAgent +
+          //  " community=" + communityName + " Role=Member");
+          //clearCtr();
+          //log.info("TestRelay published");
+          //publishChange(myTestRelay);
           //sendRelay(true);
+          if (getResponderCount() == 50) {
+            log.info("ABA Test PASSED");
+            System.exit(0);
+          } else {
+            log.info("ABA Test FAILED (" + getResponderCount() + "/50 agents received ABA/Relay)");
+            System.exit(-1);
+          }
         } catch (Exception e) {
           e.printStackTrace();
         } finally {
