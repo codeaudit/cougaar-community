@@ -37,7 +37,6 @@ import org.cougaar.core.util.PropertyNameValue;
 import org.cougaar.core.service.community.CommunityMember;
 
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.lib.web.arch.root.GlobalEntry;
 import org.cougaar.core.mts.MTImpl;
 import org.cougaar.core.mts.MessageAddress;
 
@@ -230,60 +229,17 @@ public class YellowPagesServlet extends BaseServletComponent
 
     private Hashtable buildTopologyTable(InitialDirContext idc)
     {
-      Hashtable table = new Hashtable();
-      try{
-        DirContext dc = (DirContext)idc.lookup("Topology");
-        NamingEnumeration enum = dc.list("");
-        while(enum.hasMore())
-        {
-          NameClassPair ncPair = (NameClassPair)enum.next();
-          String name = ncPair.getName();
-          /*MessageAddress o = (MessageAddress)dc.lookup(name);
-          table.put(name, o.getAddress());*/
-          if(ncPair.getClassName().equals("org.cougaar.core.mts.MessageAddress"))
-          {
-            //MessageAddress o = (MessageAddress)dc.lookup(name);
-            table.put(name + " Node", ncPair.getClassName());
-          }
-          else
-            table.put(name, ncPair.getClassName());
-        }
-      }catch(NamingException e){e.printStackTrace();}
-      return table;
+      return new Hashtable(); // now uses WP
     }
 
     private Hashtable buildWebserverTable(InitialDirContext idc)
     {
-      Hashtable table = new Hashtable();
-      try{
-        DirContext dc = (DirContext)idc.lookup("WEBSERVERS");
-        NamingEnumeration enum = dc.list("");
-        while(enum.hasMore())
-        {
-          NameClassPair ncPair = (NameClassPair)enum.next();
-          String name = ncPair.getName();
-          GlobalEntry o = (GlobalEntry)dc.lookup(name);
-          table.put(name, o);
-        }
-      }catch(NamingException e){e.printStackTrace();}
-      return table;
+      return new Hashtable(); // now uses WP
     }
 
     private Hashtable buildAgentsTable(InitialDirContext idc)
     {
-      Hashtable table = new Hashtable();
-      try{
-        DirContext dc = (DirContext)idc.lookup("Agents");
-        NamingEnumeration enum = dc.list("");
-        while(enum.hasMore())
-        {
-          NameClassPair ncPair = (NameClassPair)enum.next();
-          String name = ncPair.getName();
-          MTImpl o = (MTImpl)dc.lookup(name);
-          table.put(name, "FIXME");
-        }
-      }catch(NamingException e){e.printStackTrace();}
-      return table;
+      return new Hashtable(); // now uses WP
     }
   }
 }

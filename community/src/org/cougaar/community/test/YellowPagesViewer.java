@@ -37,7 +37,6 @@ import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import java.util.List;
 
-import org.cougaar.lib.web.arch.root.GlobalEntry;
 import org.cougaar.core.mts.MTImpl;
 
 /**
@@ -389,6 +388,9 @@ public class YellowPagesViewer extends JPanel
   private DefaultMutableTreeNode buildWebserverTree(Hashtable table, List nodes)
   {
     DefaultMutableTreeNode root = new DefaultMutableTreeNode("Webservers");
+    // web addresses are now kept in the WP
+    // assert (table.isEmpty());
+    /*
     for(Enumeration enums = table.keys(); enums.hasMoreElements();)
     {
       String name = (String)enums.nextElement();
@@ -417,6 +419,7 @@ public class YellowPagesViewer extends JPanel
       nameNode.add(https);
       root.add(nameNode);
     }
+    */
     return root;
   }
 
