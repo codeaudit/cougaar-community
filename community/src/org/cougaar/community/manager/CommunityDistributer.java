@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -197,9 +197,7 @@ public class CommunityDistributer implements CommunityServiceConstants {
     }
     for (Iterator it = l.iterator(); it.hasNext();) {
       DescriptorEntry de = (DescriptorEntry) it.next();
-      //CommunityImpl community = (CommunityImpl)de.cd.getCommunity();
-      CommunityImpl community =
-          (CommunityImpl)((CommunityImpl)communities.get(de.name)).clone();
+      CommunityImpl community = (CommunityImpl)communities.get(de.name);
       community.setLastUpdate(now);
       ((CommunityDescriptorImpl)de.ra.getContent()).community = community;
       if (de.lastSent == 0) {

@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2003-2004 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 package org.cougaar.community;
@@ -76,12 +76,12 @@ public class CommunityUtils {
 
   /**
    * Clone Entities.
-   * @param entities Map Original copy
+   * @param entities Collection Original copy
    * @return Map      Clone of Entities
    */
-  public static Map cloneEntities(Map entities) {
+  public static Map cloneEntities(Collection entities) {
     Map clone = Collections.synchronizedMap(new HashMap());
-    for (Iterator it = entities.values().iterator(); it.hasNext();) {
+    for (Iterator it = entities.iterator(); it.hasNext();) {
       Entity entityClone = (Entity)((EntityImpl)it.next()).clone();
       clone.put(entityClone.getName(), entityClone);
     }
