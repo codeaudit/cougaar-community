@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -233,22 +233,24 @@ public class MembershipWatcher {
   protected ModificationItem[] getAttrDelta(Attributes attrsFromComm,
                                             Attributes attrsFromLocalCopy) {
     List mods = new ArrayList();
-    NamingEnumeration ne = attrsFromLocalCopy.getAll();
-    try {
-      while (ne.hasMore()) {
-        Attribute attr2 = (Attribute)ne.next();
-        Attribute attr1 = attrsFromComm.get(attr2.getID());
-        if (attr1 == null) {
-          mods.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr2));
-        } else {
-          if (!attr2.equals(attr1)) {
-            mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr2));
+    if (attrsFromLocalCopy != null && attrsFromLocalCopy.size() > 0) {
+      NamingEnumeration ne = attrsFromLocalCopy.getAll();
+      try {
+        while (ne.hasMore()) {
+          Attribute attr2 = (Attribute)ne.next();
+          Attribute attr1 = attrsFromComm.get(attr2.getID());
+          if (attr1 == null) {
+            mods.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr2));
+          } else {
+            if (!attr2.equals(attr1)) {
+              mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr2));
+            }
           }
         }
-      }
-    } catch (NamingException nex) {
-      if (logger.isWarnEnabled()) {
-        logger.warn(nex.getMessage());
+      } catch (NamingException nex) {
+        if (logger.isWarnEnabled()) {
+          logger.warn(nex.getMessage());
+        }
       }
     }
     return (ModificationItem[])mods.toArray(new ModificationItem[]{});
