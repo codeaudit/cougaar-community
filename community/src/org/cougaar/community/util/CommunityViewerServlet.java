@@ -26,6 +26,8 @@ import org.cougaar.core.service.community.Entity;
 import javax.xml.transform.*;
 import javax.xml.transform.stream.*;
 
+import EDU.oswego.cs.dl.util.concurrent.Semaphore;
+
 /**
  * An optional servlet for viewing information of communities.
  * Load into any agent:
@@ -82,11 +84,13 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
   private String command = "", target = "";
   private void parseParams(HttpServletRequest request) throws IOException
     {
+      format = "html";
+      command = "";
+      target = "";
       // create a URL parameter visitor
       ServletUtil.ParamVisitor vis =
         new ServletUtil.ParamVisitor() {
           public void setParam(String name, String value) {
-            format = "html";
             if(name.equalsIgnoreCase("format"))
               format = value;
             if(name.equalsIgnoreCase("community")) {
@@ -102,16 +106,11 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
         };
       // visit the URL parameters
       ServletUtil.parseParams(vis, request);
-      cs.getCommunity(communityShown, -1, new CommunityResponseListener(){
-              public void getResponse(CommunityResponse resp){
-                communityChangeNotification((Community)resp.getContent());
-              }
-      });
-
       if(command.equals(""))
         showFrontPage();
-      else
+      else {
         displayParams(command, target);
+      }
     }
 
   //The first page when user call this servlet will show all communities who are
@@ -141,9 +140,17 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
   private void displayParams(String command, String value){
     try{
       Community community = null;
-      while(community == null){
-        community = (Community)table.get(communityShown);
-      }
+      final Semaphore s = new Semaphore(0);
+      cs.getCommunity(communityShown, -1, new CommunityResponseListener(){
+        public void getResponse(CommunityResponse resp){
+          communityChangeNotification((Community)resp.getContent());
+          s.release();
+        }
+      });
+      try{
+        s.acquire();
+      }catch(InterruptedException e){}
+      community = (Community)table.get(communityShown);
       currentXML = community.toXml();
       if(format.equals("xml"))
         out.print(convertSignals(currentXML));
