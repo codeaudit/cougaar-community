@@ -14,7 +14,7 @@
   <property name="classes" value="classes"/>
   <property name="doc" value="doc"/>
   <property name="src" value="src"/>
-  <property name="test" value="test"/>
+  <property name="examples" value="examples"/>
   <property name="hostname" value="localhost"/>
   <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
   <property name="bbn-dir" value="/home/ron/projects/mic-bbn" />
@@ -30,7 +30,8 @@
 
   <target name="compile">
     <!-- Compile the java code into ${classes} -->
-    <javac srcdir="${src}" destdir="${classes}">
+    <javac srcdir="${src}" destdir="${classes}"
+           debug="on">
       <classpath>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
@@ -44,7 +45,8 @@
 
   <target name="compile-test">
     <!-- Compile the test code into ${classes} -->
-    <javac srcdir="${test}/src" destdir="${classes}">
+    <javac srcdir="${examples}/src" destdir="${classes}"
+           debug="on">
       <classpath>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar"/>
@@ -109,7 +111,7 @@
         doc/**,
         example/**,
         regress/**,
-        test/**,
+        examples/**,
         build.xml"
       excludes="**/cvs/**,doc/api/**,**/*.bak,.cvsignore"
     />
@@ -131,7 +133,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/data;$$CWD/test/configs/common;$$INSTALL/configs/common" />
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/data;$$CWD/examples/configs/common;$$INSTALL/configs/common" />
       <arg line="community_attribute.csv community_entity_attribute.csv"/>
     </java>
   </target>
@@ -151,7 +153,9 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/data;$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.community.caching" value=""/>
+      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node TestNode"/>
     </java>
   </target>
@@ -171,7 +175,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/ma;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node ManagerNode"/>
     </java>
   </target>
@@ -191,7 +195,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/ma;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CombinedNode"/>
     </java>
   </target>
@@ -211,7 +215,9 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.community.caching" value=""/>
+      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode"/>
     </java>
   </target>
@@ -230,7 +236,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode1"/>
     </java>
   </target>
@@ -250,7 +256,7 @@
       <sysproperty key="log4j.rootCategory" value="DEBUG" />
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode2"/>
     </java>
   </target>
@@ -269,7 +275,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/demo;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/demo;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node MonitorNode"/>
     </java>
   </target>
@@ -303,7 +309,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common;$$CWD/test/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common;$$CWD/examples/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <arg line="org.cougaar.core.node.Node MiniNode"/>
     </java>
@@ -322,7 +328,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/minitestconfig;$$CWD/test/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.system.path" value="./lib"/>
@@ -338,8 +344,8 @@
         includes="build.xml,**/*.java,**/README,**/*.doc,**/*.ppt,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
         excludes="src/org/cougaar/core/service/**,
                   src/org/cougaar/tools/**,
-                  test/src/org/cougaar/tools/**,
-                  test/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
+                  examples/src/org/cougaar/tools/**,
+                  examples/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
     </copy>
   </target>
 
@@ -350,8 +356,8 @@
         includes="build.xml,**/*.java,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
         excludes="src/org/cougaar/core/service/**,
                   src/org/cougaar/community/**,
-                  test/src/org/cougaar/community/**,
-                  test/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
+                  examples/src/org/cougaar/community/**,
+                  examples/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
     </copy>
   </target>
 
