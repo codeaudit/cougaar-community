@@ -31,7 +31,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Vector;
+import javax.naming.directory.BasicAttributes;
 
+import org.cougaar.community.CommunityUtils;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
 import org.cougaar.util.ConfigFinder;
@@ -178,20 +180,28 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
       try {
         if (localname.equals("Community")){
           String name = null;
+          javax.naming.directory.Attributes attrs = new BasicAttributes();
           for (int i = 0; i < p3.getLength(); i++) {
             if (p3.getLocalName(i).equals("Name")) {
               name = p3.getValue(i).trim();
+            } else {
+              attrs.put(p3.getLocalName(i), p3.getValue(i).trim());
             }
           }
           community = new CommunityConfig(name);
+          community.setAttributes(attrs);
         } else if (localname.equals("Entity")) {
           String name = null;
+          javax.naming.directory.Attributes attrs = new BasicAttributes();
           for (int i = 0; i < p3.getLength(); i++) {
             if (p3.getLocalName(i).equals("Name")) {
               name = p3.getValue(i).trim();
+            } else {
+              attrs.put(p3.getLocalName(i), p3.getValue(i).trim());
             }
           }
           entity = new EntityConfig(name);
+          entity.setAttributes(attrs);
         } else if (localname.equals("Attribute")) {
           String id = null;
           String value = null;
@@ -216,10 +226,16 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
 
     public void endElement(String uri, String localname, String qname) {
       try {
-        if (localname.equals("Community")){
+        if (localname.equals("Community")) {
           communityMap.put(community.getName(), community);
           community = null;
-        } else if (localname.equals("Entity")){
+        } else if (localname.equals("Entity")) {
+          // Ensure entity has essential attributes defined, use defaults if absent
+          CommunityUtils.setAttribute(entity.getAttributes(), "Role", "Member");
+          if (!CommunityUtils.hasAttribute(entity.getAttributes(), "EntityType", "Agent") &&
+              !CommunityUtils.hasAttribute(entity.getAttributes(), "EntityType", "Community")) {
+            CommunityUtils.setAttribute(entity.getAttributes(), "EntityType", "Agent");
+          }
           community.addEntity(entity);
           entity = null;
         }

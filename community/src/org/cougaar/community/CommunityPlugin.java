@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -51,6 +51,8 @@ import org.cougaar.community.init.CommunityConfig;
 import org.cougaar.community.init.EntityConfig;
 
 import java.util.Collection;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.Iterator;
 import java.util.HashSet;
@@ -198,7 +200,7 @@ public class CommunityPlugin extends ComponentPlugin {
             case CommunityResponse.SUCCESS:
               Community community = (Community)resp.getContent();
               if (hasAttribute(community.getAttributes(), "CommunityManager", thisAgent)) {
-                Set parentCommunities = listParents(communityConfigs, communityName);
+                Map parentCommunities = listParents(communityConfigs, communityName);
                 if (logger.isDebugEnabled()) {
                   logger.debug("Managing community " + communityName +
                                " parents=" + parentCommunities);
@@ -207,10 +209,6 @@ public class CommunityPlugin extends ComponentPlugin {
                   joinParentCommunities(parentCommunities, communityName);
                 }
               }
-              break;
-            case CommunityResponse.TIMEOUT:
-              // Retry
-              //myCommunities.add(communityName, new AgentImpl(ec.getName(), ec.getAttributes()));
               break;
           }
         }
@@ -230,19 +228,16 @@ public class CommunityPlugin extends ComponentPlugin {
    * @param parentCommunities Collection
    * @param nestedCommunity String
    */
-  protected void joinParentCommunities(Collection parentCommunities,
+  protected void joinParentCommunities(Map   parentCommunities,
                                        final String nestedCommunity) {
-    for (Iterator it = parentCommunities.iterator(); it.hasNext();) {
-      final String communityName = (String)it.next();
-      if (logger.isDetailEnabled()) {
-        logger.detail("joinCommunity:" +
-                      " community=" + nestedCommunity +
-                      " community=" + agentId);
-      }
+    for (Iterator it = parentCommunities.entrySet().iterator(); it.hasNext();) {
+      Map.Entry me = (Map.Entry)it.next();
+      final String communityName = (String)me.getKey();
+      final Attributes memberAttrs = (Attributes)me.getValue();
       communityService.joinCommunity(communityName,
                                      nestedCommunity,
                                      CommunityService.COMMUNITY,
-                                     null,
+                                     memberAttrs,
                                      false,
                                      null,
                                      new CommunityResponseListener() {
@@ -259,14 +254,14 @@ public class CommunityPlugin extends ComponentPlugin {
   }
 
   /**
-   * Create a list of all communities that contain the specified community as
+   * Create all communities that contain the specified community as
    * a member.
    * @param communityConfigs Collection
    * @param communityName String
-   * @return Set
+   * @return Map containing parent community name and member attributes
    */
-  private Set listParents(Collection communityConfigs, String communityName) {
-    Set parents = new HashSet();
+  private Map listParents(Collection communityConfigs, String communityName) {
+    Map parents = new HashMap();
     for (Iterator it = communityConfigs.iterator(); it.hasNext(); ) {
       CommunityConfig cc = (CommunityConfig)it.next();
       EntityConfig ec = cc.getEntity(communityName);
@@ -274,7 +269,7 @@ public class CommunityPlugin extends ComponentPlugin {
         Attributes attrs = ec.getAttributes();
         Attribute type = attrs.get("EntityType");
         if (type != null && type.contains("Community")) {
-          parents.add(cc.getName());
+          parents.put(cc.getName(), attrs);
         }
       }
     }
