@@ -28,16 +28,24 @@ public class CommunityChangeNotificationImpl
 
   private String communityName = null;
   private String myToString = null;
+  private String whatChanged = null;
+  private int type = 0;
 
 
   /**
    * Constructor.
    * @param communityName  Name of changed community
    */
-    public CommunityChangeNotificationImpl(String communityName,
-                                           UID uid) {
+  public CommunityChangeNotificationImpl(MessageAddress source,
+                                           String communityName,
+                                           UID uid,
+                                           int type,
+                                           String whatChanged) {
     super();
+    setSource(source);
     setCommunityName(communityName);
+    this.type = type;
+    this.whatChanged = whatChanged;
     super.setUID(uid);
   }
 
@@ -68,6 +76,24 @@ public class CommunityChangeNotificationImpl
   public String getCommunityName() {
     return this.communityName;
   }
+
+
+  /**
+   * Returns type of changed element.  Refer to
+   * org.cougaar.core.service.CommunityChangeEvent for values.
+   */
+  public int getType() {
+    return type;
+  }
+
+
+  /**
+   * Returns name of changed element.
+   */
+  public String whatChanged() {
+    return whatChanged;
+  }
+
 
   protected boolean contentChanged(CommunityChangeNotificationAdapter newCCN) {
     CommunityChangeNotificationImpl ccn =

@@ -126,10 +126,10 @@ abstract public class CommunityChangeNotificationAdapter
    * the source was already set.
    **/
   public void setSource(MessageAddress source) {
-    if (mySource != null) {
-      RuntimeException rt = new RuntimeException("Attempt to call setSource() more than once.");
-      throw rt;
-    }
+    //if (mySource != null) {
+    //  RuntimeException rt = new RuntimeException("Attempt to call setSource() more than once.");
+    //  throw rt;
+    //}
     mySource = source;
   }
 

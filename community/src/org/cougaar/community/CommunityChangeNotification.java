@@ -68,4 +68,15 @@ public interface CommunityChangeNotification
    */
   public void setTargets(Set targets);
 
+  /**
+   * Returns code indicating type of changed element.  Refer to
+   * org.cougaar.core.service.CommunityChangeEvent for values.
+   */
+  public int getType();
+
+  /**
+   * Returns name of community or entity that changed.
+   */
+  public String whatChanged();
+
 }

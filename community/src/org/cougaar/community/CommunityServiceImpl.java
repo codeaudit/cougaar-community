@@ -128,7 +128,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         context = root.createSubcontext(contextName, null);
       } catch (NameAlreadyBoundException nabe) {
         log.debug("Context " + contextName + " already bound!");
-	return getContext(contextName);
+	      return getContext(contextName);
       } catch (Exception ex) {
         log.error("Exception creating Context " + contextName + ", " + ex);
       }
@@ -252,7 +252,7 @@ public class CommunityServiceImpl extends ComponentPlugin
           " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
           " newAttrs=(" + attrsToString(attributes) + ")");
       }
-      notifyListeners(communityName, "Set community attributes for " + communityName);
+      notifyListeners(communityName, CommunityChangeEvent.ADD_COMMUNITY, communityName);
       return true;
     } catch (NamingException ne) {
       log.error("Exception setting attributes for community " +
@@ -281,7 +281,7 @@ public class CommunityServiceImpl extends ComponentPlugin
       } else {
         communitiesContext.modifyAttributes(communityName, mods);
       }
-      notifyListeners(communityName, "Modify community attributes for " + communityName);
+      notifyListeners(communityName, CommunityChangeEvent.ADD_COMMUNITY, communityName);
       return true;
     } catch (NamingException ne) {
       log.error("Exception modifying attributes for community " +
@@ -326,7 +326,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         }
         modifyEntityAttributes(communityName, entityName, mods);
       }
-      notifyListeners(communityName, "Add " + entityName + " to community " + communityName);
+      notifyListeners(communityName, CommunityChangeEvent.ADD_ENTITY, entityName);
       return true;
     } catch (Exception ex) {
       //log.error("Exception adding entity '" + entityName + "' to community '" +
@@ -346,8 +346,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     try {
       DirContext community = (DirContext)communitiesContext.lookup(communityName);
       community.unbind(entityName);
-      notifyListeners(communityName, "Remove " + entityName + " from community "
-        + communityName);
+      notifyListeners(communityName, CommunityChangeEvent.REMOVE_ENTITY, entityName);
       return true;
     } catch (Exception ex) {
       log.error("Exception removing entity '" + entityName +
@@ -426,8 +425,7 @@ public class CommunityServiceImpl extends ComponentPlugin
           " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
           " newAttrs=(" + attrsToString(attributes) + ")");
       }
-      notifyListeners(communityName, "Set entity attributes for " + entityName +
-        " (" + attrsToString(attributes) + ")");
+      notifyListeners(communityName, CommunityChangeEvent.ADD_ENTITY, entityName);
       return true;
     } catch (Exception ex) {
       log.error("Exception setting attributes for entity '" +
@@ -463,8 +461,7 @@ public class CommunityServiceImpl extends ComponentPlugin
       } else {
         community.modifyAttributes(entityName, mods);
       }
-      notifyListeners(communityName, "Modify entity attributes for " + entityName +
-        " (" + attrStr + ")");
+      notifyListeners(communityName, CommunityChangeEvent.ADD_ENTITY, entityName);
       return true;
     } catch (Exception ex) {
       log.error("Exception modifying attributes for entity '" +
@@ -688,7 +685,12 @@ public class CommunityServiceImpl extends ComponentPlugin
           Attributes attrs = new BasicAttributes();
           attrs.put(new BasicAttribute("Name", addr.toString()));
           attrs.put(new BasicAttribute("Role", "ChangeListener"));
-          return addToCommunity(communityName, addr, addr.toString(), attrs);
+          if (addToCommunity(communityName, addr, addr.toString(), attrs)) {
+            notifyListeners(communityName, CommunityChangeEvent.ADD_ENTITY, addr.toString());
+            return true;
+          } else {
+            return false;
+          }
         } else {
           Attributes attrs = community.getAttributes(addr.toString());
           Attribute roleAttr = attrs.get("Role");
@@ -701,6 +703,7 @@ public class CommunityServiceImpl extends ComponentPlugin
             }
           }
           community.modifyAttributes(addr.toString(), DirContext.ADD_ATTRIBUTE, attrs);
+          notifyListeners(communityName, CommunityChangeEvent.ADD_ENTITY, addr.toString());
           return true;
         }
         //return addRole(communityName, addr.toString(), "ChangeListener");
@@ -997,7 +1000,8 @@ public class CommunityServiceImpl extends ComponentPlugin
   /**
    * Notifies interested agents that a change has occurred in community.
    */
-  protected void notifyListeners(final String communityName, final String message) {
+  protected void notifyListeners(final String communityName, final int type,
+      final String whatChanged) {
     if (communityExists(communityName)) {
       final Collection listeners = getListeners(communityName);
       if (listeners.size() > 0) {
@@ -1017,14 +1021,16 @@ public class CommunityServiceImpl extends ComponentPlugin
                     ((CommunityChangeNotificationFactory)domainService.getFactory("community"));
                   if (ccnFactory == null) Thread.sleep(500);
                 }
-                ccn = ccnFactory.newCommunityChangeNotification(communityName);
+                ccn = ccnFactory.newCommunityChangeNotification(agentId,
+                                                                communityName,
+                                                                type,
+                                                                whatChanged);
                 changeNotifications.put(communityName, ccn);
                 updateTargets(ccn, listeners);
-                bbs.openTransaction();
                 if (log.isDebugEnabled())
                   log.debug("notifyListeners publishAdd():" +
-                    " listeners=" + targetsToString(ccn) +
-                    " message='" + message + "'");
+                    " listeners=" + targetsToString(ccn));
+                bbs.openTransaction();
                 bbs.publishAdd(ccn);
                 bbs.closeTransaction();
 
@@ -1033,8 +1039,7 @@ public class CommunityServiceImpl extends ComponentPlugin
                 updateTargets(ccn, listeners);
                 if (log.isDebugEnabled())
                   log.debug("notifyListeners publishChange():" +
-                    " listeners=" + targetsToString(ccn) +
-                    " message='" + message + "'");
+                    " listeners=" + targetsToString(ccn));
                 bbs.openTransaction();
                 bbs.publishChange(ccn, Collections.singleton(rcr));
                 bbs.closeTransaction();

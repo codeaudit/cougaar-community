@@ -85,6 +85,7 @@ public class CommunityPlugin extends SimplePlugin {
 	.subscribe(communityRequestPredicate);
 
     // Subscribe to CommunityChangeNotifications
+    /*
     changeNotifications =
       (IncrementalSubscription)getBlackboardService()
 	.subscribe(changeNotificationPredicate);
@@ -92,7 +93,7 @@ public class CommunityPlugin extends SimplePlugin {
     // Process any existing requests
     processCommunityRequests(getBlackboardService().
       query(communityRequestPredicate));
-
+    */
   }
 
   /**
@@ -105,6 +106,7 @@ public class CommunityPlugin extends SimplePlugin {
     processCommunityRequests(requests.getAddedCollection());
 
     // Update rosters when CommunityChangeNotifications are received
+    /*
     Enumeration enum  = changeNotifications.getAddedList();
     while (enum.hasMoreElements()) {
       CommunityChangeNotification ccn =
@@ -121,6 +123,7 @@ public class CommunityPlugin extends SimplePlugin {
       log.debug("Changed CCN: agent=" + myAgent + " source=" + ccn.getSource());
       updateRosters(communityName);
     }
+    */
 
   }
 
@@ -159,7 +162,7 @@ public class CommunityPlugin extends SimplePlugin {
   /**
    * Gets the roster for a named community.
    */
-  private void getRoster(CommunityRequestImpl req) {
+  private void getRoster(final CommunityRequestImpl req) {
     CommunityRoster roster = communityService.getRoster(req.getTargetCommunityName());
     int respCode = roster.communityExists() ? CommunityResponse.SUCCESS
                                             : CommunityResponse.FAIL;
@@ -169,7 +172,19 @@ public class CommunityPlugin extends SimplePlugin {
     getBlackboardService().publishChange(req);
 
     if (req.getVerb().endsWith("WITH_UPDATES")) {
-      communityService.addListener(myAgent, req.getTargetCommunityName());
+      //communityService.addListener(myAgent, req.getTargetCommunityName());
+      communityService.addListener(new CommunityChangeListener(){
+        public void communityChanged(CommunityChangeEvent cce) {
+          if (cce.getCommunityName().equals(req.getTargetCommunityName()) &&
+              (cce.getType() == cce.ADD_ENTITY ||
+               cce.getType() == cce.REMOVE_ENTITY)) {
+            updateRosters(req.getTargetCommunityName());
+          }
+        }
+        public String getCommunityName() {
+          return req.getTargetCommunityName();
+        }
+      });
     }
   }
 
@@ -308,14 +323,18 @@ public class CommunityPlugin extends SimplePlugin {
    * Updates rosters.
    */
   private void updateRosters(String communityName) {
+    getBlackboardService().openTransaction();
     Iterator it = getBlackboardService().query(communityRequestPredicate).iterator();
+    getBlackboardService().closeTransaction();
     while (it.hasNext()) {
       CommunityRequestImpl req = (CommunityRequestImpl)it.next();
       if (req.getVerb() != null && req.getVerb().equals("GET_ROSTER_WITH_UPDATES")) {
         CommunityRoster roster = communityService.getRoster(req.getTargetCommunityName());
         CommunityResponseImpl resp = (CommunityResponseImpl)req.getCommunityResponse();
         resp.setResponseObject(roster);
+        getBlackboardService().openTransaction();
         getBlackboardService().publishChange(req);
+        getBlackboardService().closeTransaction();
       }
     }
   }
@@ -344,6 +363,7 @@ public class CommunityPlugin extends SimplePlugin {
       return (o instanceof CommunityRequest);
   }};
 
+  /*
   private IncrementalSubscription changeNotifications;
   private UnaryPredicate changeNotificationPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
@@ -353,5 +373,6 @@ public class CommunityPlugin extends SimplePlugin {
       }
       return false;
   }};
+  */
 
 }
