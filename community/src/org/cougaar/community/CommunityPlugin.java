@@ -613,16 +613,17 @@ public class CommunityPlugin extends ComponentPlugin {
         " whatChanged=" + cd.getWhatChanged() +
         " entities=" + entityNames(community.getEntities()));
     }
-    blackboard.publishChange(community);
     getCommunityDescriptorsForDescendents(community);
     if (cache.contains(community.getName())) {
       cache.communityChanged(new CommunityChangeEvent(community,
                                                       cd.getChangeType(),
                                                       cd.getWhatChanged()));
+      blackboard.publishChange(community);
     } else {
       cache.communityChanged(new CommunityChangeEvent(community,
                                                       CommunityChangeEvent.ADD_COMMUNITY,
                                                       community.getName()));
+      blackboard.publishAdd(community);
     }
     if (communityDescriptorRequests.containsKey(community.getName())) {
       List gcListeners = (List)communityDescriptorRequests.remove(community.getName());
