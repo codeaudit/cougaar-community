@@ -81,6 +81,13 @@ public class BlackboardClient extends BlackboardClientComponent {
     }
   }
 
+  protected AlarmService getAlarmService() {
+    if (alarmService == null) {
+      setAlarmService((AlarmService)getServiceBroker().getService(this, AlarmService.class, null));
+    }
+    return alarmService;
+  }
+
   private boolean servicesAvailable() {
     ServiceBroker sb = getServiceBroker();
     boolean servicesAvailable =

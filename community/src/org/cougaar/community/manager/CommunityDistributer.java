@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.cougaar.core.service.community.Community;
 import org.cougaar.community.CommunityImpl;
 import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.RelayAdapter;
@@ -48,6 +47,7 @@ import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceAvailableEvent;
 import org.cougaar.core.component.ServiceAvailableListener;
 import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.service.AlarmService;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDService;
@@ -511,8 +511,11 @@ public class CommunityDistributer implements CommunityServiceConstants {
 
     protected void startTimer() {
       if (timer == null) {
-        timer = new BBWakeAlarm(now() + updateInterval);
-        alarmService.addRealTimeAlarm(timer);
+        AlarmService as = getAlarmService();
+        if (as != null) {
+          timer = new BBWakeAlarm(now() + updateInterval);
+          as.addRealTimeAlarm(timer);
+        }
       }
     }
 
