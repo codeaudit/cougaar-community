@@ -26,7 +26,6 @@
 
 package org.cougaar.community.init;
 
-import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.Component;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
@@ -57,9 +56,7 @@ implements Component
   private ServiceProvider theSP;
   private LoggingService log;
 
-  public void setBindingSite(BindingSite bs) {
-    // this.sb = bs.getServiceBroker();
-  }
+  // ignore "setServiceBroker", we want the node-level service broker
 
   public void setNodeControlService(NodeControlService ncs) {
     if (ncs == null) {
