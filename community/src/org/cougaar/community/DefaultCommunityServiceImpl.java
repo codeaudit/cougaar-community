@@ -240,7 +240,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                                 entity,
                                                 attrMods);
             Set listeners = Collections.singleton(crl);
-            handleResponse(resp, listeners);
+            handleResponse(communityName, resp, listeners);
           } else { // Send request to remote manager agent
             MessageAddress managerAddr =
                 MessageAddress.getMessageAddress(managerName);
@@ -265,7 +265,8 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
    * @param req Request
    */
   protected void handleResponse(Request req) {
-    handleResponse((CommunityResponse)req.getResponse(),
+    handleResponse(req.getCommunityName(),
+                   (CommunityResponse)req.getResponse(),
                    req.getCommunityResponseListeners());
   }
 

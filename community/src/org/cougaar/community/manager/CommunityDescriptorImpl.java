@@ -82,7 +82,8 @@ public class CommunityDescriptorImpl
   }
 
   public int updateContent(Object content, Relay.Token token) {
-    community = ((CommunityDescriptorImpl)content).getCommunity();
+    CommunityDescriptor cd = (CommunityDescriptorImpl)content;
+    community = cd.getCommunity();
     return Relay.CONTENT_CHANGE;
   }
 

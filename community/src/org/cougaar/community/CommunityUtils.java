@@ -76,7 +76,7 @@ public class CommunityUtils {
 
   /**
    * Clone Entities.
-   * @param entities Collection Original copy
+   * @param entities Map Original copy
    * @return Map      Clone of Entities
    */
   public static Map cloneEntities(Collection entities) {

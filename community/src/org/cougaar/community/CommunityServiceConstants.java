@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 1997-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 package org.cougaar.community;
@@ -65,7 +65,13 @@ public interface CommunityServiceConstants {
   // correct state
   public static final String VERIFY_MEMBERSHIPS_INTERVAL_PROPERTY =
       "org.cougaar.community.verify.memberships.interval";
-  public static long DEFAULT_VERIFY_MEMBERSHIPS_INTERVAL = 1 * 60 * 1000;
+  public static long DEFAULT_VERIFY_MEMBERSHIPS_INTERVAL = 5 * 60 * 1000;
+
+  // Defines whether community descriptors are returned with response from
+  // community manager.
+  public static final String INCLUDE_DESCRIPTOR_IN_RESPONSE_PROPERTY =
+      "org.cougaar.community.manager.include.descriptor";
+  public static boolean DEFAULT_INCLUDE_DESCRIPTOR_IN_RESPONSE = false;
 
 
 }

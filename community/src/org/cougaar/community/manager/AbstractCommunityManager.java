@@ -95,7 +95,20 @@ public abstract class AbstractCommunityManager
     }
   }
 
-  public synchronized CommunityResponse processRequest(String             source,
+  public CommunityResponse processRequest(String             source,
+                                          String             communityName,
+                                          int                reqType,
+                                          Entity             entity,
+                                          ModificationItem[] attrMods) {
+    CommunityResponseImpl resp = (CommunityResponseImpl)
+        handleRequest(source, communityName, reqType, entity, attrMods);
+    if (resp.getContent() != null) {
+      resp.setContent(((CommunityImpl) resp.getContent()).clone());
+    }
+    return resp;
+  }
+
+  protected synchronized CommunityResponse handleRequest(String             source,
                                           String             communityName,
                                           int                reqType,
                                           Entity             entity,
@@ -234,8 +247,7 @@ public abstract class AbstractCommunityManager
         return new CommunityResponseImpl(result
                                          ? CommunityResponse.SUCCESS
                                          : CommunityResponse.FAIL,
-                                         result ?
-                                         (CommunityImpl)community.clone() : null);
+                                         result ? community : null);
       } else {
         if (logger.isDetailEnabled()) {
           logger.detail(agentName + ": Not community manager:" +

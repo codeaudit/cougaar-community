@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -65,7 +65,7 @@ public class CommunityServiceTestImpl extends AbstractCommunityService
     communityUpdateListener = new MyCommunityUpdateListener();
     if (cache == null) cache = new CommunityCacheTestImpl();
     communityManager =
-        CommunityManagerTestImpl.getInstance(agentName, cache, null);
+        CommunityManagerTestImpl.getInstance(agentName, cache, communityUpdateListener);
     myCommunities = new CommunityMemberships();
     membershipWatcher = new MembershipWatcher(agentName,
                                               this,
@@ -97,10 +97,11 @@ public class CommunityServiceTestImpl extends AbstractCommunityService
               " attrMods=" + attrMods);
     CommunityResponse resp =
         communityManager.processRequest(agentName, communityName, requestType, entity, attrMods);
-    handleResponse(resp, Collections.singleton(crl));
+    handleResponse(communityName, resp, Collections.singleton(crl));
   }
 
   protected void sendResponse(CommunityResponse resp, Set listeners) {
+    log.debug("sendResponse: resp=" + resp + " listeners=" + listeners);
     for (Iterator it = listeners.iterator(); it.hasNext();) {
       CommunityResponseListener crl = (CommunityResponseListener)it.next();
       if (crl != null) {

@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 package org.cougaar.community.manager;
@@ -41,6 +41,7 @@ import org.cougaar.community.CommunityUpdateListener;
 import org.cougaar.community.RelayAdapter;
 import org.cougaar.community.AbstractCommunityService;
 import org.cougaar.community.CommunityServiceConstants;
+import org.cougaar.community.CommunityResponseImpl;
 
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.component.BindingSite;
@@ -87,6 +88,9 @@ public class DefaultCommunityManagerImpl
 
   protected long verifyInterval = DEFAULT_VERIFY_MGR_INTERVAL;
 
+  protected boolean includeDescriptorInResponse =
+      DEFAULT_INCLUDE_DESCRIPTOR_IN_RESPONSE;
+
   /**
    * Construct CommunityManager component capable of communicating with remote
    * agents via Blackboard Relays.
@@ -111,7 +115,6 @@ public class DefaultCommunityManagerImpl
     distributer = new CommunityDistributer(bs,
                                            true,
                                            cul,
-                                           myBlackboardClient,
                                            communities);
   }
 
@@ -149,6 +152,9 @@ public class DefaultCommunityManagerImpl
       verifyInterval =
           Long.parseLong(System.getProperty(VERIFY_MGR_INTERVAL_PROPERTY,
                                             Long.toString(DEFAULT_VERIFY_MGR_INTERVAL)));
+      includeDescriptorInResponse =
+          Boolean.valueOf(System.getProperty(INCLUDE_DESCRIPTOR_IN_RESPONSE_PROPERTY,
+                                            Boolean.toString(DEFAULT_INCLUDE_DESCRIPTOR_IN_RESPONSE))).booleanValue();
     } catch (Exception ex) {
       if (logger.isWarnEnabled()) {
         logger.warn(agentName + ": Exception setting parameter from system property", ex);
@@ -182,11 +188,19 @@ public class DefaultCommunityManagerImpl
     int reqType = req.getRequestType();
     Entity entity = req.getEntity();
     ModificationItem[] attrMods = req.getAttributeModifications();
-    req.setResponse(processRequest(source,
-                                   communityName,
-                                   reqType,
-                                   entity,
-                                   attrMods));
+    CommunityResponseImpl resp = (CommunityResponseImpl)handleRequest(source,
+                                                                      communityName,
+                                                                      reqType,
+                                                                      entity,
+                                                                      attrMods);
+
+    if (!includeDescriptorInResponse && reqType != GET_COMMUNITY_DESCRIPTOR) {
+      // Don't include community in response, instead rely on CommunityDistributer to send
+      // This decreases messaging overhead (primarily in serialization) and thus
+      //    improves overally scalability
+      resp.setContent(null);
+    }
+    req.setResponse(resp);
     myBlackboardClient.publish(req, BlackboardClient.CHANGE);
   }
 
@@ -377,8 +391,8 @@ public class DefaultCommunityManagerImpl
    * is in sync with the WPS bindings.
    */
   private void verifyManagerRole() {
-    Collection l = new HashSet();
-    synchronized (managedCommunities) {
+    Set l = new HashSet();
+    synchronized (communitiesToCheck) {
       l.addAll(communitiesToCheck);
     }
     for (Iterator it = l.iterator(); it.hasNext(); ) {
