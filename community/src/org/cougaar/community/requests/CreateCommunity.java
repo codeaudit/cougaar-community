@@ -36,6 +36,7 @@ public class CreateCommunity
   public CreateCommunity(String    communityName,
                         Attributes attributes,
                        UID         uid) {
+    super(communityName, uid);
     this.attributes = attributes;
   }
 
