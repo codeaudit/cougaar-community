@@ -727,11 +727,5 @@ public class CommunityTestPlugin extends SimplePlugin {
     }
   }
 
-  private IncrementalSubscription requests;
-  private UnaryPredicate communityRequestPredicate = new UnaryPredicate() {
-    public boolean execute (Object o) {
-      return (o instanceof CommunityRequest);
-  }};
-
 
 }
