@@ -160,6 +160,29 @@ public class CommunityUtils {
   }
 
   /**
+   * Creates a string representation of an Attribute set.
+   */
+  public static String attrsToString(Attributes attrs) {
+    StringBuffer sb = new StringBuffer("[");
+    try {
+      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
+        Attribute attr = (Attribute)enum.next();
+        sb.append(attr.getID() + "=(");
+        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
+          sb.append((String)enum1.next());
+          if (enum1.hasMore())
+            sb.append(",");
+          else
+            sb.append(")");
+        }
+        if (enum.hasMore()) sb.append(",");
+      }
+      sb.append("]");
+    } catch (NamingException ne) {}
+    return sb.toString();
+  }
+
+  /**
    * Converts a collection of entities to a compact string representation of names
    */
   public static String entityNames(Collection members) {

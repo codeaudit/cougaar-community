@@ -35,6 +35,13 @@ import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.FindCommunityCallback;
 
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.ModificationItem;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+
 import org.cougaar.util.log.LoggerFactory;
 import org.cougaar.util.log.Logger;
 
@@ -71,18 +78,17 @@ public class MembershipWatcher {
     }
     for (Iterator it = myCommunities.listCommunities().iterator(); it.hasNext(); ) {
       final String communityName = (String)it.next();
-      Community community = communityService.getCommunity(communityName, null);
       Collection entities = myCommunities.getEntities(communityName);
       for (Iterator it1 = entities.iterator(); it1.hasNext(); ) {
         Entity entity = (Entity)it1.next();
-        if (community == null || !community.hasEntity(entity.getName()) &&
-            !pendingOperations.contains(communityName)) {
+        if (!pendingOperations.contains(communityName)) {
           checkCommunity(communityName, entity, true);
         }
       }
     }
     Collection parents =
         communityService.listParentCommunities(null, (CommunityResponseListener)null);
+    parents.removeAll(myCommunities.listCommunities());
     for (Iterator it1 = parents.iterator(); it1.hasNext(); ) {
       String parentName = (String)it1.next();
       Community parentCommunity = communityService.getCommunity(parentName, null);
@@ -98,8 +104,8 @@ public class MembershipWatcher {
   protected void checkCommunity(final String  communityName,
                                 final Entity  entity,
                                 final boolean isMember) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(thisAgent+": checkCommunityMembership:" +
+    if (logger.isDetailEnabled()) {
+      logger.detail(thisAgent+": checkCommunityMembership:" +
                   " community=" + communityName +
                   " entity=" + entity +
                   " isMember=" + isMember);
@@ -123,6 +129,11 @@ public class MembershipWatcher {
                              community != null &&
                              community.hasEntity(entity.getName())) {
                     leave(communityName, entity.getName());
+                  } else if (isMember && community.hasEntity(entity.getName())) {
+                    verifyAttributes(communityName,
+                                     entity.getName(),
+                                     community.getEntity(entity.getName()).getAttributes(),
+                                     entity.getAttributes());
                   }
                 }
               }
@@ -132,6 +143,11 @@ public class MembershipWatcher {
                 rejoin(communityName, entity);
               } else if (!isMember && community.hasEntity(entity.getName())) {
                 leave(communityName, entity.getName());
+              } else if (isMember && community.hasEntity(entity.getName())) {
+                verifyAttributes(communityName,
+                                 entity.getName(),
+                                 community.getEntity(entity.getName()).getAttributes(),
+                                 entity.getAttributes());
               }
             }
         } else { // Community doesn't exist
@@ -140,6 +156,28 @@ public class MembershipWatcher {
       }
     };
     communityService.findCommunity(communityName, fccb, 0);
+  }
+
+  protected void verifyAttributes(String communityName,
+                                  String entityName,
+                                  Attributes attrsFromComm,
+                                  Attributes attrsFromLocalCopy) {
+    ModificationItem attrDelta[] =
+        getAttrDelta(attrsFromComm, attrsFromLocalCopy);
+    if (attrDelta.length > 0) {
+      if (logger.isInfoEnabled()) {
+        logger.info(thisAgent+": Correcting attributes:" +
+                    " community=" + communityName +
+                    " entity=" + entityName +
+                    " numAttrsCorrected=" + attrDelta.length +
+                    " commAttrs=" + CommunityUtils.attrsToString(attrsFromComm) +
+                    " localAttrs=" + CommunityUtils.attrsToString(attrsFromLocalCopy));
+      }
+      communityService.modifyAttributes(communityName,
+                                        entityName,
+                                        attrDelta,
+                                        null);
+    }
   }
 
   protected void rejoin(final String communityName, Entity entity) {
@@ -186,4 +224,29 @@ public class MembershipWatcher {
         }
     });
   }
+
+  protected ModificationItem[] getAttrDelta(Attributes attrsFromComm,
+                                            Attributes attrsFromLocalCopy) {
+    List mods = new ArrayList();
+    NamingEnumeration ne = attrsFromLocalCopy.getAll();
+    try {
+      while (ne.hasMore()) {
+        Attribute attr2 = (Attribute)ne.next();
+        Attribute attr1 = attrsFromComm.get(attr2.getID());
+        if (attr1 == null) {
+          mods.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr2));
+        } else {
+          if (!attr2.equals(attr1)) {
+            mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr2));
+          }
+        }
+      }
+    } catch (NamingException nex) {
+      if (logger.isWarnEnabled()) {
+        logger.warn(nex.getMessage());
+      }
+    }
+    return (ModificationItem[])mods.toArray(new ModificationItem[]{});
+  }
+
 }
