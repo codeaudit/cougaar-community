@@ -21,9 +21,6 @@
 
 package org.cougaar.community;
 
-
-import org.cougaar.core.agent.service.alarm.Alarm;
-
 import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.service.community.CommunityChangeListener;
 import org.cougaar.core.service.community.CommunityResponse;
@@ -69,9 +66,6 @@ import javax.naming.directory.Attribute;
  * Joins an agents startup communities.
  */
 public class CommunityPlugin extends ComponentPlugin {
-
-  // Defines how often community memberships are validated
-  public static final long TIMER_INTERVAL = 2 * 60 * 1000;
 
   // Services used
   protected LoggingService logger;
