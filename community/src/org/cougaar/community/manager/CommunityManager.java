@@ -79,7 +79,10 @@ public class CommunityManager {
       NAMESPACE_IDENTIFIER + ":";
 
   // Timeout for calls to WhitePagesService
-  private static final long WPS_TIMEOUT = 60000;
+  private static final long WPS_TIMEOUT = 
+    Long.getLong(
+        "org.cougaar.community.manager.WPTimeout",
+        60000).longValue();
 
   // Defines frequency of White Pages read to verify that this agent is still
   // manager for community
