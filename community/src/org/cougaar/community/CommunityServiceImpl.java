@@ -790,9 +790,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     NamingService ns = null;
     if (serviceBroker.hasService(org.cougaar.core.service.NamingService.class)) {
       ns = (NamingService)serviceBroker.getService(this,
-      org.cougaar.core.service.NamingService.class, new ServiceRevokedListener() {
-        public void serviceRevoked(ServiceRevokedEvent re) {}
-      });
+      org.cougaar.core.service.NamingService.class, null);
     }
     return ns;
   }
@@ -810,9 +808,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         blackboardClient = new MyBlackboardClient();
       }
       blackboardService = (BlackboardService)sb.getService(blackboardClient,
-        BlackboardService.class, new ServiceRevokedListener() {
-        public void serviceRevoked(ServiceRevokedEvent re) {}
-      });
+        BlackboardService.class, null);
     }
     return blackboardService;
   }
@@ -874,10 +870,8 @@ public class CommunityServiceImpl extends ComponentPlugin
    * Gets reference to LoggingService.
    */
   private LoggingService getLoggingService() {
-    return (LoggingService)serviceBroker.getService(this, LoggingService.class,
-      new ServiceRevokedListener() {
-        public void serviceRevoked(ServiceRevokedEvent re) {}
-    });
+    return (LoggingService)serviceBroker.getService(
+        this, LoggingService.class, null);
   }
 
   /**
