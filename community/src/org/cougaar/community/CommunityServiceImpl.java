@@ -69,9 +69,9 @@ import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityChangeListener;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.CommunityResponseListener;
-import org.cougaar.core.service.community.CommunityRoster;
 import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.service.community.FindCommunityCallback;
 import org.cougaar.core.service.wp.WhitePagesService;
 import org.cougaar.core.util.UID;
 import org.cougaar.util.UnaryPredicate;
@@ -370,6 +370,17 @@ public class CommunityServiceImpl extends BlackboardClientComponent
   }
 
   /**
+   * Performs attribute based search of community entities.  This is a general
+   * purpose search operation using a JNDI search filter.
+   * @param communityName Name of community to search
+   * @param filter        JNDI search filter
+   * @return              Collection of MessageAddresses
+   */
+  public Collection search(final String communityName, String filter) {
+    return search(communityName, filter, false);
+  }
+
+  /**
    * Returns an array of community names of all communities of which caller is
    * a member.
    * @param allLevels Set to false if the list should contain only those
@@ -433,6 +444,52 @@ public class CommunityServiceImpl extends BlackboardClientComponent
                                  : null));
     }
     return results;
+  }
+
+  /**
+   * Requests a collection of community names identifying the communities that
+   * contain the specified member and satisfy a given set of attributes.
+   * The results are returned directly if the member name is
+   * null or if a copy of the specified community is available in local cache.
+   * Otherwise, the results will be returned in the CommunityResponseListener
+   * callback in which case the method returns a null value.
+   * @param name   Member name
+   * @param filter Search filter defining community attributes
+   * @param crl Listener to receive results
+   * @return A collection of community names if operation can be resolved using
+   *         data from local cache, otherwise null
+   */
+  public Collection listParentCommunities(String                    member,
+                                          String                    filter,
+                                          CommunityResponseListener crl) {
+    return listParentCommunities(member, filter);
+  }
+
+  /**
+   * Invokes callback when specified community is found.
+   * @param communityName Name of community
+   * @param fccb          Callback invoked after community is found or timeout
+   *                      has lapsed
+   * @param timeout       Length of time (in milliseconds) to wait for
+   *                      community to be located.  A value of -1 disables
+   *                      the timeout.
+   */
+  public void findCommunity(String                communityName,
+                            FindCommunityCallback fccb,
+                            long                  timeout) {
+    //TODO: Complete this method
+  }
+
+  /**
+   * Lists all communities in bound in White Pages.  Results are returned
+   * in CommunityResponseListener callback.  The crl.getContent() method
+   * returns a Collection of community names found in white pages.
+   */
+  public void listAllCommunities(CommunityResponseListener crl) {
+    if (crl != null) {
+      crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
+                                                listAllCommunities()));
+    }
   }
 
   /**
@@ -546,61 +603,6 @@ public class CommunityServiceImpl extends BlackboardClientComponent
   /////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Creates a new community.
-   * @param communityName Name of community
-   * @param attributes    Community attributes
-   * @return              True if operation was successful
-   */
-  public boolean createCommunity(String communityName, Attributes attributes) {
-    log.debug("createCommunity:" +
-              " community=" + communityName);
-    final Status status = new Status(false);
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    createCommunity(communityName, attributes, new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        status.setValue(resp != null && resp.getStatus() == CommunityResponse.SUCCESS);
-        s.release();
-      }
-    });
-    try {
-      s.acquire();
-    } catch (InterruptedException ie) {
-      log.error("Error in createCommunity:", ie);
-    }
-    return status.getValue();
-  }
-
-
-  /**
-   * Checks for the existence of a community in the White pages.
-   * @param communityName Name of community to look for
-   * @return              True if community was found
-   */
-  public boolean communityExists(String communityName) {
-    if (cache.contains(communityName)) {
-      return true;
-    } else {
-      final Status status = new Status(false);
-      final Semaphore s = new Semaphore(0);
-      queueCommunityRequest(new GetCommunity(communityName, getUID(), 0),
-                              new CommunityResponseListener() {
-        public void getResponse(CommunityResponse resp) {
-          status.setValue(resp != null &&
-                          resp.getStatus() == CommunityResponse.SUCCESS);
-          s.release();
-        }
-      });
-      try {
-        s.acquire();
-      }
-      catch (Exception ex) {}
-      return status.getValue();
-    }
-  }
-
-
-  /**
    * Lists all communities in White pages.
    * @return  Collection of community names
    */
@@ -648,369 +650,31 @@ public class CommunityServiceImpl extends BlackboardClientComponent
   }
 
   /**
-   * Returns attributes associated with community.
-   * @param communityName Name of community
-   * @return              Communities attributes
+   * Requests a collection of community names identifying the communities that
+   * contain the specified member.
+   * @param name   Member name
+   * @return A collection of community names
    */
-  public Attributes getCommunityAttributes(String communityName) {
-    if (cache.contains(communityName)) {
-      return cache.get(communityName).getAttributes();
-    } else {
-      final CommunityHolder ch = new CommunityHolder();
-      final Semaphore s = new Semaphore(0);
-      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
-                              new CommunityResponseListener() {
-        public void getResponse(CommunityResponse resp) {
-          ch.setCommunity( (Community) resp.getContent());
-          s.release();
-        }
-      });
-      try {
-        s.acquire();
-        if (ch.getCommunity() != null) {
-          return ch.getCommunity().getAttributes();
-        }
-        else {
-          log.warn("Error in getCommunityAttributes: " +
-                   " community=" + communityName +
-                   " communityExists=" + (ch.getCommunity() != null));
+  public Collection listParentCommunities(String member) {
+    return cache.getAncestorNames(member, false);
+  }
+
+  public Collection listParentCommunities(String member, String filter) {
+    List matches = new ArrayList();
+    Collection parentNames = listParentCommunities(member);
+    Set communitiesMatchingFilter = cache.search(filter);
+    if (communitiesMatchingFilter != null) {
+      for (Iterator it = communitiesMatchingFilter.iterator(); it.hasNext(); ) {
+        Community community = (Community) it.next();
+        if (parentNames.contains(community.getName())) {
+          matches.add(community.getName());
         }
       }
-      catch (InterruptedException ie) {
-        log.error("Error in getCommunityAttributes:", ie);
-      }
-      return new BasicAttributes();
     }
+    return matches;
   }
 
-
-  /**
-   * Sets the attributes associated with a community.
-   * @param communityName Name of community
-   * @param attributes    Communities attributes
-   * @return              True if operation was successful
-   */
-  public boolean setCommunityAttributes(String communityName,
-                                        Attributes attributes) {
-
-    final Status status = new Status(false);
-    final Semaphore s = new Semaphore(0);
-    final CommunityHolder ch = new CommunityHolder();
-    CommunityResponseListener crl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp) {
-        status.setValue(resp != null && resp.getStatus() == CommunityResponse.SUCCESS);
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    };
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), crl);
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null) {
-        ModificationItem[] items =
-          getAttributeModificationItems(ch.getCommunity().getAttributes(), attributes);
-        modifyAttributes(communityName, null, items, crl);
-      } else {
-        log.warn("Error in setCommunityAttributes: " +
-                 " community=" + communityName +
-                 " communityExists=" + (ch.getCommunity() != null));
-        status.setValue(false);
-      }
-      s.acquire();
-    } catch (Exception e) {
-      log.error("Error in setCommunityAttributes: " + e);
-    }
-    return status.getValue();
-  }
-
-  private ModificationItem[] getAttributeModificationItems(Attributes oldAttrs, Attributes newAttrs) {
-    List modsList = new ArrayList();
-    for(NamingEnumeration enums = oldAttrs.getAll(); enums.hasMoreElements();) {
-      Attribute oldAttr = (Attribute) enums.nextElement();
-      Attribute newAttr = (Attribute) newAttrs.get(oldAttr.getID());
-      if (newAttr == null || !newAttr.equals(oldAttr)) {
-        modsList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, oldAttr));
-      }
-    }
-    for(NamingEnumeration enums = newAttrs.getAll(); enums.hasMoreElements();) {
-      Attribute newAttr = (Attribute) enums.nextElement();
-      Attribute oldAttr = (Attribute) oldAttrs.get(newAttr.getID());
-      if (oldAttr != null || !newAttr.equals(oldAttr)) {
-        modsList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, newAttr));
-      }
-    }
-    return (ModificationItem[])modsList.toArray(new ModificationItem[0]);
-  }
-
-
-  /**
-   * Modifies the attributes associated with a community.
-   * @param communityName Name of community
-   * @param mods          Attribute modifications to be performed
-   * @return              True if operation was successful
-   */
-  public boolean modifyCommunityAttributes(String communityName, ModificationItem[] mods) {
-    final Status status = new Status(false);
-    final Semaphore s = new Semaphore(0);
-    CommunityResponseListener cl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp) {
-        status.setValue(resp != null && resp.getStatus() == CommunityResponse.SUCCESS);
-        s.release();
-      }
-    };
-    modifyAttributes(communityName, null, mods, cl);
-    try {
-      s.acquire();
-    } catch (Exception e) {
-      log.error("Error in modifyCommunityAttributes: " + e);
-    }
-    return status.getValue();
-  }
-
-  /**
-   * Adds an entity to a community.
-   * @param communityName        Community name
-   * @param entity               Entity to add
-   * @param attributes           Attributes to associate with entity
-   * @return                     True if operation was successful
-   */
-  public boolean addToCommunity(String communityName, Object entity,
-                         String entityName, Attributes attributes) {
-    if(communityName == null || entity == null || entityName == null)
-      return false;
-    final Status status = new Status(false);
-    final Semaphore s = new Semaphore(0);
-    CommunityResponseListener cl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        log.debug("addToCommunity: " +
-                  " resp=" + resp);
-        status.setValue(resp != null &&
-                        resp.getStatus() == CommunityResponse.SUCCESS);
-        s.release();
-      }
-    };
-    // Try to determine if entity is an agent or nested community
-    int entityType = AGENT;
-    if (attributes != null) {
-      Attribute attr = attributes.get("EntityType");
-      if (attr != null && attr.contains("Community")) {
-        entityType = COMMUNITY;
-      }
-    }
-    joinCommunity(communityName, entityName, entityType, attributes, false, null, cl);
-    try {
-      s.acquire();
-    } catch(InterruptedException e) {
-      log.error("Error in addToCommunity: " + e);
-    }
-    return status.getValue();
-  }
-
-
-  /**
-   * Removes an entity from a community.
-   * @param communityName  Community name
-   * @param entityName     Name of entity to remove
-   * @return               True if operation was successful
-   */
-  public boolean removeFromCommunity(String communityName, String entityName) {
-    final Status status = new Status(false);
-    final Semaphore s = new Semaphore(0);
-    Entity entity = new EntityImpl(entityName);
-    leaveCommunity(communityName, entity.getName(), new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        status.setValue(resp.getStatus() == CommunityResponse.SUCCESS);
-        s.release();
-      }
-    });
-    try {
-      s.acquire();
-    } catch(InterruptedException e) {
-      log.error("Error in addToCommunity: " + e);
-    }
-    return status.getValue();
-  }
-
-
-  /**
-   * Returns a collection of entity names associated with the specified
-   * community.
-   * @param communityName  Entities parent community
-   * @return               Collection of entity names
-   */
-  public Collection listEntities(String communityName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
-                            new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp){
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    });
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null) {
-        return ch.getCommunity().getEntities();
-      } else {
-        log.warn("Error in listEntities: " +
-                 " community=" + communityName +
-                 " communityExists=" + (ch.getCommunity() != null));
-      }
-    }catch(InterruptedException e){log.error("Error in listEntities:" + e);}
-    return ch.getCommunity().getEntities();
-  }
-
-
-  /**
-   * Returns attributes associated with specified community entity.
-   * @param communityName  Entities parent community
-   * @param entityName     Name of community entity
-   * @return               Attributes associated with entity
-   */
-  public Attributes getEntityAttributes(String communityName,
-                                        String entityName) {
-    log.debug("getEntityAttributes");
-    if (cache.contains(communityName)) {
-      Community community = cache.get(communityName);
-      if (community.hasEntity(entityName)) {
-        return community.getEntity(entityName).getAttributes();
-      } else {
-        return new BasicAttributes();
-      }
-    } else {
-      final CommunityHolder ch = new CommunityHolder();
-      final Semaphore s = new Semaphore(0);
-      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
-                              new CommunityResponseListener() {
-        public void getResponse(CommunityResponse resp) {
-          ch.setCommunity( (Community) resp.getContent());
-          s.release();
-        }
-      });
-      try {
-        s.acquire();
-        if (ch.getCommunity() != null &&
-            ch.getCommunity().hasEntity(entityName)) {
-          return ch.getCommunity().getEntity(entityName).getAttributes();
-        }
-        else {
-          log.warn("Error in getEntityAttributes: " +
-                   " community=" + communityName +
-                   " entity=" + entityName +
-                   " communityExists=" + (ch.getCommunity() != null) +
-                   " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
-        }
-      }
-      catch (Exception ex) {
-        log.debug(ex.getMessage(), ex);
-      }
-      return new BasicAttributes();
-    }
-  }
-
-  /**
-   * Sets the attributes associated with specified community entity.
-   * @param communityName  Entities parent community
-   * @param entityName     Name of community entity
-   * @param attributes     Attributes to associate with entity
-   * @return               True if operation was successful
-   */
-  public boolean setEntityAttributes(String communityName, String entityName,
-                                     Attributes attributes) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    final Status status = new Status(false);
-    CommunityResponseListener crl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        status.setValue(resp.getStatus() == CommunityResponse.SUCCESS);
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    };
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), crl);
-    try{
-      s.acquire();
-      if (ch.getCommunity() != null &&
-          ch.getCommunity().hasEntity(entityName)) {
-          ModificationItem[] items =
-          getAttributeModificationItems(ch.getCommunity().getEntity(entityName).
-                                        getAttributes(), attributes);
-          modifyAttributes(communityName, entityName, items, crl);
-          s.acquire();
-      } else {
-        log.warn("Error in setEntityAttributes: " +
-                 " community=" + communityName +
-                 " entity=" + entityName +
-                 " communityExists=" + (ch.getCommunity() != null) +
-                 " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
-       }
-    }catch(Exception e) {
-      log.error("Error in setEntityAttributes: " + e);
-    }
-    return status.getValue();
-  }
-
-
-  /**
-   * Modifies the attributes associated with specified community entity.
-   * @param communityName  Entities parent community
-   * @param entityName     Name of community entity
-   * @param mods           Attribute modifications to be performed
-   * @return               True if operation was successful
-   */
-  public boolean modifyEntityAttributes(String communityName, String entityName,
-                                 ModificationItem[] mods) {
-    log.debug("modifyEntityAttributes");
-    final Semaphore s = new Semaphore(0);
-    final Status status = new Status(false);
-    CommunityResponseListener cl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp) {
-        status.setValue(resp != null && resp.getStatus() == CommunityResponse.SUCCESS);
-         s.release();
-      }
-    };
-    modifyAttributes(communityName, entityName, mods, cl);
-    try {
-      s.acquire();
-    } catch(InterruptedException e) {
-      log.error("Error in modifyEntityAttributes:" + e);
-    }
-    return status.getValue();
-  }
-
-  /**
-   * Performs attribute based search of community context.  This search looks
-   * for communities with attributes that satisfy criteria specified by filter.
-   * Entities within communities are not searched.  This is a general
-   * purpose search operation using a JNDI search filter.  Refer to JNDI
-   * documentation for filter syntax.
-   * @param filter        JNDI search filter
-   * @return              Collection of community names that satisfy filter
-   */
-  public Collection search(String filter) {
-    log.debug("search: filter=" + filter);
-    Collection entities = cache.search(filter);
-    Collection names = new ArrayList();
-    for (Iterator it = entities.iterator(); it.hasNext();) {
-      names.add(((Entity)it.next()).getName());
-    }
-    return names;
-  }
-
-
-  /**
-   * Performs attribute based search of community entities.  This is a general
-   * purpose search operation using a JNDI search filter.
-   * @param communityName Name of community to search
-   * @param filter        JNDI search filter
-   * @return              Collection of MessageAddresses
-   */
-  public Collection search(final String communityName, String filter) {
-    return search(communityName, filter, false);
-  }
-
-  public Collection search(final String communityName, final String filter, boolean block) {
+  protected Collection search(final String communityName, final String filter, boolean block) {
     if (log.isDebugEnabled()) {
       boolean inCache = cache.contains(communityName);
       log.debug("search" +
@@ -1052,189 +716,6 @@ public class CommunityServiceImpl extends BlackboardClientComponent
                " matches=" + matches.size());
     }
     return matches;
-  }
-
-  private String entityNames(Collection entities) {
-    StringBuffer sb = new StringBuffer("[");
-    for (Iterator it = entities.iterator(); it.hasNext();) {
-      Entity entity = (Entity)it.next();
-      sb.append(entity.getName());
-      if (it.hasNext()) sb.append(",");
-    }
-    sb.append("]");
-    return sb.toString();
-  }
-
-  protected Object lookup(String communityName, String entityName) {
-    return null;
-  }
-
-
-  /**
-   * Requests the roster for the named community.
-   * @param communityName Name of community
-   * @return              Community roster (or null if agent is not authorized
-   *                      access)
-   */
-  public CommunityRoster getRoster(String communityName) {
-    log.debug("getRoster: community=" + communityName);
-    if (cache.contains(communityName)) {
-      return new CommunityRosterImpl(cache.get(communityName));
-    } else {
-      final CommunityHolder ch = new CommunityHolder();
-      final Semaphore s = new Semaphore(0);
-      queueCommunityRequest(new GetCommunity(communityName, getUID(), 0),
-                              new CommunityResponseListener() {
-        public void getResponse(CommunityResponse resp) {
-          ch.setCommunity( (Community) resp.getContent());
-          s.release();
-        }
-      });
-      try {
-        s.acquire();
-      }
-      catch (Exception ex) {}
-      if (ch.getCommunity() == null) {
-        return new CommunityRosterImpl(communityName, new Vector(), false);
-      }
-      else {
-        return new CommunityRosterImpl(ch.getCommunity());
-      }
-    }
-  }
-
-  /**
-   * Requests a collection of community names identifying the communities that
-   * contain the specified member.
-   * @param name   Member name
-   * @return A collection of community names
-   */
-  public Collection listParentCommunities(String member) {
-    return cache.getAncestorNames(member, false);
-  }
-
-  /**
-   * Requests a collection of community names identifying the communities that
-   * contain the specified member and satisfy a given set of attributes.
-   * @param name   Member name
-   * @param filter Search filter defining community attributes
-   * @return A collection of community names
-   */
-  public Collection listParentCommunities(String member, String filter) {
-    List matches = new ArrayList();
-    Collection parentNames = listParentCommunities(member);
-    Set communitiesMatchingFilter = cache.search(filter);
-    if (communitiesMatchingFilter != null) {
-      for (Iterator it = communitiesMatchingFilter.iterator(); it.hasNext(); ) {
-        Community community = (Community) it.next();
-        if (parentNames.contains(community.getName())) {
-          matches.add(community.getName());
-        }
-      }
-    }
-    return matches;
-  }
-
-  /**
-   * Adds a listener to list of addresses that are notified of changes to
-   * specified community.
-   * @param addr          Listeners MessageAddress
-   * @param communityName Community of interest
-   * @return              True if operation was successful
-   * @deprecated          Subscribe to changes in Community objects associated
-   *                      with community of interest
-   */
-  public boolean addListener(MessageAddress addr, String communityName) {
-    return false;
-  }
-
-
-  /**
-   * Removes a listener from list of addresses that are notified of changes to
-   * specified community.
-   * @param addr          Listeners MessageAddress
-   * @param communityName Community of interest
-   * @return              True if operation was successful
-   * @deprecated          Subscribe to changes in Community objects associated
-   *                      with community of interest
-   */
-  public boolean removeListener(MessageAddress addr, String communityName) {
-    return false;
-  }
-
-
-  /**
-   * Returns a collection of MessageAddresss associated with the agents
-   * that are have the attribute "ChangeListener".
-   * specified community.
-   * @param communityName Community of interest
-   * @return              MessageAddresses of listener agents
-   * @deprecated
-   */
-  public Collection getListeners(String communityName) {
-    return Collections.EMPTY_SET;
-  }
-
-
-  /**
-   * Finds all community entities associated with a given role.  This method
-   * is equivalent to using the search method with the filter
-   * "(Role=RoleName)".
-   * @param communityName Name of community to query
-   * @param roleName      Name of role provided
-   * @return              Collection of entity objects
-   */
-  public Collection searchByRole(String communityName, String roleName) {
-    return search(communityName, "(Role=" + roleName + ")");
-  }
-
-
-  /**
-   * Returns a collection of all roles supported by the specified community
-   * entity.
-   * @param communityName  Parent community
-   * @param entityName     Name of community entity
-   * @return               Collection of role names
-   */
-  public Collection getEntityRoles(String communityName, String entityName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
-                            new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp){
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    });
-    try{
-      s.acquire();
-      if (ch.getCommunity() != null &&
-          ch.getCommunity().hasEntity(entityName)) {
-        Entity entity = ch.getCommunity().getEntity(entityName);
-        Attributes attrs = entity.getAttributes();
-        Attribute attr = attrs.get("Role");
-        Collection roles = new ArrayList();
-        for(NamingEnumeration enum = attr.getAll(); enum.hasMoreElements();) {
-          roles.add((String)enum.nextElement());
-        }
-        if (log.isDebugEnabled()) {
-          log.debug("getCommunityRoles:" +
-                    " community=" + communityName +
-                    " attrs=" + attrsToString(attrs) +
-                    " roles=" + roles);
-        }
-        return roles;
-      } else {
-        log.warn("Error in getEntityRoles: " +
-                 " community=" + communityName +
-                 " entity=" + entityName +
-                 " communityExists=" + (ch.getCommunity() != null) +
-                 " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
-       }
-    } catch(Exception e) {
-      log.error("Error in getEntityRoles:" + e);
-    }
-    return new ArrayList();
   }
 
   public void setupSubscriptions() {
@@ -1297,179 +778,11 @@ public class CommunityServiceImpl extends BlackboardClientComponent
   }
 
   /**
-   * Returns a list of all external roles supported by the specified community.
-   * @param communityName Community name
-   * @return              Collection of role names
-   */
-  public Collection getCommunityRoles(String communityName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
-                            new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp){
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    });
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null) {
-        Attributes attrs = ch.getCommunity().getAttributes();
-        Attribute attr = attrs.get("Role");
-        if(attr == null) return new ArrayList();
-        Collection roles = new ArrayList();
-        if (attr.size() == 1)
-          roles.add( (String) attr.get());
-        else {
-          for (NamingEnumeration enum = attr.getAll(); enum.hasMoreElements(); ) {
-            roles.add( (String) enum.nextElement());
-          }
-        }
-        if (log.isDebugEnabled()) {
-          log.debug("getCommunityRoles:" +
-                    " community=" + communityName +
-                    " attrs=" + attrsToString(attrs) +
-                    " roles=" + roles);
-        }
-        return roles;
-      }
-      else {
-        log.warn("Error in getCommunityRoles: " +
-                 " community=" + communityName +
-                 " communityExists=" + (ch.getCommunity() != null));
-      }
-    } catch(Exception e) {
-      log.error("Error in getCommunityRoles:" + e);
-    }
-    return Collections.EMPTY_SET;
-  }
-
-
-  /**
-   * Associates a new role with specified community entity.
-   * @param communityName  Parent community
-   * @param entityName     Name of community entity
-   * @param roleName       Name of role to associate with entity
-   * @return               True if operation was successful
-   */
-  public boolean addRole(String communityName, String entityName,
-                         String roleName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    final Status status = new Status(false);
-    CommunityResponseListener cl = new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp) {
-        status.setValue(resp.getStatus() == CommunityResponse.SUCCESS);
-        ch.setCommunity( (Community) resp.getContent());
-        s.release();
-      }
-    };
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), cl);
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null &&
-          ch.getCommunity().hasEntity(entityName)) {
-        Entity entity = ch.getCommunity().getEntity(entityName);
-        Attributes attrs = entity.getAttributes();
-        Attribute attr = attrs.get("Role");
-        ModificationItem mi[];
-        if (attr == null)
-          mi = new ModificationItem[] {
-              new ModificationItem(DirContext.ADD_ATTRIBUTE,
-                                   new BasicAttribute("Role", roleName))};
-        else {
-          mi = new ModificationItem[2];
-          mi[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, attr);
-          attr.add(roleName);
-          mi[1] = new ModificationItem(DirContext.ADD_ATTRIBUTE, attr);
-        }
-        modifyAttributes(communityName, entityName, mi, cl);
-      }
-      else {
-        log.warn("Error in addRole: " +
-                 " community=" + communityName +
-                 " entity=" + entityName +
-                 " communityExists=" + (ch.getCommunity() != null) +
-                 " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
-        status.setValue(false);
-      }
-    }
-    catch (Exception e) {
-      log.error("Error in addRole: " + e);
-    }
-    return status.getValue();
-  }
-
-
-  /**
-   * Removes a Role from attributes of specified community entity.
-   * @param communityName  Parent community
-   * @param entityName     Name of community entity
-   * @param roleName       Name of role to associate with entity
-   * @return               True if operation was successful
-   */
-  public boolean removeRole(String communityName, String entityName,
-                            String roleName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    final Status status = new Status(false);
-    CommunityResponseListener cl = new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        status.setValue(resp.getStatus() == CommunityResponse.SUCCESS);
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    };
-    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), cl);
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null &&
-          ch.getCommunity().hasEntity(entityName)) {
-        Entity entity = ch.getCommunity().getEntity(entityName);
-        Attributes attrs = entity.getAttributes();
-        Attribute attr = attrs.get("Role");
-        ModificationItem[] mi;
-        if (!attr.contains(roleName)) {
-          return true;
-        }
-        else {
-          mi = new ModificationItem[2];
-          mi[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, attr);
-          attr.remove(roleName);
-          mi[1] = new ModificationItem(DirContext.ADD_ATTRIBUTE, attr);
-        }
-        modifyAttributes(communityName, entityName, mi, cl);
-      }
-      else {
-        log.warn("Error in removeRole: " +
-                 " community=" + communityName +
-                 " entity=" + entityName +
-                 " communityExists=" + (ch.getCommunity() != null) +
-                 " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
-        status.setValue(false);
-      }
-    }
-    catch (Exception e) {
-      log.error("Error in removeRole: " + e);
-    }
-    return status.getValue();
-  }
-
-  /**
    * Get Unique identifier.
    */
   private UID getUID() {
     return uidService != null ? uidService.nextUID() : null;
   }
-
-
-  /**
-   * Notifies interested agents that a change has occurred in community.
-   */
-  protected void notifyListeners(final String communityName, final int type,
-      final String whatChanged) {
-  }
-
 
   /**
    * Predicate for Community Requests that are published locally.  These
@@ -1481,29 +794,6 @@ public class CommunityServiceImpl extends BlackboardClientComponent
     public boolean execute (Object o) {
       return (o instanceof CommunityRequest);
   }};
-
-  /**
-   * Creates a string representation of an Attribute set.
-   */
-  protected String attrsToString(Attributes attrs) {
-    StringBuffer sb = new StringBuffer("[");
-    try {
-      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
-        Attribute attr = (Attribute)enum.next();
-        sb.append(attr.getID() + "=(");
-        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
-          sb.append((String)enum1.next());
-          if (enum1.hasMore())
-            sb.append(",");
-          else
-            sb.append(")");
-        }
-        if (enum.hasMore()) sb.append(",");
-      }
-      sb.append("]");
-    } catch (NamingException ne) {}
-    return sb.toString();
-  }
 
   /**
    * Container for community request/listener pair.
