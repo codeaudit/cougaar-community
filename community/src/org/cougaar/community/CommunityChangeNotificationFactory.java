@@ -50,22 +50,8 @@ public class CommunityChangeNotificationFactory
    * @param Name of community
    */
   public CommunityChangeNotification newCommunityChangeNotification(String communityName, MessageAddress source) {
-    CommunityChangeNotification ccn = new CommunityChangeNotificationImpl(communityName, source);
-    ccn.setUID(myUIDServer.nextUID());
+    CommunityChangeNotification ccn = new CommunityChangeNotificationImpl(communityName, source, myUIDServer.nextUID());
+    //ccn.setUID(myUIDServer.nextUID());
     return ccn;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

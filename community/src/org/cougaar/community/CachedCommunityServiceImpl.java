@@ -114,7 +114,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         (CommunityChangeNotification)enum.nextElement();
       String communityName = ccn.getCommunityName();
       if (log.isDebugEnabled())
-        log.debug("Received CommunityChangeNotification: community=" +
+        log.debug("Received added CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
       synchronized (this) {
         if (contains(communityName)) update(communityName);
@@ -127,7 +127,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         (CommunityChangeNotification)enum.nextElement();
       String communityName = ccn.getCommunityName();
       if (log.isDebugEnabled())
-        log.debug("Received CommunityChangeNotification: community=" +
+        log.debug("Received changed CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
       synchronized (this) {
         if (contains(communityName)) update(communityName);
@@ -186,8 +186,8 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    */
   private void addEntity(String communityName, String entityName,
     Object obj, Attributes attrs) {
-    if (log.isInfoEnabled())
-      log.info("Adding entity to community: community=" + communityName
+    if (log.isDebugEnabled())
+      log.debug("Adding entity to community: community=" + communityName
                + " entity=" + entityName
                + " attrs=" + attrs);
     Community ce = (Community)cache.get(communityName);
@@ -271,6 +271,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         for (Iterator it = entities.iterator(); it.hasNext();) {
           String entityName = (String)it.next();
           attrs = super.getEntityAttributes(communityName, entityName);
+          log.debug("update: entity="+ entityName + " attributes=" + attrsToString(attrs));
           Object obj = super.lookup(communityName, entityName);
           addEntity(communityName, entityName, obj, attrs);
         }
@@ -328,12 +329,14 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
   private IncrementalSubscription changeNotifications;
   private UnaryPredicate changeNotificationPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
-      //return (o instanceof CommunityChangeNotification);
+      return (o instanceof CommunityChangeNotification);
+      /*
       if (o instanceof CommunityChangeNotification) {
         CommunityChangeNotification ccn = (CommunityChangeNotification)o;
         return (ccn.getTargets() == Collections.EMPTY_SET);
       }
       return false;
+      */
   }};
 
 }

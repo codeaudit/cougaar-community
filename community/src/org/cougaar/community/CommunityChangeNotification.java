@@ -25,6 +25,7 @@ import org.cougaar.core.relay.Relay;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.util.UniqueObject;
 import org.cougaar.core.util.UID;
+import java.util.Set;
 
 /**
  * Message used to notify agents of state change in a community of interest.
@@ -60,5 +61,11 @@ public interface CommunityChangeNotification
    * @param target the address of the target agent to be removed.
    **/
   public void removeTarget(MessageAddress target);
+
+  /**
+   * Sets destination targets.
+   * @param targets  Destination addresses
+   */
+  public void setTargets(Set targets);
 
 }

@@ -18,6 +18,7 @@
 package org.cougaar.community;
 
 import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.util.UID;
 
 /**
  * Implementation of CommunityChangeNotification interface.
@@ -33,12 +34,23 @@ public class CommunityChangeNotificationImpl
    * Constructor.
    * @param communityName  Name of changed community
    */
-    public CommunityChangeNotificationImpl(String communityName, MessageAddress source) {
+    public CommunityChangeNotificationImpl(String communityName,
+                                           MessageAddress source,
+                                           UID uid) {
     super();
     setCommunityName(communityName);
     setSource(source);
+    super.setUID(uid);
   }
 
+
+  /**
+   *
+   * @param uid
+   */
+  public void setUID(UID uid) {
+    throw new RuntimeException("Invalid attempt  to set UID");
+  }
 
   /**
    * Defines the name of the changed community.
@@ -63,8 +75,8 @@ public class CommunityChangeNotificationImpl
     CommunityChangeNotificationImpl ccn =
       (CommunityChangeNotificationImpl) newCCN;
 
-    return (super.contentChanged(ccn) ||
-            !getCommunityName().equals(ccn.getCommunityName()));
+   return (super.contentChanged(ccn) ||
+          !getCommunityName().equals(ccn.getCommunityName()));
   }
 
   /**

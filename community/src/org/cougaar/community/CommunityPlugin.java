@@ -170,7 +170,7 @@ public class CommunityPlugin extends SimplePlugin {
   private void join(CommunityRequestImpl req) {
     Attributes attrs = new BasicAttributes();
     attrs.put("Name", myAgent.toString());
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
     boolean result = communityService.addToCommunity(req.getTargetCommunityName(),
       myAgent, myAgent.toString(), attrs);

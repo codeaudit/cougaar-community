@@ -147,6 +147,14 @@ abstract public class CommunityChangeNotificationAdapter
   }
 
   /**
+   * Set the addresses of the target agents to which this Relay
+   * should be sent.
+   **/
+  public void setTargets(Set targets) {
+    myTargetSet = targets;
+  }
+
+  /**
    * Get an object representing the value of this Relay suitable
    * for transmission. This implementation uses itself to represent
    * its Content.
@@ -177,7 +185,7 @@ abstract public class CommunityChangeNotificationAdapter
         Object content,
         Token token) {
       CommunityChangeNotification ccn = (CommunityChangeNotification)content;
-      return new CommunityChangeNotificationImpl(ccn.getCommunityName(), source);
+      return new CommunityChangeNotificationImpl(ccn.getCommunityName(), source, uid);
       //(
       //    uid, source, null, content, null);
     }
@@ -218,7 +226,8 @@ abstract public class CommunityChangeNotificationAdapter
    *    case the infrastructure should "publishChange" this
    */
   public int updateContent(Object content, Token token) {
-    return Relay.NO_CHANGE;
+    return (contentChanged((CommunityChangeNotificationAdapter) content) ?
+            Relay.CONTENT_CHANGE : Relay.NO_CHANGE);
   }
 
   // XMLizable interface
