@@ -18,14 +18,14 @@
  *  PERFORMANCE OF THE COUGAAR SOFTWARE.
  * </copyright>
  */
-//package org.cougaar.core.service.community;
 package org.cougaar.community;
 
 import org.cougaar.core.component.Service;
 
 /**
+ * Interface defining CommunityProtectionService used to authorize
+ * CommunityServuce client requests.
  */
-
 public interface CommunityProtectionService extends Service {
 
   /**

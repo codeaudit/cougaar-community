@@ -59,6 +59,7 @@ public abstract class AbstractCommunityManager
   protected Logger logger;
   protected Map communities = Collections.synchronizedMap(new HashMap());
   protected String agentName;
+  protected CommunityAccessManager accessManager;
 
   /**
    * Adds a community to be managed by this community manager.
@@ -102,125 +103,142 @@ public abstract class AbstractCommunityManager
                    " entity=" + entity +
                    " attrMods=" + attrMods);
     }
-    if (isManager(communityName)) {
-      CommunityImpl community = (CommunityImpl)communities.get(communityName);
-      boolean result = true;
-      switch (reqType) {
-        case JOIN:
-          if (entity != null) {
-            String entitiesBeforeAdd = "";
-            if (logger.isDetailEnabled()) {
-              entitiesBeforeAdd = entityNames(community.getEntities());
-            }
-            community.addEntity(entity);
-            if (logger.isDebugEnabled()) {
-              logger.debug(agentName+": Add entity:" +
-                           " community=" + community.getName() +
-                           " entity=" + entity +
-                           " members=" + community.getEntities().size());
-            }
-            if (logger.isDetailEnabled()) {
-              logger.detail(agentName+": Add entity:" +
-                           " community=" + community.getName() +
-                           " entity=" + entity.getName() +
-                           " before=" + entitiesBeforeAdd +
-                           " after=" +
-                           entityNames(community.getEntities()));
-            }
-            addTargets(communityName, Collections.singleton(source));
-            distributeUpdates(communityName);
-          } else {
-            result = false;
-          }
-          break;
-        case LEAVE:
-          if (entity != null && community.hasEntity(entity.getName())) {
-            String entitiesBeforeRemove = "";
-            if (logger.isDetailEnabled()) {
-              entitiesBeforeRemove = entityNames(community.getEntities());
-            }
-            community.removeEntity(entity.getName());
-            if (logger.isDebugEnabled()) {
-              logger.debug(agentName+": Remove entity:" +
-                           " community=" + community.getName() +
-                           " entity=" + entity +
-                           " members=" + community.getEntities().size());
-            }
-            if (logger.isDetailEnabled()) {
-              logger.detail(agentName+": Remove entity:" +
-                           " community=" + community.getName() +
-                           " entity=" + entity.getName() +
-                           " before=" + entitiesBeforeRemove +
-                           " after=" +
-                           entityNames(community.getEntities()));
-            }
-            distributeUpdates(communityName);
-          } else {
-            result = false;
-          }
-          break;
-        case GET_COMMUNITY_DESCRIPTOR:
-          addTargets(communityName, Collections.singleton(source));
-          break;
-        case MODIFY_ATTRIBUTES:
-          if (logger.isDebugEnabled()) {
-            logger.debug(agentName+": Modify attributes:" +
-                         " community=" + community.getName() +
-                         " source=" + source +
-                         " affectedEntity=" + entity);
-          }
-          if (entity == null ||
-              community.getName().equals(entity.getName())) {
-            // modify community attributes
-            Attributes attrs = community.getAttributes();
-            if (logger.isDetailEnabled()) {
-              logger.debug(agentName+": Modifying community attributes:" +
-                           " community=" + community.getName() +
-                           " before=" + attrsToString(attrs));
-            }
-            applyAttrMods(attrs, attrMods);
-            if (logger.isDetailEnabled()) {
-              logger.debug(agentName+": Modifying community attributes:" +
-                           " community=" + community.getName() +
-                           " after=" + attrsToString(attrs));
-            }
-            distributeUpdates(communityName);
-          } else {
-            // modify attributes of a community entity
-            entity = community.getEntity(entity.getName());
+    if (accessManager != null &&
+        !accessManager.authorize(communityName,
+                                 source,
+                                 reqType,
+                                 entity != null ? entity.getName()
+                                               : communityName)) {
+      if (logger.isWarnEnabled()) {
+        logger.warn(agentName + ": Authorization Failure:" +
+                                " community=" + communityName +
+                                " source=" + source +
+                                " request=" + reqType +
+                                " target=" + entity);
+      }
+      return new CommunityResponseImpl(CommunityResponse.FAIL, null);
+    } else {
+      if (isManager(communityName)) {
+        CommunityImpl community = (CommunityImpl)communities.get(communityName);
+        boolean result = true;
+        switch (reqType) {
+          case JOIN:
             if (entity != null) {
-              Attributes attrs = entity.getAttributes();
+              String entitiesBeforeAdd = "";
               if (logger.isDetailEnabled()) {
-                logger.detail(agentName+": Modifying entity attributes:" +
+                entitiesBeforeAdd = entityNames(community.getEntities());
+              }
+              community.addEntity(entity);
+              if (logger.isDebugEnabled()) {
+                logger.debug(agentName + ": Add entity:" +
                              " community=" + community.getName() +
-                             " entity=" + entity.getName() +
+                             " entity=" + entity +
+                             " members=" + community.getEntities().size());
+              }
+              if (logger.isDetailEnabled()) {
+                logger.detail(agentName + ": Add entity:" +
+                              " community=" + community.getName() +
+                              " entity=" + entity.getName() +
+                              " before=" + entitiesBeforeAdd +
+                              " after=" +
+                              entityNames(community.getEntities()));
+              }
+              addTargets(communityName, Collections.singleton(source));
+              distributeUpdates(communityName);
+            } else {
+              result = false;
+            }
+            break;
+          case LEAVE:
+            if (entity != null && community.hasEntity(entity.getName())) {
+              String entitiesBeforeRemove = "";
+              if (logger.isDetailEnabled()) {
+                entitiesBeforeRemove = entityNames(community.getEntities());
+              }
+              community.removeEntity(entity.getName());
+              if (logger.isDebugEnabled()) {
+                logger.debug(agentName + ": Remove entity:" +
+                             " community=" + community.getName() +
+                             " entity=" + entity +
+                             " members=" + community.getEntities().size());
+              }
+              if (logger.isDetailEnabled()) {
+                logger.detail(agentName + ": Remove entity:" +
+                              " community=" + community.getName() +
+                              " entity=" + entity.getName() +
+                              " before=" + entitiesBeforeRemove +
+                              " after=" +
+                              entityNames(community.getEntities()));
+              }
+              distributeUpdates(communityName);
+            } else {
+              result = false;
+            }
+            break;
+          case GET_COMMUNITY_DESCRIPTOR:
+            addTargets(communityName, Collections.singleton(source));
+            break;
+          case MODIFY_ATTRIBUTES:
+            if (logger.isDebugEnabled()) {
+              logger.debug(agentName + ": Modify attributes:" +
+                           " community=" + community.getName() +
+                           " source=" + source +
+                           " affectedEntity=" + entity);
+            }
+            if (entity == null ||
+                community.getName().equals(entity.getName())) {
+              // modify community attributes
+              Attributes attrs = community.getAttributes();
+              if (logger.isDetailEnabled()) {
+                logger.debug(agentName + ": Modifying community attributes:" +
+                             " community=" + community.getName() +
                              " before=" + attrsToString(attrs));
               }
               applyAttrMods(attrs, attrMods);
               if (logger.isDetailEnabled()) {
-                logger.detail(agentName+": Modifying entity attributes:" +
+                logger.debug(agentName + ": Modifying community attributes:" +
                              " community=" + community.getName() +
-                             " entity=" + entity.getName() +
                              " after=" + attrsToString(attrs));
               }
               distributeUpdates(communityName);
+            } else {
+              // modify attributes of a community entity
+              entity = community.getEntity(entity.getName());
+              if (entity != null) {
+                Attributes attrs = entity.getAttributes();
+                if (logger.isDetailEnabled()) {
+                  logger.detail(agentName + ": Modifying entity attributes:" +
+                                " community=" + community.getName() +
+                                " entity=" + entity.getName() +
+                                " before=" + attrsToString(attrs));
+                }
+                applyAttrMods(attrs, attrMods);
+                if (logger.isDetailEnabled()) {
+                  logger.detail(agentName + ": Modifying entity attributes:" +
+                                " community=" + community.getName() +
+                                " entity=" + entity.getName() +
+                                " after=" + attrsToString(attrs));
+                }
+                distributeUpdates(communityName);
+              }
             }
-          }
-          break;
+            break;
+        }
+        community.setLastUpdate(System.currentTimeMillis());
+        return new CommunityResponseImpl(result
+                                         ? CommunityResponse.SUCCESS
+                                         : CommunityResponse.FAIL,
+                                         result ?
+                                         (CommunityImpl)community.clone() : null);
+      } else {
+        if (logger.isDetailEnabled()) {
+          logger.detail(agentName + ": Not community manager:" +
+                        " community=" + communityName +
+                        " source=" + source +
+                        " request=" + reqType);
+        }
+        return new CommunityResponseImpl(CommunityResponse.TIMEOUT, null);
       }
-      community.setLastUpdate(System.currentTimeMillis());
-      return new CommunityResponseImpl(result
-                                       ? CommunityResponse.SUCCESS
-                                       : CommunityResponse.FAIL,
-                                       result ? (CommunityImpl)community.clone() : null);
-    } else {
-      if (logger.isDetailEnabled()) {
-        logger.detail(agentName+": Not community manager:" +
-                     " community=" + communityName +
-                     " source=" + source +
-                     " request=" + reqType);
-      }
-      return new CommunityResponseImpl(CommunityResponse.TIMEOUT, null);
     }
   }
 

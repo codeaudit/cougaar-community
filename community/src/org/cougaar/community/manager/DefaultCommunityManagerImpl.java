@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.lang.reflect.Constructor;
 
 import javax.naming.directory.ModificationItem;
 
@@ -57,28 +58,25 @@ import org.cougaar.util.UnaryPredicate;
  */
 public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
 
-  public static final String SEND_INTERVAL_PROPERTY = "org.cougaar.community.updateInterval";
   // Defines how long CommunityDescriptor updates should be aggregated before
   // sending to interested agents.
+  public static final String SEND_INTERVAL_PROPERTY = "org.cougaar.community.updateInterval";
   private static long SEND_INTERVAL = 30 * 1000;
 
-  // Defines TTL for community manager binding cache entry
-  public static final String WPS_CACHE_EXPIRATION_PROPERTY = "org.cougaar.community.wps.cache.expiration";
-  private static long CACHE_TTL = 5 * 60 * 1000;
-
-  public static final String WPS_RETRY_INTERVAL_PROPERTY = "org.cougaar.community.wps.retry.interval";
-  private static long WPS_RETRY_DELAY = 15 * 1000;
-
   // Defines frequency of White Pages read to verify that this agent is still
   // manager for community
-  public static final String MANAGER_CHECK_INTERVAL_PROPERTY = "org.cougaar.community.manager.check.interval";
-  private static long TIMER_INTERVAL = 1 * 60 * 1000;
+  public static final String VERIFY_MGR_INTERVAL_PROPERTY = "org.cougaar.community.manager.check.interval";
+  private static long VERIFY_MGR_INTERVAL = 1 * 60 * 1000;
 
-  // Defines frequency of White Pages read to verify that this agent is still
-  // manager for community
-  public static final String CACHE_EXPIRATION_PROPERTY = "org.cougaar.community.manager.cache.expiration";
-  private static long CACHE_EXPIRATION = 5 * 60 * 1000;
+  // Period that a client caches its community descriptors
+  public static final String CACHE_EXPIRATION_PROPERTY = "org.cougaar.community.cache.expiration";
+  private static long CACHE_EXPIRATION = 10 * 60 * 1000;
 
+  // Classname of CommunityAccessManager to use for request authorization
+  public static final String COMMUNITY_ACCESS_MANAGER_PROPERTY =
+      "org.cougaar.community.access.manager.classname";
+  private static String DEFAULT_COMMUNITY_ACCESS_MANAGER_CLASSNAME =
+      "org.cougaar.community.manager.CommunityAccessManager";
 
   protected BindingSite bindingSite;
   protected MyBlackboardClient myBlackboardClient;
@@ -90,7 +88,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
   protected CommunityDistributer distributer;
 
   // Services used
-  protected AbstractCommunityService communityService;  //private CommunityService communityService;
+  protected AbstractCommunityService communityService;
   protected WhitePagesService whitePagesService;
 
   // This agent
@@ -119,6 +117,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
         (WhitePagesService) sb.getService(this, WhitePagesService.class, null);
     myBlackboardClient = new MyBlackboardClient(bs);
     getSystemProperties();
+    accessManager = getCommunityAccessManager();
     distributer = new CommunityDistributer(bs,
                                            SEND_INTERVAL,
                                            CACHE_EXPIRATION,
@@ -126,6 +125,31 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
                                            cul,
                                            myBlackboardClient,
                                            communities);
+  }
+
+  /**
+   * Create a new CommunityAccessManager.
+   * @return CommunityAccessManager
+   */
+  protected CommunityAccessManager getCommunityAccessManager() {
+    ServiceBroker sb = getServiceBroker();
+    CommunityAccessManager cam = null;
+    String accessManagerClassname =
+        System.getProperty(COMMUNITY_ACCESS_MANAGER_PROPERTY,
+                           DEFAULT_COMMUNITY_ACCESS_MANAGER_CLASSNAME);
+    try {
+      Class accessManagerClass = Class.forName(accessManagerClassname);
+      Class args[] = new Class[]{ServiceBroker.class};
+      Constructor constructor =
+          accessManagerClass.getConstructor(args);
+      cam = (CommunityAccessManager)constructor.newInstance(new Object[]{sb});
+    } catch (Exception ex) {
+      logger.error("Exception creating CommunityAccessManager: "
+                   + ex.getMessage() +
+                   ", reverting to org.cougaar.community.manager.CommunityAccessManager");
+      cam = new CommunityAccessManager(sb);
+    }
+    return cam;
   }
 
   public void manageCommunity(Community community) {
@@ -136,12 +160,8 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
     try {
       SEND_INTERVAL =
           Long.parseLong(System.getProperty(SEND_INTERVAL_PROPERTY, Long.toString(SEND_INTERVAL)));
-      CACHE_TTL =
-          Long.parseLong(System.getProperty(WPS_CACHE_EXPIRATION_PROPERTY, Long.toString(CACHE_TTL)));
-      WPS_RETRY_DELAY =
-          Long.parseLong(System.getProperty(WPS_RETRY_INTERVAL_PROPERTY, Long.toString(WPS_RETRY_DELAY)));
-      TIMER_INTERVAL =
-          Long.parseLong(System.getProperty(MANAGER_CHECK_INTERVAL_PROPERTY, Long.toString(TIMER_INTERVAL)));
+      VERIFY_MGR_INTERVAL =
+          Long.parseLong(System.getProperty(VERIFY_MGR_INTERVAL_PROPERTY, Long.toString(VERIFY_MGR_INTERVAL)));
       CACHE_EXPIRATION =
           Long.parseLong(System.getProperty(CACHE_EXPIRATION_PROPERTY, Long.toString(CACHE_EXPIRATION)));
     } catch (Exception ex) {
@@ -230,7 +250,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
   public void findManager(String                      communityName,
                           final FindCommunityCallback fmcb) {
 
-    communityService.findCommunity(communityName, fmcb, -1);
+    communityService.findCommunity(communityName, fmcb, 0);
   }
 
   /**
@@ -438,7 +458,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
 
     protected void startVerifyManagerCheck() {
       if (verifyMgrAlarm == null) {
-        verifyMgrAlarm = new BBWakeAlarm(now() + TIMER_INTERVAL);
+        verifyMgrAlarm = new BBWakeAlarm(now() + VERIFY_MGR_INTERVAL);
         alarmService.addRealTimeAlarm(verifyMgrAlarm);
       }
     }
@@ -475,7 +495,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
       // manager roles for this agent
       if (verifyMgrAlarm != null && verifyMgrAlarm.hasExpired()) {
         verifyManagerRole();
-        verifyMgrAlarm = new BBWakeAlarm(now() + TIMER_INTERVAL);
+        verifyMgrAlarm = new BBWakeAlarm(now() + VERIFY_MGR_INTERVAL);
         alarmService.addRealTimeAlarm(verifyMgrAlarm);
       }
 
