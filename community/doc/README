@@ -251,7 +251,9 @@ computers the applicable "alpreg.ini" file must of course be updated.
 VIII.  ANT TARGETS
        -----------
 
-A "build.xml" file is provided for use with the ant build system.  This build
+A module-specific "build.xml" file is provided in the doc directory 
+for use with the ant build system (the Cougaar generated Ant build
+script is in the top-level directory).  This build
 file makes 2 assumptions:
   1) The COUGAAR_INSTALL_PATH environment variable is defined and,
   2) Ant is invoked from the root directory of the community distribution.
