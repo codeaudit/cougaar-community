@@ -107,6 +107,12 @@ public class CommunityServiceTestImpl extends AbstractCommunityService
     return listParentCommunities(member, filter);
   }
 
+  public Collection listParentCommunities(String                    member,
+					  CommunityResponseListener crl) {
+    // FIXME - bug 3910 stub
+    return listParentCommunities(member);
+  }
+
   protected void sendResponse(CommunityResponse resp, Set listeners) {
     log.debug("sendResponse: resp=" + resp + " listeners=" + listeners);
     for (Iterator it = listeners.iterator(); it.hasNext();) {
