@@ -83,8 +83,6 @@ public class CommunityServiceComponent extends ComponentSupport {
     try {
       //initXmlFile only used by FileInitializerServiceProvider
       communityConfigs = is.getCommunityDescriptions(agentId.toString(), initXmlFile);  
-      //FIXME -only gets info for this particular agent,
-      //      -need to add functionality to load info for communities that are members of communities.
     }
     catch (Exception e) {
       System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
@@ -92,7 +90,7 @@ public class CommunityServiceComponent extends ComponentSupport {
     } finally {
       sb.releaseService(this, InitializerService.class, is);
     }
-    initializeCommunityRelationships(cs, agentId, communityConfigs);  
+    initializeCommunityRelationships(cs, is, agentId, communityConfigs); //recursive
 
     super.load();
   }
@@ -114,78 +112,50 @@ public class CommunityServiceComponent extends ComponentSupport {
 
   /**
    * Adds initial community relationships for this agent to Name Server.
-   * Community relationships is obtained from the InitializerService which
+   * Community relationships are obtained from the InitializerService which
    * in turn obtains the information from either the Configuration database or
-   * an XML file based on a system parameter. 
+   * an XML file based on a system parameter. This method is recursive in tha this 
+   * agent, if it creates a community, takes responsibility for determining if the
+   * community that it created is a member of other communities and will add that
+   * information to the NameServer as well.
    * @param cs       Reference to CommunityService
+   * @param is       Reference to InitializerService
    * @param agentID  Agent identifier
    * @param communityConfigs  CommunityConfig objects
    */
+  private void initializeCommunityRelationships(CommunityService cs, InitializerService is,
+                                                Object entId, Collection communityConfigs) {
+    Object entityId;
+    if ((entId.getClass().getName())== "org.cougaar.core.agent.ClusterIdentifier")
+      entityId = (ClusterIdentifier) entId;
+    else
+      entityId = (String) entId;
 
-  private void initializeCommunityRelationships(CommunityService cs,
-                                                ClusterIdentifier agentId, Collection communityConfigs) {
     if (log.isDebugEnabled()) {
-      log.debug("Setup initial community assignments: agent=" + agentId);
+      log.debug("Setup initial community assignments: agent=" + entityId);
     }
+    String communityName = null;
     try {
       for (Iterator it = communityConfigs.iterator(); it.hasNext();) {
         CommunityConfig cc = (CommunityConfig)it.next();
-        if (!cs.communityExists(cc.getName())) {
+        communityName = cc.getName();        
+        if (!cs.communityExists(communityName)) {
           if (log.isDebugEnabled())
-            log.debug("Agent " + agentId + ": creating community " + cc.getName());
-          cs.createCommunity(cc.getName(), cc.getAttributes());
+            log.debug("Agent " + entityId + ": creating community " + communityName);
+          cs.createCommunity(communityName, cc.getAttributes());
+          //this agent just created this community so now have responsibility to check if this
+          // community is a member of any other communities
+          Collection communityWithCommMember = is.getCommunityDescriptions(communityName, initXmlFile); 
+          if (!communityWithCommMember.isEmpty()) {
+            initializeCommunityRelationships(cs, is, communityName, communityWithCommMember);
+          }
         }
-        Attributes myAttributes = cc.getEntity(agentId.toString()).getAttributes();
+        Attributes myAttributes = cc.getEntity(entityId.toString()).getAttributes();
         if (log.isDebugEnabled()) {
-          log.debug("Adding Agent " + agentId + " to community " + cc.getName());
+          log.debug("Adding Agent " + entityId + " to community " + communityName);
         }
-        cs.addToCommunity(cc.getName(), agentId, agentId.toString(), myAttributes);
-      }
-    } catch (Exception ex) {
-      log.error("Exception when initializing communities, " + ex, ex);
-    }
-  }
-
-  /**
-   * Adds initial community relationships for this agent to Name Server.
-   * Community relationships may be obtained from Configuration database or
-   * an XML file.  The Configuration database is used by default.  If loading
-   * from an XML file is required the parameter "file=XXX" must be supplied
-   * to this component.
-   * @param cs       Reference to CommunityService
-   * @param agentID  Agent identifier
-   */
-  private void initializeCommunityRelationships(CommunityService cs,
-      ClusterIdentifier agentId) {
-    if (log.isDebugEnabled()) {
-      log.debug("Setup initial community assignments: agent=" + agentId);
-    }
-    try {
-      // Get initial community config data
-      Collection communityConfigs = null;
-      if (initXmlFile == null) {
-        if (log.isDebugEnabled())
-          log.debug("Loading community config data from Configuration database");
-        communityConfigs =
-          CommunityConfigUtils.getCommunityConfigsFromDB(agentId.toString());
-      } else {
-        if (log.isDebugEnabled())
-          log.debug("Loading community config data from file '" + initXmlFile + "'");
-        communityConfigs =
-          CommunityConfigUtils.getCommunityConfigsFromFile(initXmlFile, agentId.toString());
-      }
-      for (Iterator it = communityConfigs.iterator(); it.hasNext();) {
-        CommunityConfig cc = (CommunityConfig)it.next();
-        if (!cs.communityExists(cc.getName())) {
-          if (log.isDebugEnabled())
-            log.debug("Agent " + agentId + ": creating community " + cc.getName());
-          cs.createCommunity(cc.getName(), cc.getAttributes());
-        }
-        Attributes myAttributes = cc.getEntity(agentId.toString()).getAttributes();
-        if (log.isDebugEnabled()) {
-          log.debug("Adding Agent " + agentId + " to community " + cc.getName());
-        }
-        cs.addToCommunity(cc.getName(), agentId, agentId.toString(), myAttributes);
+        //entityId is either a ClusterIdentifier or a String Object
+        cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
       }
     } catch (Exception ex) {
       log.error("Exception when initializing communities, " + ex, ex);
