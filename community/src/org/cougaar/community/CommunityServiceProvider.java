@@ -35,7 +35,8 @@ public class CommunityServiceProvider implements ServiceProvider {
   private CommunityService cs;
 
   public CommunityServiceProvider (BindingSite bs, MessageAddress agentId) {
-    cs = CommunityServiceImpl.getInstance(bs, agentId);
+    //cs = CommunityServiceImpl.getInstance(bs, agentId);
+    cs = new DefaultCommunityServiceImpl(bs);
   }
 
   public Object getService(ServiceBroker sb, Object requestor,

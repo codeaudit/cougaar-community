@@ -36,8 +36,6 @@ import org.cougaar.core.service.community.CommunityService;
 
 public class CommunityServiceComponent extends ComponentSupport {
 
-  private LoggingService log = null;
-
   public CommunityServiceComponent() {
     super();
   }
@@ -58,8 +56,8 @@ public class CommunityServiceComponent extends ComponentSupport {
 
   /**
    * Creates a CommunityService instance and adds to agent ServiceBroker.
-   * @param agentId
-   * @return
+   * @param agentId  Name of Agent
+   * @return CommunityService reference
    */
   private CommunityService loadCommunityService(MessageAddress agentId) {
     ServiceBroker sb = getBindingSite().getServiceBroker();

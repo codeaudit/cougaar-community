@@ -51,7 +51,8 @@ public class RelayAdapter implements Relay.Source {
   public Object getContent() {
     return content;
   }
-  /**
+
+  /*
    * Get a factory for creating the target.
    */
   public TargetFactory getTargetFactory() {
@@ -62,9 +63,9 @@ public class RelayAdapter implements Relay.Source {
     return resp;
   }
 
-  /**
+  /*
    * Set the response that was sent from a target.
-   **/
+   */
   public int updateResponse(MessageAddress target, Object response) {
     this.resp = response;
     return Relay.RESPONSE_CHANGE;
@@ -73,6 +74,7 @@ public class RelayAdapter implements Relay.Source {
   /**
    * Get all the addresses of the target agents to which this Relay
    * should be sent.
+   * @return Set of MessageAddress objects
    **/
   public Set getTargets() {
     if (myTargetSet == null) {
@@ -83,6 +85,7 @@ public class RelayAdapter implements Relay.Source {
   }
   /**
    * Add a target destination.
+   * @param target MessageAddress of agent to add to targets
    **/
   public void addTarget(MessageAddress target) {
     if (myTargetSet != null) {
@@ -98,10 +101,10 @@ public class RelayAdapter implements Relay.Source {
     return myUID;
   }
 
-  /** set the UID of a UniqueObject.  This should only be done by
+  /* set the UID of a UniqueObject.  This should only be done by
    * an LDM factory.  Will throw a RuntimeException if
    * the UID was already set.
-   **/
+   */
 
   public void setUID(UID uid) {
     if (myUID != null) {

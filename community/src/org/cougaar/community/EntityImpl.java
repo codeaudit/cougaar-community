@@ -20,6 +20,8 @@
  */
 package org.cougaar.community;
 
+import java.io.Serializable;
+
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -31,14 +33,15 @@ import org.cougaar.core.service.community.Entity;
 /**
  * Defines entities that are associated with a community.
  */
-public class EntityImpl implements Entity, java.io.Serializable {
+public class EntityImpl implements Entity, Serializable, Cloneable {
 
   // Instance variables
-  private String name;
-  private Attributes attrs = new BasicAttributes();
+  protected String name;
+  protected Attributes attrs = new BasicAttributes();
 
   /**
    * Constructor.
+   * @param name Name of new Entity
    */
   public EntityImpl(String name) {
     this.name = name;
@@ -46,6 +49,8 @@ public class EntityImpl implements Entity, java.io.Serializable {
 
   /**
    * Constructor.
+   * @param name Name of new Entity
+   * @param attrs Initial attributes
    */
   public EntityImpl(String name, Attributes attrs) {
     this.name = name;
@@ -84,29 +89,42 @@ public class EntityImpl implements Entity, java.io.Serializable {
     return this.attrs;
   }
 
-  /**
-   * Instances are considered equal if they have the same name.
-   */
   public boolean equals(Object o) {
-    return (o instanceof Entity && name.equals(((Entity)o).getName()));
+    return (o instanceof Entity && name.equals(((Entity)o).getName()) &&
+            attrs.equals(((Entity)o).getAttributes()));
   }
 
-  /**
-   * Instances are considered equal if they have the same name.
-   */
   public int hashCode() {
     return (name != null ? name.hashCode() : "".hashCode());
   }
 
   /**
    * Returns name of entity.
+   * @return entity name
    */
   public String toString() {
     return getName();
   }
 
+  public Object clone() {
+    EntityImpl o = null;
+    try {
+      o = (EntityImpl)super.clone();
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+    o.name = new String(name);
+    if (attrs == null) {
+      o.attrs = null;
+    } else {
+      o.attrs = CommunityUtils.cloneAttributes(attrs);
+    }
+    return o;
+  }
+
   /**
    * Returns an XML representation of entity.
+   * @return XML representation of entity
    */
   public String toXml() {
     return toXml("");
@@ -116,6 +134,7 @@ public class EntityImpl implements Entity, java.io.Serializable {
    * Returns an XML representation of Entity.
    * @param indent Blank string used to pad beginning of entry to control
    *               indentation formatting
+   * @return XML representation of entity
    */
   public String toXml(String indent) {
     StringBuffer sb = new StringBuffer(indent + "<Entity name=\"" + name + "\" >\n");
@@ -127,15 +146,20 @@ public class EntityImpl implements Entity, java.io.Serializable {
 
   /**
    * Creates a string representation of an Attribute set.
+   * @param attrs Attributes
+   * @return String representation of attributes
    */
-  protected String attrsToString(Attributes attrs) {
+  public static String attrsToString(Attributes attrs) {
     return attrsToString(attrs, "");
   }
 
   /**
    * Creates a string representation of an Attribute set.
+   * @param attrs Attributes
+   * @param indent Indentation for pretty printing
+   * @return String representation of attributes
    */
-  protected String attrsToString(Attributes attrs, String indent) {
+  public static String attrsToString(Attributes attrs, String indent) {
     StringBuffer sb = new StringBuffer(indent + "<Attributes>\n");
     try {
       for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
@@ -153,6 +177,7 @@ public class EntityImpl implements Entity, java.io.Serializable {
 
   /**
    * Creates a string representation of an Attribute set.
+   * @return String representation of attributes
    */
   public String attrsToString() {
     StringBuffer sb = new StringBuffer();

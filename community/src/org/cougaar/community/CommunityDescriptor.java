@@ -35,15 +35,10 @@ public interface CommunityDescriptor extends Relay.Target, UniqueObject {
 
   /**
    * Gets the community name
-   *
    * @return Community.
    */
   public Community getCommunity();
 
   public String getName();
-
-  public int getChangeType();
-
-  public String getWhatChanged();
 
 }

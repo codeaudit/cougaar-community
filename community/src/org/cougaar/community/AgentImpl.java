@@ -31,6 +31,7 @@ public class AgentImpl extends EntityImpl implements Agent, java.io.Serializable
 
   /**
    * Constructor
+   * @param name Agent name
    */
   public AgentImpl(String name) {
     super(name);
@@ -38,13 +39,20 @@ public class AgentImpl extends EntityImpl implements Agent, java.io.Serializable
 
   /**
    * Constructor
+   * @param name Agent name
+   * @param attrs Initial attributes
    */
   public AgentImpl(String name, Attributes attrs) {
     super(name, attrs);
   }
 
+  public Object clone() {
+    return super.clone();
+  }
+
   /**
    * Returns an XML representation of agent.
+   * @return XML representation of agent
    */
   public String toXml() {
     return toXml("");
@@ -54,6 +62,7 @@ public class AgentImpl extends EntityImpl implements Agent, java.io.Serializable
    * Returns an XML representation of agent.
    * @param indent Blank string used to pad beginning of entry to control
    *               indentation formatting
+   * @return XML representation of agent
    */
   public String toXml(String indent) {
     StringBuffer sb = new StringBuffer(indent + "<Agent name=\"" + getName() + "\" >\n");

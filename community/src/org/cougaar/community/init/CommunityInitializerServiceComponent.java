@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 1997-2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -30,8 +30,8 @@ import org.cougaar.core.node.NodeControlService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.util.GenericStateModelAdapter;
 
-/** 
- * A component which creates and advertises the appropriate 
+/**
+ * A component which creates and advertises the appropriate
  * CommunityInitializerService ServiceProvider.
  * It can initialize from the CSMART database, using the <code>DBInitializerService</code>,
  * or from XML files, depending on where components were intialized from.
@@ -41,9 +41,9 @@ import org.cougaar.util.GenericStateModelAdapter;
  **/
 public final class CommunityInitializerServiceComponent
 extends GenericStateModelAdapter
-implements Component 
+implements Component
 {
-  private static final String INITIALIZER_PROP = 
+  private static final String INITIALIZER_PROP =
     "org.cougaar.core.node.InitializationComponent";
 
   private ServiceBroker sb;
@@ -124,13 +124,13 @@ implements Component
       String prop = System.getProperty(INITIALIZER_PROP);
       if (prop != null && prop.indexOf("DB") != -1 && dbInit != null) {
         sp = new DBCommunityInitializerServiceProvider(dbInit);
-	if (log.isInfoEnabled())
-	  log.info("Using CSMART DB CommunityInitializer");
+        if (log.isInfoEnabled())
+          log.info("Using CSMART DB CommunityInitializer");
       } else {
-	// Note that these files are XML
+        // Note that these files are XML
         sp = new FileCommunityInitializerServiceProvider();
-	if (log.isInfoEnabled())
-	  log.info("Using File (XML) CommunityInitializer");
+        if (log.isInfoEnabled())
+          log.info("Using File (XML) CommunityInitializer");
       }
       return sp;
     } catch (Exception e) {

@@ -45,6 +45,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
 
   /**
    * Hard-coded servlet path.
+   * @return Servlet path
    */
   protected String getPath() {
     return "/communityViewer";
@@ -60,6 +61,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
 
   /**
    * Create the servlet.
+   * @return Servlet
    */
   protected Servlet createServlet() {
     log =  (LoggingService) serviceBroker.getService(this, LoggingService.class, null);

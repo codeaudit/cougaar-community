@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -70,6 +70,7 @@ public class Glob {
      * Segment corresponds to a portion of the pattern. There are
      * four kinds of Segments corresponding "*", "?", "[...]" and
      * ordinary characters.
+     * @param s Parse pattern
      **/
     private Glob(String s) {
         List segmentList = new ArrayList();
@@ -151,6 +152,7 @@ public class Glob {
      * achieved. If all the possibilities fail, then this method
      * fails.
      * @param s the string to test
+     * @return true if a match
      **/
     public boolean match(String s) {
         return match(s, 0);
@@ -163,6 +165,7 @@ public class Glob {
      * @param s the string to test
      * @param ix the index of the segment to start with (recursive
      * call).
+     * @return true if a match
      **/
     private boolean match(String s, int ix) {
         for (int n = segments.length; ix < n; ) {
@@ -188,6 +191,7 @@ public class Glob {
 
     /**
      * Convert the parsed pattern to a string
+     * @return String representation of parsed pattern
      **/
     public String toString() {
         return appendString(new StringBuffer()).toString();

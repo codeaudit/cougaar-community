@@ -30,7 +30,6 @@ import org.cougaar.core.util.UID;
 public class AddChangeListener
     extends CommunityRequest implements java.io.Serializable {
 
-  private String entityName;
   private transient CommunityChangeListener ccl;
 
   public AddChangeListener(String                    communityName,

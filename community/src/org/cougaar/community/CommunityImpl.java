@@ -1,6 +1,6 @@
 /*
  * <copyright>
- *  Copyright 2003 BBNT Solutions, LLC
+ *  Copyright 2001-2003 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Date;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import javax.naming.directory.Attributes;
 
@@ -42,22 +46,29 @@ import org.cougaar.core.service.community.Entity;
  * A community entity.
  */
 public class CommunityImpl extends EntityImpl
-    implements Community, java.io.Serializable {
+    implements Community, java.io.Serializable, Cloneable {
 
-  private Map entities = Collections.synchronizedMap(new HashMap());
+  protected static final DateFormat df = new SimpleDateFormat("hh:mm:ss,SSS");
+  protected Map entities = Collections.synchronizedMap(new HashMap());
+  protected long lastUpdate;
 
   /**
    * Constructor
+   * @param name Name of community
    */
   public CommunityImpl(String name) {
     super(name);
+    lastUpdate = now();
   }
 
   /**
    * Constructor
+   * @param name Name of community
+   * @param attrs Initial attributes
    */
   public CommunityImpl(String name, Attributes attrs) {
     super(name, attrs);
+    lastUpdate = now();
   }
 
   /**
@@ -84,8 +95,22 @@ public class CommunityImpl extends EntityImpl
     }
   }
 
+  public void setAttributes(Attributes attrs) {
+    super.setAttributes(attrs);
+    lastUpdate = now();
+  }
+
+  public long getLastUpdate() {
+    return lastUpdate;
+  }
+
+  public void setLastUpdate(long time) {
+    lastUpdate = time;
+  }
+
   /**
    * Returns the named Entity or null if it doesn't exist.
+   * @param name  Name of entity
    * @return  Entity referenced by name
    */
   public Entity getEntity(String name) {
@@ -94,7 +119,7 @@ public class CommunityImpl extends EntityImpl
 
   /**
    * Returns true if community contains entity.
-   * @param  Name of requested entity
+   * @param name Name of requested entity
    * @return true if community contains entity
    */
   public boolean hasEntity(String name) {
@@ -109,17 +134,19 @@ public class CommunityImpl extends EntityImpl
     if (entity != null) {
       synchronized (entities) {
         entities.put(entity.getName(), entity);
+        lastUpdate = now();
       }
     }
   }
 
   /**
    * Removes an Entity from the community.
-   * @param entity  Name of entity to remove from community
+   * @param name  Name of entity to remove from community
    */
   public void removeEntity(String name) {
     synchronized (entities) {
       entities.remove(name);
+      lastUpdate = now();
     }
   }
 
@@ -172,8 +199,30 @@ public class CommunityImpl extends EntityImpl
     return "INVALID_VALUE";
   }
 
+  protected long now() {
+    return System.currentTimeMillis();
+  }
+
+  public Object clone() {
+    CommunityImpl clone =  (CommunityImpl)super.clone();
+    clone.lastUpdate = lastUpdate;
+    clone.entities = CommunityUtils.cloneEntities(entities);
+    return clone;
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof CommunityImpl) {
+      CommunityImpl c = (CommunityImpl)o;
+      return (name.equals(c.name) &&
+          lastUpdate == c.lastUpdate &&
+          attrs.equals(c.attrs));
+    }
+    return false;
+  }
+
   /**
    * Returns an XML representation of community.
+   * @return XML representation of community
    */
   public String toXml() {
     return toXml("");
@@ -183,10 +232,12 @@ public class CommunityImpl extends EntityImpl
    * Returns an XML representation of community.
    * @param indent Blank string used to pad beginning of entry to control
    *               indentation formatting
+   * @return XML representation of community
    */
   public String toXml(String indent) {
-    StringBuffer sb = new StringBuffer(indent + "<Community name=\"" + getName() +
-                                       "\" >\n");
+    StringBuffer sb =
+        new StringBuffer(indent + "<Community name=\"" + getName() +
+                         "\" timestamp=\"" + df.format(new Date(lastUpdate)) + "\" >\n");
     Attributes attrs = getAttributes();
     if (attrs != null && attrs.size() > 0)
       sb.append(attrsToString(getAttributes(), indent + "  "));
@@ -201,6 +252,7 @@ public class CommunityImpl extends EntityImpl
     stream.writeObject(this.getName());
     stream.writeObject(this.getAttributes());
     stream.writeObject(getEntities());
+    stream.writeLong(lastUpdate);
   }
 
   private void readObject(ObjectInputStream stream) throws ClassNotFoundException, IOException {
@@ -208,5 +260,6 @@ public class CommunityImpl extends EntityImpl
     setName((String)stream.readObject());
     setAttributes((Attributes)stream.readObject());
     setEntities((Collection)stream.readObject());
+    lastUpdate = stream.readLong();
   }
 }
