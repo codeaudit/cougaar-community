@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Communities [
+<!ELEMENT Communities (Community+)>
+<!ELEMENT Community (Attribute+, Entity*)>
+<!ATTLIST Community Name CDATA #REQUIRED>
+
+<!ELEMENT AttributeID EMPTY>
+<!ATTLIST AttributeID ID CDATA #REQUIRED>
+<!ATTLIST AttributeID Access (manager|member|associate|world) #IMPLIED>
+
+<!ELEMENT Entity (Attribute*)>
+<!ATTLIST Entity Name CDATA #REQUIRED>
+
+<!ELEMENT Attribute EMPTY>
+<!ATTLIST Attribute ID CDATA #REQUIRED>
+<!ATTLIST Attribute Value CDATA #REQUIRED>
+]>
+<Communities>
+
+  <!--
+    Example of a logistics (domain) community that has 5 members and provides 2
+    externally visible roles.  Both external roles are provided by the agent
+    "21-TSC-HQ".
+  -->
+  <Community Name="21-TSC">
+    <Attribute ID="CommunityType"     Value="Domain" />
+    <!-- If CommunityManager attribute is not empty only the agents listed
+         are permitted to write to this community context. -->
+    <Attribute ID="CommunityManager"  Value="" />
+    <Entity Name="21-TSC-HQ" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="ExternalRole" Value="AmmoSupplyProvider" />
+      <Attribute ID="ExternalRole" Value="TransportProvider" />
+    </Entity>
+    <Entity Name="11-ORDCO" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="AmmoSupplyProvider" />
+    </Entity>
+    <Entity Name="22-ORDCO" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="AmmoSupplyProvider" />
+    </Entity>
+    <Entity Name="33-TRKCO" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="TransportProvider" />
+    </Entity>
+    <Entity Name="44-TRKCO" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="TransportProvider" />
+    </Entity>
+
+  </Community>
+
+  <!--
+    Example of a restart community that has 5 members.  The Management Agent
+    for this community is identified as an "Associate" with the Roles
+    of "ManagementAgent" and "HealthReportConsumer".
+  -->
+  <Community Name="21-TSC-Enclave" >
+    <Attribute ID="CommunityType"    Value="Robustness" />
+    <Attribute ID="CommunityManager" Value="RestartAgent-1" />
+    <Entity Name="21-TSC-HQ" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="11-ORDCO"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="22-ORDCO"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="33-TRKCO"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="44-TRKCO"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="RestartAgent-1" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Associate" />
+      <Attribute ID="Role"         Value="ManagementAgent" />
+      <Attribute ID="Role"         Value="HealthReportConsumer" />
+    </Entity>
+  </Community>
+
+  <Community Name="MiniTestConfig-COMM" >
+    <Attribute ID="CommunityType"    Value="Domain" />
+    <Attribute ID="CommunityManager" Value="" />
+    <Entity Name="1BDE" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="TestRole" />
+    </Entity>
+    <Entity Name="3-69-ARBN"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="3ID"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="MCCGlobalMode"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+  </Community>
+
+  <Community Name="MiniTestConfigEnclave-COMM" >
+    <Attribute ID="CommunityType"    Value="Robustness" />
+    <Attribute ID="CommunityManager" Value="" />
+    <Entity Name="1BDE" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+      <Attribute ID="Role"         Value="TestRole" />
+    </Entity>
+    <Entity Name="3-69-ARBN"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="3ID"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="MCCGlobalMode"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Manager"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="ManagementAgent" />
+      <Attribute ID="Role"         Value="HealthReportConsumer" />
+    </Entity>
+  </Community>
+
+  </Communities>

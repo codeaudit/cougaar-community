@@ -1,0 +1,427 @@
+<?xml version="1.0"?>
+<!-- ==================================================== -->
+<!--     Ant build file for:                              -->
+<!--     Ultralog Community Components                    -->
+<!-- ==================================================== -->
+
+<project name="mic" default="build" basedir=".">
+
+  <!-- set global properties for this build -->
+  <property environment="env"/>
+  <property name="cougaar" value="${env.COUGAAR_INSTALL_PATH}"/>
+  <property name="packageName" value="org.cougaar.community"/>
+  <property name="packageDir" value="org/cougaar/community"/>
+  <property name="classes" value="classes"/>
+  <property name="doc" value="doc"/>
+  <property name="src" value="src"/>
+  <property name="test" value="test"/>
+  <property name="hostname" value="localhost"/>
+  <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
+  <property name="bbn-dir" value="/home/ron/projects/mic-bbn" />
+  <property name="tic-dir" value="/home/ron/projects/mic-tic" />
+
+  <target name="init" >
+    <mkdir dir="${classes}"/>
+  </target>
+
+  <target name="build" depends="init, compile, compile-test, jar">
+    <mkdir dir="${classes}"/>
+  </target>
+
+  <target name="compile">
+    <!-- Compile the java code into ${classes} -->
+    <javac srcdir="${src}" destdir="${classes}">
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="compile-test">
+    <!-- Compile the test code into ${classes} -->
+    <javac srcdir="${test}/src" destdir="${classes}">
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+    </javac>
+  </target>
+
+  <!-- Builds jar file -->
+  <target name="jar">
+    <!-- Put everything in ${classes} into a jar file -->
+    <delete file="${ant.project.name}.jar" />
+    <jar jarfile="${ant.project.name}.jar">
+      <fileset dir="${classes}"
+        includes="${packageDir}/**"
+        excludes="**/cvs/*,**/*.bak"
+      />
+    </jar>
+  </target>
+
+  <!-- Deletes unnecessary files -->
+  <target name="clean">
+    <!-- Delete the ${classes} and ${dist} directory trees -->
+    <delete dir="${classes}"/>
+    <delete dir="${doc}/api"/>
+  </target>
+
+  <!-- Generates javadoc -->
+  <target name="javadoc">
+    <mkdir dir="doc/api"/>
+    <javadoc packagenames="${packageName}"
+           sourcepath="src"
+           destdir="doc/api"
+           author="false"
+           version="false"
+           use="true"
+           windowtitle="Cougaar Community Package"
+           doctitle="Cougaar Community Package">
+      <group title="Community" packages="${packageName}"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+    </javadoc>
+  </target>
+
+  <!-- creates zip archive of development files -->
+  <target name="zip">
+    <tstamp/>
+    <zip zipfile="${ant.project.name}-${DSTAMP}.zip"
+      basedir="${basedir}"
+      includes="src/**,
+	data/**,
+        doc/**,
+        example/**,
+        regress/**,
+        test/**,
+        build.xml"
+      excludes="**/cvs/**,doc/api/**,**/*.bak,.cvsignore"
+    />
+  </target>
+
+
+  <!-- Loads Community configurations into database -->
+  <target name="loaddb">
+    <java dir="${basedir}" fork="yes"
+      classname="org.cougaar.community.util.CsvFileLoader">
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/data;$$CWD/test/configs/common;$$INSTALL/configs/common" />
+      <arg line="community_attribute.csv community_entity_attribute.csv"/>
+    </java>
+  </target>
+
+  <!-- Runs automated unit/integration -->
+    <target name="test">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/data;$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node TestNode"/>
+    </java>
+  </target>
+
+  <!-- Runs ManagementAgent -->
+    <target name="manager">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m"/>
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/ma;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node ManagerNode"/>
+    </java>
+  </target>
+
+  <!-- Runs ManagementAgent and MiniTestConfig on one node -->
+    <target name="manager-1node">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m"/>
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/ma;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node CombinedNode"/>
+    </java>
+  </target>
+
+  <!-- Runs demo on 1 node -->
+    <target name="demo">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m"/>
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node CommunityDemoNode"/>
+    </java>
+  </target>
+
+  <!-- Runs 1st half of 2 node demo -->
+    <target name="demo1">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node CommunityDemoNode1"/>
+    </java>
+  </target>
+
+  <!-- Runs 2nd half of 2 node demo -->
+    <target name="demo2">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="log4j.rootCategory" value="DEBUG" />
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${test}/configs/demo;$$CWD/${test}/configs/minitestconfig;$$CWD/${test}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node CommunityDemoNode2"/>
+    </java>
+  </target>
+
+  <!-- Runs demo node with roster watcher plugin -->
+    <target name="monitor">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/demo;$$CWD/test/configs/common;$$INSTALL/configs/common"/>
+      <arg line="org.cougaar.core.node.Node MonitorNode"/>
+    </java>
+  </target>
+
+  <!-- Runs Yellow Pages viewer -->
+  <target name="ypviewer">
+    <java dir="${basedir}" fork="yes"
+      classname="org.cougaar.community.test.YellowPagesViewer">
+      <classpath>
+        <pathelement location="./classes"/>
+        <pathelement location="./lib/communities.jar"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+    </java>
+  </target>
+
+  <!-- Runs minitestconfig without communities-->
+  <target name="minitestconfig">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common;$$CWD/test/configs/common"/>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <arg line="org.cougaar.core.node.Node MiniNode"/>
+    </java>
+  </target>
+
+
+  <!-- Runs minitestconfig with communities activated-->
+  <target name="minitestconfig-c">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/test/configs/minitestconfig;$$CWD/test/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.class.path" value="./classes"/>
+      <sysproperty key="org.cougaar.system.path" value="./lib"/>
+      <arg line="org.cougaar.core.node.Node MiniTestConfigNode"/>
+    </java>
+  </target>
+
+
+  <!-- Copies latest working files to BBN release directory -->
+  <target name="updatebbn">
+    <copy todir="${bbn-dir}" >
+      <fileset dir="${basedir}"
+        includes="build.xml,**/*.java,**/README,**/*.doc,**/*.ppt,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
+        excludes="src/org/cougaar/core/service/**,
+                  src/org/cougaar/tools/**,
+                  test/src/org/cougaar/tools/**,
+                  test/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
+    </copy>
+  </target>
+
+  <!-- Copies latest working files to TIC release directory -->
+  <target name="updatetic">
+    <copy todir="${tic-dir}" >
+      <fileset dir="${basedir}"
+        includes="build.xml,**/*.java,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
+        excludes="src/org/cougaar/core/service/**,
+                  src/org/cougaar/community/**,
+                  test/src/org/cougaar/community/**,
+                  test/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
+    </copy>
+  </target>
+
+
+  <!-- Gets most current Cougaar build -->
+  <target name="getlatest" depends="getlatestzips,unziplatest">
+  </target>
+
+  <!-- Gets latest Cougaar build -->
+  <target name="getlatestzips">
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/aggagent-dev.zip" dest="${cougaar}/zips/aggagent-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/bol.zip" dest="${cougaar}/zips/bol.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/bootstrap-dev.zip" dest="${cougaar}/zips/bootstrap-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/build-dev.zip" dest="${cougaar}/zips/build-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/community-dev.zip" dest="${cougaar}/zips/community-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/contract-dev.zip" dest="${cougaar}/zips/contract-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/core-dev.zip" dest="${cougaar}/zips/core-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar-api.zip" dest="${cougaar}/zips/cougaar-api.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar-support.zip" dest="${cougaar}/zips/cougaar-support.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar.zip" dest="${cougaar}/zips/cougaar.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/csmart-dev.zip" dest="${cougaar}/zips/csmart-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/datagrabber-dev.zip" dest="${cougaar}/zips/datagrabber-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/glm-dev.zip" dest="${cougaar}/zips/glm-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/glmtrans-dev.zip" dest="${cougaar}/zips/glmtrans-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/javaiopatch-dev.zip" dest="${cougaar}/zips/javaiopatch-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/manager-dev.zip" dest="${cougaar}/zips/manager-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/planserver-dev.zip" dest="${cougaar}/zips/planserver-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/qos-dev.zip" dest="${cougaar}/zips/qos-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/quo-dev.zip" dest="${cougaar}/zips/quo-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/scalability-dev.zip" dest="${cougaar}/zips/scalability-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/server-dev.zip" dest="${cougaar}/zips/server-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/toolkit-dev.zip" dest="${cougaar}/zips/toolkit-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/tutorial-dev.zip" dest="${cougaar}/zips/tutorial-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/uiframework-dev.zip" dest="${cougaar}/zips/uiframework-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/util-dev.zip" dest="${cougaar}/zips/util-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/vishnu-dev.zip" dest="${cougaar}/zips/vishnu-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/webserver-dev.zip" dest="${cougaar}/zips/webserver-dev.zip" usetimestamp="true" />
+    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/webtomcat-dev.zip" dest="${cougaar}/zips/webtomcat-dev.zip" usetimestamp="true" />
+  </target>
+
+  <!-- Unzip nightly build -->
+  <target name="unziplatest">
+    <unzip src="${cougaar}/zips/aggagent-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/bol.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/bootstrap-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/build-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/community-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/contract-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/core-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/cougaar-api.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/cougaar-support.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/cougaar.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/csmart-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/datagrabber-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/glm-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/glmtrans-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/javaiopatch-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/manager-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/planserver-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/qos-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/quo-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/scalability-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/server-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/toolkit-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/tutorial-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/uiframework-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/util-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/vishnu-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/webserver-dev.zip" dest="${cougaar}" />
+    <unzip src="${cougaar}/zips/webtomcat-dev.zip" dest="${cougaar}" />
+  </target>
+
+  </project>

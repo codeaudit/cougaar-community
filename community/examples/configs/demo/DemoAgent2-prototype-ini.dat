@@ -1,0 +1,14 @@
+[Prototype]     Organization
+
+[UIC]		"DemoAgent2"
+
+[Relationship]
+
+[TypeIdentificationPG]
+TypeIdentification		String	"UTC/RTOrg"
+Nomenclature			String	"DemoAgent2"
+AlternateTypeIdentification	String	"Another Community Demo Agent"
+
+[OrganizationPG]
+Roles	Collection<Role>  "CommunityTester"
+

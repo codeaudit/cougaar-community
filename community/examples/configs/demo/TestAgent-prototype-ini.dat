@@ -1,0 +1,14 @@
+[Prototype]     Organization
+
+[UIC]		"TestAgent"
+
+[Relationship]
+
+[TypeIdentificationPG]
+TypeIdentification		String	"UTC/RTOrg"
+Nomenclature			String	"TestAgent"
+AlternateTypeIdentification	String	"A Community Test Agent"
+
+[OrganizationPG]
+Roles	Collection<Role>  "CommunityTester"
+
