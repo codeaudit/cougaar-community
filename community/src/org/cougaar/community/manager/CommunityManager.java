@@ -800,9 +800,10 @@ public class CommunityManager extends BlackboardClientComponent {
    * is in sync with the WPS bindings.
    */
   private void verifyManagerRole() {
-    Collection l = new ArrayList();
+    Collection l = new HashSet();
     synchronized (managedCommunities) {
       l.addAll(managedCommunities);
+      l.addAll(priorCommunities());
     }
 
     // See if WP binding lists this agent as manager for each name
