@@ -2,7 +2,7 @@
 
 README file for Ultralog Communities release
 
-Date: 6/3/02
+Date: 6/12/02
 
 *******************************************************************************
 
@@ -86,33 +86,24 @@ a. The community system requires 3 separate components to operate.  Each must
 
    1) Community Domain.  The CommunityDomain is used to create ABA/Relay objects
       for transmitting CommunityChangeNotifications between CommunityPlugins
-      in different agents.  The CommunityDomain may be loaded in a couple of
-      different ways.
-
-      The preferred method is to specify the domain using the
-      component insertion mechanism.  The following component insertion
-      parameter is included in the "[Cluster]" section of each agents ".ini"
-      file.  An equivalent insertion point must be defined in CSMART if a
-      community-enabled agent is to be run from the CSMART tool.
-      "Node.AgentManager.Agent.DomainManager.Domain = org.cougaar.community.CommunityDomain(community)"
-
-      Alternately, the CommunityDomain may be defined in an "LDMDomains.ini"
-      file using the following syntax:
+      in different agents.  The CommunityDomain is loaded by default as it has
+      been defined in an "LDMDomains.ini" file using the following syntax:
       community=org.cougaar.community.CommunityDomain
 
    2) Community Service.  The CommunityService provider is installed by the
       CommunityServiceComponent.  The CommunityServiceComponent is loaded automatically
       for each agent.  
 
-      The CommunityServiceComponent uses two optional arguments that can be 
+      The CommunityServiceComponent uses two optional parameters that can be 
       defined as System properties.
 
-      - When running usig ".ini" files, to load community configuration data from 
+      - When running using ".ini" files, to load community configuration data from 
         a specified XML file rather than the default 'communities.xml' file, specify the
         System parameter on the command line as follows: 
         -Dorg.cougaar.community.configfile="yourfilename.xml"
          
-        The file is loaded from the cougaar config path.
+        The file (either communities.xml or a specified xml file is loaded from the 
+        cougaar config path.
 
       - To turn caching at the CommunityService level off, specify the 
         System parameter on the command line with the value "off" as follows:
@@ -127,14 +118,20 @@ a. The community system requires 3 separate components to operate.  Each must
       of agents to their startup communities and to provide the blackboard
       Publish/Subscribe interface.
 
-      - When running in CSMART a "Specific Insertion Recipe" must be created
+      - When running using the configuration database in CSMART, this plugin is 
+        loaded automatically in each agent in the initial society.  However, for 
+        NodeAgents and additional agents added using recipes, this plugin is not 
+        loaded by default.  Instead, a "Specific Insertion Recipe" must be created
         that consists of the following parameters:
 
         Class Name = org.cougaar.community.CommunityPlugin
         Component Name = org.cougaar.community.CommunityPlugin
         Number of Arguments = 0
-        Target Component Selection Query = recipeQueryAllAgents
+        Target Component Selection Query = [user created query]
         Type of Insertion = plugin
+
+        Note that you must create a specific query to insert this plugin into the
+        newly created agent.
 
       - When running using ".ini" files the following entry must be created in
         each agent-level ".ini" file in the "[ Plugins ]" section:
