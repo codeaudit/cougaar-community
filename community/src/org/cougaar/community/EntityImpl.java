@@ -95,7 +95,7 @@ public class EntityImpl implements Entity, java.io.Serializable {
    * Instances are considered equal if they have the same name.
    */
   public int hashCode() {
-    return name.hashCode();
+    return (name != null ? name.hashCode() : "".hashCode());
   }
 
   /**
