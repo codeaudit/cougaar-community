@@ -18,8 +18,8 @@
   <property name="examples" value="examples"/>
   <property name="hostname" value="localhost"/>
   <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
-  <property name="bbn-dir" value="/home/ron/projects/mic-bbn" />
-  <property name="tic-dir" value="/home/ron/projects/mic-tic" />
+  <property name="file" value="communities.xml" />
+  <property name="assembly" value="COMM-DEFAULT_CONFIG" />
 
   <target name="init" >
     <mkdir dir="${classes}"/>
@@ -337,18 +337,42 @@
     </java>
   </target>
 
-
-  <!-- Copies latest working files to BBN release directory -->
-  <target name="updatebbn">
-    <copy todir="${bbn-dir}" >
-      <fileset dir="${basedir}"
-        includes="build.xml,**/*.java,**/README,**/*.doc,**/*.ppt,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
-        excludes="src/org/cougaar/core/service/**,
-                  src/org/cougaar/tools/**,
-                  examples/src/org/cougaar/tools/**,
-                  examples/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
-    </copy>
+  <!-- Imports community descriptions into Configuration database from xml file-->
+  <target name="dbimport">
+    <java dir="${basedir}" fork="yes"
+      classname="org.cougaar.community.util.ConfigDbUtils">
+      <classpath>
+        <pathelement location="./lib/community.jar"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <arg line="import file=${file} assembly=${assembly} db=replace"/>
+    </java>
   </target>
 
+  <!-- Exports community descriptions from Configuration database to xml file-->
+  <target name="dbexport">
+    <java dir="${basedir}" fork="yes"
+      classname="org.cougaar.community.util.ConfigDbUtils">
+      <classpath>
+        <pathelement location="./lib/community.jar"/>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <arg line="export file=${file} assembly=${assembly}"/>
+    </java>
+  </target>
 
   </project>
