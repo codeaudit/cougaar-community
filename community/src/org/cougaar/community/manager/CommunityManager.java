@@ -214,7 +214,6 @@ public class CommunityManager {
           cd.setChangeType(CommunityChangeEvent.ADD_ENTITY);
           cd.setWhatChanged(cmr.getEntity().getName());
           ra.addTarget(cmr.getSource());
-          //}
         }
         break;
       case CommunityManagerRequest.LEAVE:
@@ -355,15 +354,9 @@ public class CommunityManager {
       String communityName, WhitePagesService wps) throws Exception {
     MessageAddress ret = null;
     if (communityName != null) {
-
-    // Remove for use with new WPS API
-      AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
-      if (ae.length > 0) {
-        ret = extractAgentIdFromURI(ae[0].getAddress());
-      }
-
-    /* Uncomment for use with new WPS
-      AddressEntry entry = wps.get(communityName + ".comm", "community");
+      AddressEntry entry = wps.get(
+          communityName+".comm",
+          "community");
       if (entry != null) {
         URI uri = entry.getURI();
         String agentName = uri.getPath().substring(1);
@@ -371,8 +364,6 @@ public class CommunityManager {
           ret = MessageAddress.getMessageAddress(agentName);
         }
       }
-    */
-
     }
     return ret;
   }
@@ -380,26 +371,12 @@ public class CommunityManager {
   /** create a wp entry for white pages binding */
   private AddressEntry createManagerEntry(
       String communityName) throws Exception {
-
-  // Remove for use with new WPS API
-  URI cmUri = new java.net.URI(URN_PREFIX + ":" +
-                           NAMESPACE_IDENTIFIER + ":" +
-                           agentId);
-  AddressEntry entry =
-      new AddressEntry(communityName,
-                       org.cougaar.core.service.wp.Application.getApplication("community"),
-                       cmUri,
-                       org.cougaar.core.service.wp.Cert.NULL,
-                       Long.MAX_VALUE);
-
-    /* Uncomment for use with new WPS
-    URI uri = URI.create("agent:///" + agentId);
+    URI uri = URI.create("agent:///"+agentId);
     AddressEntry entry =
-        AddressEntry.getAddressEntry(
-        communityName + ".comm",
-        "community",
-        uri);
-    */
+      AddressEntry.getAddressEntry(
+          communityName+".comm",
+          "community",
+          uri);
     return entry;
   }
 
@@ -439,7 +416,7 @@ public class CommunityManager {
       logger.error("Unable to (re)bind agent as community manager:" +
                    " error=" + ex.getMessage() +
                    " agent=" + agentId +
-                   " community=" + communityName);
+                   " community=" + communityName, ex);
     } finally {
       serviceBroker.releaseService(this, WhitePagesService.class, wps);
     }

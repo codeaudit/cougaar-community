@@ -85,7 +85,6 @@ import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDService;
 import org.cougaar.core.service.wp.WhitePagesService;
 import org.cougaar.core.service.wp.AddressEntry;
-import org.cougaar.core.service.wp.Application;
 import org.cougaar.core.service.SchedulerService;
 import org.cougaar.core.service.AlarmService;
 import org.cougaar.core.service.ThreadService;
