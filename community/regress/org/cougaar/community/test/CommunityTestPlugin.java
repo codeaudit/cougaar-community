@@ -129,6 +129,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     if (result == false) log.info(roster.toString() +
                                   " exists=" + roster.communityExists() +
                                   " numAgents=" + roster.getMemberAgents().size());
+    System.out.println("  Roster=" + roster);
 
     // Test: communityExists - Yes
     result = cs.communityExists(testCommunityName);
@@ -356,6 +357,7 @@ public class CommunityTestPlugin extends SimplePlugin {
               roster.getMemberAgents().contains(testAgentName));
     System.out.println("Method: getRoster (community has 2 members)      " +
       (result ? "pass" : "fail"));
+    System.out.println("  Roster=" + roster);
 
     // Test: listParentCommunities
     communityList = cs.listParentCommunities(testAgentName);
