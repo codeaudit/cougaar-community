@@ -29,9 +29,6 @@ import org.cougaar.community.requests.LeaveCommunity;
 import org.cougaar.community.requests.ModifyAttributes;
 import org.cougaar.community.requests.SearchCommunity;
 
-import org.cougaar.core.component.ServiceRevokedListener;
-import org.cougaar.core.component.ServiceRevokedEvent;
-
 import org.cougaar.community.RelayAdapter;
 
 import org.cougaar.core.service.community.CommunityResponse;
@@ -80,6 +77,8 @@ import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.mts.SimpleMessageAddress;
 
 import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.component.ServiceRevokedListener;
+import org.cougaar.core.component.ServiceRevokedEvent;
 
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.LoggingService;
@@ -89,6 +88,8 @@ import org.cougaar.core.service.wp.AddressEntry;
 import org.cougaar.core.service.wp.Application;
 import org.cougaar.core.service.SchedulerService;
 import org.cougaar.core.service.AlarmService;
+import org.cougaar.core.service.ThreadService;
+import org.cougaar.core.thread.Schedulable;
 
 import org.cougaar.core.blackboard.BlackboardClient;
 
@@ -143,7 +144,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     agentId = addr;
     this.log = getLoggingService();
     this.log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log, agentId + ": ");
-    cache = new CommunityCache(agentId.toString() + ".cs");
+    cache = new CommunityCache(serviceBroker, agentId.toString() + ".cs");
     initBlackboardSubscriber();
   }
 
@@ -310,7 +311,10 @@ public class CommunityServiceImpl extends ComponentPlugin
   private Map myRequests = new HashMap();
   protected void publishCommunityRequest(final CommunityRequest    cr,
                                          CommunityResponseListener crl) {
-    Thread communityRequestThread = new Thread("CommunityRequestThread") {
+    ThreadService ts =
+      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
+    Schedulable communityRequestThread =
+      ts.getThread(this, new Runnable() {
       public void run() {
         try {
           if (log.isDebugEnabled()) {
@@ -330,7 +334,9 @@ public class CommunityServiceImpl extends ComponentPlugin
           log.error("Exception in publishCommunityRequest", ex);
         }
       }
-    };
+    }, "CommunityRequestThread");
+    serviceBroker.releaseService(this, ThreadService.class, ts);
+    communityRequestThread.start();
     myRequests.put(cr.getUID(), crl);
     log.debug("Adding request to myRequests:" +
               " request=" + cr.getRequestType() +
@@ -740,27 +746,13 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              Collection of community names that satisfy filter
    */
   public Collection search(String filter) {
-    final Semaphore s = new Semaphore(0);
-    final ResultsHolder rh = new ResultsHolder();
-    searchCommunity(null, filter, true, Community.ALL_ENTITIES, new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp){
-        if (resp != null) {
-          Collection entities = (Collection) resp.getContent();
-          Collection names = new ArrayList();
-          for (Iterator it = entities.iterator(); it.hasNext();) {
-            names.add(((Entity)it.next()).getName());
-          }
-          rh.setResults(names);
-        }
-        s.release();
-      }
-    });
-    try {
-      s.acquire();
-    } catch(InterruptedException e) {
-      log.error("Error in search: " + e);
+    log.debug("search: filter=" + filter);
+    Collection entities = cache.search(filter);
+    Collection names = new ArrayList();
+    for (Iterator it = entities.iterator(); it.hasNext();) {
+      names.add(((Entity)it.next()).getName());
     }
-    return rh.getResults();
+    return names;
   }
 
 
@@ -1198,7 +1190,10 @@ public class CommunityServiceImpl extends ComponentPlugin
    * Initialize a Blackboard subscriber to receive changed Community Requests.
    */
   private void initBlackboardSubscriber() {
-    Thread initThread = new Thread("CommunityService-BBSubscriberInit") {
+    ThreadService ts =
+      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
+    Schedulable initThread =
+          ts.getThread(this, new Runnable() {
       public void run() {
         // Wait for required services to become available
         while (getBlackboardService(serviceBroker) == null ||
@@ -1223,7 +1218,8 @@ public class CommunityServiceImpl extends ComponentPlugin
         load();
         CommunityServiceImpl.this.start();
       }
-    };
+    }, "CommunityInitThread");
+    serviceBroker.releaseService(this, ThreadService.class, ts);
     initThread.start();
   }
 
