@@ -941,7 +941,6 @@ public class CommunityPlugin extends ComponentPlugin {
   }
 
   private void updateCommunityDescriptor(CommunityDescriptor cd) {
-    checkParentAttributes();
     Community community = cd.getCommunity();
     getCommunityDescriptorsForDescendents(community);
     if (cache.contains(community.getName())) {
@@ -953,6 +952,7 @@ public class CommunityPlugin extends ComponentPlugin {
             CommunityChangeEvent.ADD_COMMUNITY,
             community.getName()));
     }
+    checkParentAttributes();
     if (communityDescriptorRequests.containsKey(community.getName())) {
       List gcListeners = (List) communityDescriptorRequests.remove(community.
           getName());
