@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2004 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 package org.cougaar.community.util;
@@ -55,6 +55,8 @@ import org.cougaar.util.UnaryPredicate;
 
 import EDU.oswego.cs.dl.util.concurrent.Semaphore;
 
+import java.util.*;
+
 /**
  * An optional servlet for viewing information of communities.
  * Load into any agent:
@@ -64,7 +66,6 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
 
   private CommunityService cs;
   private static LoggingService log;
-  private BlackboardService blackboard;
   private PrintWriter out;
   private String agentId;
 
@@ -80,23 +81,19 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     this.cs = cs;
   }
 
-  public void setBlackboardService(BlackboardService bb){
-    this.blackboard = bb;
-  }
-
   /**
    * Create the servlet.
    * @return Servlet
    */
   protected Servlet createServlet() {
     log =  (LoggingService) serviceBroker.getService(this, LoggingService.class, null);
-    blackboard = (BlackboardService)serviceBroker.getService(this, BlackboardService.class, null);
     AgentIdentificationService ais = (AgentIdentificationService)serviceBroker.getService(
         this, AgentIdentificationService.class, null);
     if (ais != null) {
       this.agentId = ais.getMessageAddress().toString();
       serviceBroker.releaseService(this, AgentIdentificationService.class, ais);
     }
+    log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log, agentId + ": ");
     return new MyServlet();
   }
 
@@ -142,16 +139,33 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
       }
     }
 
+  Collection pcomms = new ArrayList();
   //The first page when user call this servlet will show all communities who are
   //direct parents of calling agent.
   private void showFrontPage() {
-    String parentCommunities[] = cs.getParentCommunities(true);
+   final Semaphore s = new Semaphore(0);
+   cs.listAllCommunities(new CommunityResponseListener() {
+      public void getResponse(CommunityResponse resp) {
+        pcomms = (Collection)resp.getContent();
+        s.release();
+      }
+    });
+    Collection local = cs.listParentCommunities(agentId.toString(), "(CommunityType=*)", null);
+
     out.print("<html><title>communityViewer</title>\n");
-    out.print("<body>\n<ol>");
-    for (int i = 0; i < parentCommunities.length; i++) {
-      out.print("<li><a href=./communityViewer?community=" + parentCommunities[i] + ">" + parentCommunities[i] + "</a>\n");
+    out.print("<body>\n<h3>Local community:</h3><ol>\n");
+    for(Iterator it = local.iterator(); it.hasNext();) {
+      String name = (String)it.next();
+      out.print("<li><a href=./communityViewer?community=" + name + ">" + name + "</a>\n");
+    }
+    out.print("</ol><br><br><h3>Remote community:</h3><ol>\n");
+    for(Iterator it = pcomms.iterator(); it.hasNext();) {
+      String name = (String)it.next();
+      if(!local.contains(name))
+        out.print("<li><a href=./communityViewer?community=" + name + ">" + name + "</a>\n");
     }
     out.print("</body>\n</html>\n");
+
   }
 
   private static Hashtable table = new Hashtable();
@@ -178,10 +192,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
         out.write(currentXML);
       else {
         if(command.equals("showCommunity")){
-          //log.error("xml file:\n" + currentXML);
-          //String html = getHTMLFromXML(currentXML, communityViewer);
           out.print(getHTMLFromXML(currentXML, communityViewer));
-          //log.error("html file:\n" + html);
         }
         else {
           String xml = "";
@@ -225,20 +236,6 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     }else {
       table.put(community.getName(), community);
     }
-  }
-
-  /**
-   * To show raw xml in a html page, convert several specific signals.
-   * @param xml the given xml string
-   * @return converted xml
-   */
-  private String convertSignals(String xml)
-  {
-    String tmp1 = xml.replaceAll("<", "&lt;");
-    String tmp2 = tmp1.replaceAll(">", "&gt;");
-    String tmp3 = tmp2.replaceAll("\n", "<br>");
-    String tmp4 = tmp3.replaceAll(" ", "&nbsp;");
-    return tmp4;
   }
 
   /**
@@ -286,23 +283,6 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
   // unused BlackboardClient method:
   public boolean triggerEvent(Object event) {
     return false;
-  }
-
-
-  public static void main(String[] args){
-    String xml = "<Community name=\"MiniTestConfig\"><Attributes><Attribute id=\"CommunityType\">" +
-      "<Value>Test</Value><Value>Domain</Value></Attribute></Attributes></Community>";
-      //"<Community name=\"NestedCommunity\"></Community><Agent name=\"3-69-ARBN\"></Agent>" +
-      //"<Agent name=\"3ID\"></Agent></Community>";
-    try{
-      TransformerFactory tFactory = TransformerFactory.newInstance();
-      //File xslf = new File("examples/configs/common/attributesViewer.xsl");
-      Transformer transformer = tFactory.newTransformer(new StreamSource(new StringReader(attributesViewer)));
-      StringWriter writer = new StringWriter();
-      transformer.transform(new StreamSource(new StringReader(xml)), new StreamResult(writer));
-      String html = writer.toString();
-      System.out.println(html);
-    }catch(Exception e){e.printStackTrace();}
   }
 
   private static final String attributesViewer =
@@ -353,7 +333,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     "</xsl:otherwise></xsl:choose></xsl:for-each></xsl:otherwise></xsl:choose></xsl:for-each>" +
     "</xsl:template></xsl:stylesheet>";
 
-   private static final String communityViewer =
+  private static final String communityViewer =
     "<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">" +
     "<xsl:output method=\"html\" indent=\"yes\"/>" +
     "<xsl:template match=\"/\"><xsl:variable name=\"community\">" +
@@ -367,7 +347,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     "</xsl:element></H1><br /><ol>" +
     "<xsl:for-each select=\"Community/Community\">" +
     "<li><xsl:element name=\"a\"><xsl:attribute name=\"href\">" +
-    "<xsl:text>./communityViewer?attributes=</xsl:text>" +
+    "<xsl:text>./communityViewer?community=</xsl:text>" +
     "<xsl:value-of select=\"@name\" /></xsl:attribute>" +
     "<xsl:text>Community </xsl:text><xsl:value-of select=\"@name\" />" +
     "</xsl:element></li></xsl:for-each>" +
