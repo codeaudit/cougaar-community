@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 1997-2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -23,6 +23,7 @@ package org.cougaar.community.init;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.LineNumberReader;
 import java.io.PrintStream;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,7 +50,7 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
     }
     return new CommunityInitializerServiceImpl();
   }
-  
+
   public void releaseService(ServiceBroker sb, Object requestor,
                              Class serviceClass, Object service)
   {
@@ -78,8 +79,13 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
   private static Collection getCommunityConfigsFromFile(String xmlFileName) {
     File communityFile = ConfigFinder.getInstance().locateFile(xmlFileName);
     if (communityFile != null) {
-      return loadCommunitiesFromFile(communityFile.getAbsolutePath());
-    } 
+      Collection communityConfigs = loadCommunitiesFromFile(communityFile.getAbsolutePath());
+      if (communityConfigs.isEmpty()) {
+        System.out.println("Couldn't get community config info, retrying ...");
+        communityConfigs = loadCommunitiesFromFile(communityFile.getAbsolutePath());
+      }
+      return communityConfigs;
+    }
     else {
       System.err.println("Error: Could not find file '" +xmlFileName + "' on config path");
     }
@@ -96,8 +102,26 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
       return myHandler.getCommunityConfigs();
     } catch (Exception ex) {
       System.out.println("Exception parsing Community XML definition, " + ex);
+      //System.out.println(getCommunityDescriptorText(fname));
     }
     return new Vector();
+  }
+
+  private static String getCommunityDescriptorText(String fname) {
+    StringBuffer sb = new StringBuffer();
+    try {
+      FileReader in = new FileReader(fname);
+      LineNumberReader lnr = new LineNumberReader(in);
+      String line = null;
+      while ((line = lnr.readLine()) != null) {
+        sb.append(line + "\n");
+      }
+      lnr.close();
+      in.close();
+    } catch (Exception ex) {
+      System.out.println("Exception reading community text from file, " + ex);
+    }
+    return sb.toString();
   }
 
   /**
@@ -126,7 +150,7 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
     System.out.print(
         "<!-- load entity=\""+entityName+" -->");
     //
-    FileCommunityInitializerServiceProvider me = 
+    FileCommunityInitializerServiceProvider me =
       new FileCommunityInitializerServiceProvider();
     CommunityInitializerService cis = (CommunityInitializerService)
       me.getService(null, null, CommunityInitializerService.class);
