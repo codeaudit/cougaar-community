@@ -48,7 +48,7 @@ public class RelayAdapter implements Relay.Source {
   Object content;
   UID myUID;
   Object resp;
-  CommunityResponseListener crl;
+  transient CommunityResponseListener crl;
 
   public RelayAdapter(MessageAddress source,
                Object content,
