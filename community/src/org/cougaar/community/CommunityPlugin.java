@@ -340,6 +340,10 @@ public class CommunityPlugin extends ComponentPlugin {
               community = new CommunityImpl(cc.getCommunityName());
               community.setAttributes(cc.getAttributes());
               communityManager.addCommunity(community);
+              CommunityResponse ccResp =
+                new CommunityResponseImpl(CommunityResponse.SUCCESS, community);
+              cc.setResponse(ccResp);
+              blackboard.publishChange(cc);
             } else {  // community exists but we don't have a local copy
               CommunityResponseListener crl = new CommunityResponseListener() {
                 public void getResponse(CommunityResponse resp) {
@@ -1196,30 +1200,32 @@ public class CommunityPlugin extends ComponentPlugin {
           // Publish updated requests and responses outside of iterator loop
           // otherwise deadlock is created with "isCMRQueued" method
           blackboard.openTransaction();
-          for (Iterator it = requestsToPublish.iterator(); it.hasNext();) {
-            RelayAdapter relay = (RelayAdapter)it.next();
-            CommunityManagerRequest cmr = (CommunityManagerRequest)relay.getContent();
+          for (Iterator it = requestsToPublish.iterator(); it.hasNext(); ) {
+            RelayAdapter relay = (RelayAdapter) it.next();
+            CommunityManagerRequest cmr = (CommunityManagerRequest) relay.
+                getContent();
             blackboard.publishAdd(relay);
             if (logger.isDebugEnabled()) {
-              logger.debug("Sending CommunityManagerRequest:"+
-               " source=" + cmr.getSource() +
-               " request=" + cmr.getRequestTypeAsString() +
-               " community=" + cmr.getCommunityName() +
-               " entity=" + cmr.getEntity() +
-               " uid=" + cmr.getUID() +
-               " targets=" + RelayAdapter.targetsToString(relay));
+              logger.debug("Sending CommunityManagerRequest:" +
+                           " source=" + cmr.getSource() +
+                           " request=" + cmr.getRequestTypeAsString() +
+                           " community=" + cmr.getCommunityName() +
+                           " entity=" + cmr.getEntity() +
+                           " uid=" + cmr.getUID() +
+                           " targets=" + RelayAdapter.targetsToString(relay));
             }
           }
-          for (Iterator it = responsesToPublish.iterator(); it.hasNext();) {
-            CommunityRequest cr = (CommunityRequest)it.next();
+          for (Iterator it = responsesToPublish.iterator(); it.hasNext(); ) {
+            CommunityRequest cr = (CommunityRequest) it.next();
             blackboard.publishChange(cr);
             if (logger.isDebugEnabled()) {
-              logger.debug("Updating CommunityRequest:"+
+              logger.debug("Updating CommunityRequest:" +
                            " source=" + agentId +
                            " request=" + cr.getRequestType() +
                            " community=" + cr.getCommunityName() +
                            " uid=" + cr.getUID() +
-                           " response=" + cr.getResponse().getStatusAsString());
+                           " response=" +
+                           cr.getResponse().getStatusAsString());
             }
           }
           blackboard.closeTransaction();
