@@ -28,7 +28,8 @@ import org.cougaar.core.agent.ClusterIdentifier;
 /**
  * Implementation of a CommunityRoster.
  */
-public class CommunityRosterImpl implements CommunityRoster {
+public class CommunityRosterImpl
+  implements CommunityRoster, java.io.Serializable {
 
   private String name;
   private Collection members = new Vector();
