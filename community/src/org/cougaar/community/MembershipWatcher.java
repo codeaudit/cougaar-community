@@ -106,6 +106,18 @@ public class MembershipWatcher {
 
   }
 
+  public void addPendingOperation(String communityName) {
+    if (!pendingOperations.contains(communityName)) {
+      pendingOperations.add(communityName);
+    }
+  }
+
+  public void removePendingOperation(String communityName) {
+    if (pendingOperations.contains(communityName)) {
+      pendingOperations.remove(communityName);
+    }
+  }
+
   protected void checkCommunity(final String  communityName,
                                 final Entity  entity,
                                 final boolean isMember) {
@@ -191,7 +203,7 @@ public class MembershipWatcher {
                   " community=" + communityName +
                   " entity=" + entity.getName());
     }
-    pendingOperations.add(communityName);
+    addPendingOperation(communityName);
     int type = entity instanceof Agent
                   ? CommunityService.AGENT
                   : CommunityService.COMMUNITY;
@@ -203,7 +215,7 @@ public class MembershipWatcher {
                                    null,
       new CommunityResponseListener() {
         public void getResponse(CommunityResponse resp) {
-          pendingOperations.remove(communityName);
+          removePendingOperation(communityName);
           if (logger.isDetailEnabled()) {
             logger.detail(thisAgent + ": Join status=" + resp);
           }
@@ -217,7 +229,7 @@ public class MembershipWatcher {
                   " community=" + communityName +
                   " entity=" + entityName);
     }
-    pendingOperations.add(communityName);
+    addPendingOperation(communityName);
     communityService.leaveCommunity(communityName,
                                    entityName,
       new CommunityResponseListener() {
@@ -225,7 +237,7 @@ public class MembershipWatcher {
           if (logger.isDetailEnabled()) {
             logger.detail("Leave status=" + resp);
           }
-          pendingOperations.remove(communityName);
+          removePendingOperation(communityName);
         }
     });
   }

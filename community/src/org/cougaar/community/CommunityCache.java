@@ -161,7 +161,7 @@ public class CommunityCache implements CommunityServiceConstants {
   /*
    * Recursive search of community map for all ancestors of a specified entity.
    */
-  private synchronized void findAncestors(String entityName, List ancestors, boolean recursive) {
+  private synchronized void findAncestors(String entityName, Set ancestors, boolean recursive) {
     Collection allCommunities = communities.values();
     if (logger.isDetailEnabled()) {
       logger.detail("findAncestors:" +
@@ -240,9 +240,9 @@ public class CommunityCache implements CommunityServiceConstants {
    *                  parents
    * @return List of communities having specified community as a descendent
    */
-  public List getAncestorNames(String entityName, boolean recursive) {
+  public Set getAncestorNames(String entityName, boolean recursive) {
     //TODO: Add authorization check
-   List ancestors = new ArrayList();
+   Set ancestors = new HashSet();
     if (logger.isDetailEnabled()) {
       logger.detail("getAncestorNames:" +
                     " entity=" + entityName +

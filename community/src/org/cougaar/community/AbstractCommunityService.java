@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 package org.cougaar.community;
@@ -260,6 +260,7 @@ public abstract class AbstractCommunityService
                                                  final CommunityResponseListener crl,
                                                  final String communityName,
                                                  final Entity entity) {
+    membershipWatcher.addPendingOperation(communityName);
     return new CommunityResponseListener() {
       public void getResponse(CommunityResponse resp) {
         switch (resp.getStatus()) {
@@ -273,6 +274,7 @@ public abstract class AbstractCommunityService
             if (crl != null) {
               crl.getResponse(resp);
             }
+            membershipWatcher.removePendingOperation(communityName);
             break;
           case CommunityResponse.TIMEOUT:
             // retry
@@ -518,42 +520,35 @@ public abstract class AbstractCommunityService
    */
   public Collection listParentCommunities(String                    member,
                                           CommunityResponseListener crl) {
-    Collection results = null;
-    if (member == null || member.equals(getAgentName())) {
-      results = cache.getAncestorNames(getAgentName(), false);
-    } else {  // get parent names for specified community
-      if (cache.contains(member)) {
-        results = new HashSet();
-        Attributes attrs = cache.get(member).getAttributes();
-        if (attrs != null) {
-          Attribute parentAttr = attrs.get("Parent");
-          if (parentAttr != null) {
-            try {
-              for (NamingEnumeration enum = parentAttr.getAll(); enum.hasMore();) {
-                results.add((String)enum.next());
-              }
-            } catch (NamingException ne) {
-              if (log.isErrorEnabled()) {
-                log.error(agentName + ": Error parsing attributes for " +
-                          member, ne);
-              }
+    String child = member == null ? getAgentName() : member;
+    Collection parents = cache.getAncestorNames(child, false);
+    if (cache.contains(member)) { // member is a community
+      Attributes attrs = cache.get(member).getAttributes();
+      if (attrs != null) {
+        Attribute parentAttr = attrs.get("Parent");
+        if (parentAttr != null) {
+          try {
+            for (NamingEnumeration enum = parentAttr.getAll(); enum.hasMore(); ) {
+              parents.add((String)enum.next());
+            }
+          } catch (NamingException ne) {
+            if (log.isErrorEnabled()) {
+              log.error(agentName + ": Error parsing attributes for " +
+                        member, ne);
             }
           }
         }
-      } else {
-        //queueCommunityRequest(new ListParentCommunities(member,
-        //                      getUID()), crl);
       }
     }
     if (log.isDebugEnabled()) {
       log.debug(agentName+": listParentCommunities:" +
                 " entity=" + member +
-                " inCache=" + (results != null) +
-                " results=" + (results != null
-                                 ? Integer.toString(results.size())
+                " inCache=" + (parents != null) +
+                " results=" + (parents != null
+                                 ? Integer.toString(parents.size())
                                  : null));
     }
-    return results;
+    return parents;
   }
 
   /**
