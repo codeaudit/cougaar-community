@@ -6,7 +6,7 @@ import javax.naming.directory.*;
 
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.agent.ClusterIdentifier;
-import org.cougaar.core.service.community.CommunityService;
+import org.cougaar.core.service.community.*;
 
 import org.cougaar.core.naming.Filter;
 import org.cougaar.core.naming.SearchStringParser;
@@ -116,7 +116,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
       if (log.isDebugEnabled())
         log.debug("Received CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
-      if (contains(communityName)) update(communityName);
+      synchronized (this) {
+        if (contains(communityName)) update(communityName);
+      }
     }
 
     enum  = changeNotifications.getChangedList();
@@ -127,7 +129,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
       if (log.isDebugEnabled())
         log.debug("Received CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
-      if (contains(communityName)) update(communityName);
+      synchronized (this) {
+        if (contains(communityName)) update(communityName);
+      }
     }
   }
 
@@ -136,7 +140,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @param communityName
    * @return True if community is part of cache
    */
-  public synchronized boolean contains(String communityName) {
+  private boolean contains(String communityName) {
     return cache.containsKey(communityName);
   }
 
@@ -145,20 +149,33 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * with same name.
    * @param communityName
    * @param attrs  Community Attributes
+   * @param entitiesToRetain the entities that should be retained in
+   * the community
    */
-  public synchronized void addCommunity(String communityName, Attributes attrs) {
-    if (log.isDebugEnabled())
-      log.debug("Adding community: community=" + communityName);
-     if (!contains(communityName)) addListener(agentId, communityName);
-    cache.put(communityName, new Community(communityName, attrs));
+  private void addCommunity(String communityName, Attributes attrs, Collection entitiesToRetain) {
+    Community ce = (Community) cache.get(communityName);
+    if (ce == null) {
+      if (log.isDebugEnabled())
+        log.debug("Adding community: community=" + communityName);
+      addListener(agentId, communityName);
+      cache.put(communityName, new Community(communityName, attrs));
+    } else {
+      if (log.isDebugEnabled())
+        log.debug("Updating community: community=" + communityName);
+      ce.attrs = attrs;
+      ce.entities.keySet().retainAll(entitiesToRetain);
+    }
   }
 
   /**
    * Removes named community from cache.
    * @param communityName
    */
-  public synchronized void removeCommunity(String communityName) {
+  private void removeCommunity(String communityName) {
     cache.remove(communityName);
+    fireListeners(new CommunityChangeEvent(communityName,
+                                           CommunityChangeEvent.REMOVE_COMMUNITY,
+                                           communityName));
   }
 
   /**
@@ -167,14 +184,19 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @param entityName
    * @param attrs Entity Attributes
    */
-  public synchronized void addEntity(String communityName, String entityName,
+  private void addEntity(String communityName, String entityName,
     Object obj, Attributes attrs) {
-    if (log.isDebugEnabled())
-      log.debug("Adding entity to community: community=" + communityName +
-      " entity=" + entityName);
+    if (log.isInfoEnabled())
+      log.info("Adding entity to community: community=" + communityName
+               + " entity=" + entityName
+               + " attrs=" + attrs);
     Community ce = (Community)cache.get(communityName);
-    if (ce != null)
+    if (ce != null) {
       ce.entities.put(entityName, new Entity(entityName, obj, attrs));
+      fireListeners(new CommunityChangeEvent(communityName,
+                                             CommunityChangeEvent.ADD_ENTITY,
+                                             entityName));
+    }
   }
 
   /**
@@ -182,9 +204,14 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @param communityName
    * @param entityName
    */
-  public synchronized void removeEntity(String communityName, String entityName) {
+  private void removeEntity(String communityName, String entityName) {
     Community ce = (Community)cache.get(communityName);
-    if (ce != null) ce.entities.remove(entityName);
+    if (ce != null) {
+      ce.entities.remove(entityName);
+      fireListeners(new CommunityChangeEvent(communityName,
+                                             CommunityChangeEvent.REMOVE_ENTITY,
+                                             entityName));
+    }
   }
 
   /**
@@ -215,10 +242,14 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
       ex.printStackTrace();
     }
     if (log.isDebugEnabled()) {
-      StringBuffer sb = new StringBuffer("search: found " +
-        entities.size() + " entities, filter=" + filter + ", entities=");
-      for (Iterator it = entities.iterator(); it.hasNext();)
-        sb.append(it.next());
+      StringBuffer sb = new StringBuffer();
+      sb.append("search: found ")
+        .append(entities.size())
+        .append(" entities, filter=")
+        .append(filter)
+        .append(", entities=")
+        .append(entities);
+      log.debug(sb.toString());
     }
     return entities;
   }
@@ -233,8 +264,8 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
     try {
       if (communityExists(communityName)) {
         Attributes attrs = super.getCommunityAttributes(communityName);
-        addCommunity(communityName, attrs);
         Collection entities = listEntities(communityName);
+        addCommunity(communityName, attrs, entities);
         //System.out.println("Community " + communityName + " has " +
         //  entities.size() + " entities");
         for (Iterator it = entities.iterator(); it.hasNext();) {
@@ -243,6 +274,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
           Object obj = super.lookup(communityName, entityName);
           addEntity(communityName, entityName, obj, attrs);
         }
+        fireListeners(new CommunityChangeEvent(communityName,
+                                               CommunityChangeEvent.ADD_COMMUNITY,
+                                               communityName));
       } else {
         log.error("Community '" + communityName + "' not found in Name Server");
       }
@@ -256,7 +290,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @param communityName Name of community
    * @return              Communities attributes
    */
-  public Attributes getCommunityAttributes(String communityName) {
+  public synchronized Attributes getCommunityAttributes(String communityName) {
     if (log.isDebugEnabled())
       log.debug("getCommunityAttributes: community=" + communityName);
     if (!contains(communityName)) update(communityName);

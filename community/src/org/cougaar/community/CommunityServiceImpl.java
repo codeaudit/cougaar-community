@@ -49,10 +49,12 @@ import org.cougaar.core.plugin.ComponentPlugin;
 public class CommunityServiceImpl extends ComponentPlugin
   implements CommunityService, java.io.Serializable {
 
-  protected static Logger log;
+  protected LoggingService log;
   protected MessageAddress agentId = null;
   protected ServiceBroker serviceBroker = null;
   protected DirContext communitiesContext = null;
+
+  private List listeners = new ArrayList();
 
   private BlackboardClient blackboardClient = null;
   private SearchControls defaultSearchControls = new SearchControls();
@@ -78,6 +80,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     this.agentId = addr;
     this.serviceBroker = sb;
     this.log = getLoggingService();
+    this.log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log, addr + ": ");
     this.communitiesContext = getCommunitiesContext();
     defaultSearchControls.setSearchScope(SearchControls.ONELEVEL_SCOPE);
     defaultSearchControls.setReturningObjFlag(false);
@@ -842,6 +845,44 @@ public class CommunityServiceImpl extends ComponentPlugin
     return false;
   }
 
+  public void addListener(CommunityChangeListener l) {
+    synchronized (listeners) {
+      listeners.add(l);
+    }
+  }
+
+  public void removeListener(CommunityChangeListener l) {
+    synchronized (listeners) {
+      listeners.remove(l);
+    }
+  }
+
+  protected void fireListeners(CommunityChangeEvent event) {
+    synchronized (listeners) {
+      if (listeners.size() == 0) {
+        if (log.isInfoEnabled())
+          log.info("fireListeners: no listeners");
+        return;
+      }
+      String communityOfEvent = event.getCommunityName();
+      for (int i = 0, n = listeners.size(); i < n; i++) {
+        if (i == 0 && log.isInfoEnabled()) {
+          if (log.isInfoEnabled())
+            log.info("fireListeners: "
+                     + event.toString());
+        }
+        CommunityChangeListener l = (CommunityChangeListener) listeners.get(i);
+        String communityOfInterest = l.getCommunityName();
+        if (communityOfInterest == null || communityOfInterest.equals(communityOfEvent)) {
+          try {
+            l.communityChanged(event);
+          } catch (Throwable t) {
+            log.error("Exception in listener", t);
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Gets reference to NamingService.
@@ -920,8 +961,11 @@ public class CommunityServiceImpl extends ComponentPlugin
 			        // Uses explicit addresses for listeners rather than ABA
               for (Iterator it = listeners.iterator(); it.hasNext();) {
                 MessageAddress listener = (MessageAddress)it.next();
-			  	      log.debug("NotifyListeners: message='" + message + "' agent=" +
-                  agentId + " community=" + communityName + " listener=" + listener);
+                if (log.isDebugEnabled())
+                  log.debug("NotifyListeners: message='" + message
+                            + "' agent=" + agentId
+                            + " community=" + communityName
+                            + " listener=" + listener);
                 ccn.addTarget(listener);
               }
 
