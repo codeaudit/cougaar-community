@@ -146,7 +146,7 @@ public class CommunityPlugin extends ComponentPlugin {
       (IncrementalSubscription)blackboard.subscribe(communityRequestPredicate);
 
     // Initialize cache
-    cache = new CommunityCache(agentId.toString() + ".pi");
+    cache = new CommunityCache(getServiceBroker(), agentId.toString() + ".pi");
 
     communityManager = new CommunityManager(agentId, blackboard,
                                             getBindingSite().getServiceBroker());
@@ -522,10 +522,12 @@ public class CommunityPlugin extends ComponentPlugin {
       }
       updateMemberships(cmr);
       // Notify requester and remove Source Relay
-      CmrQueueEntry cqe = (CmrQueueEntry) pendingRequests.remove(cmr.getUID());
-      if (cqe != null && cqe.cr != null) {
-        cqe.cr.setResponse( (CommunityResponse) cmr.getResponse());
-        blackboard.publishChange(cqe.cr);
+      synchronized (pendingRequests) {
+        CmrQueueEntry cqe = (CmrQueueEntry) pendingRequests.remove(cmr.getUID());
+        if (cqe != null && cqe.cr != null) {
+          cqe.cr.setResponse( (CommunityResponse) cmr.getResponse());
+          blackboard.publishChange(cqe.cr);
+        }
       }
       deleteSourceRelay(cmr.getUID());
     } else {
@@ -723,7 +725,7 @@ public class CommunityPlugin extends ComponentPlugin {
                                               uidService.nextUID());
           queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
           if (logger.isInfoEnabled()) {
-            logger.info(
+            logger.debug(
                 "Detected inconsistent community, submitting join request to rectify:" +
                 " source=" + cmr.getSource() +
                 " community=" + cmr.getCommunityName() +
@@ -848,30 +850,36 @@ public class CommunityPlugin extends ComponentPlugin {
   private boolean isCmrQueued(String communityName, String entityName, int type) {
     boolean cmrQueued = false;
     // Check for CMRs that have been queued but not yet sent to community manager
-    for (Iterator it = communityManagerRequestQueue.iterator(); it.hasNext();) {
-      CmrQueueEntry cqe = (CmrQueueEntry)it.next();
-      CommunityManagerRequest cmr = (CommunityManagerRequest)cqe.request;
-      Entity entity = cmr.getEntity();
-      if (cmr.getCommunityName().equals(communityName) &&
-          cmr.getRequestType() == type &&
-          (entityName == null || (entity != null && entityName.equals(entity.getName())))) {
-        cmrQueued = true;
-        break;
+    synchronized (communityManagerRequestQueue) {
+      for (Iterator it = communityManagerRequestQueue.iterator(); it.hasNext(); ) {
+        CmrQueueEntry cqe = (CmrQueueEntry) it.next();
+        CommunityManagerRequest cmr = (CommunityManagerRequest) cqe.request;
+        Entity entity = cmr.getEntity();
+        if (cmr.getCommunityName().equals(communityName) &&
+            cmr.getRequestType() == type &&
+            (entityName == null ||
+             (entity != null && entityName.equals(entity.getName())))) {
+          cmrQueued = true;
+          break;
+        }
       }
     }
     if (cmrQueued) return true;
     // Check for CMRs that have been sent to community manager but not yet responded tp
-    Collection requests = pendingRequests.values();
-    for (Iterator it1 = requests.iterator(); it1.hasNext(); ) {
-      CmrQueueEntry cqe = (CmrQueueEntry)it1.next();
-      RelayAdapter ra = (RelayAdapter)cqe.request;
-      CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
-      Entity entity = cmr.getEntity();
-      if (cmr.getCommunityName().equals(communityName) &&
-          cmr.getRequestType() == type &&
-          (entityName == null || (entity != null && entityName.equals(entity.getName())))) {
-        cmrQueued = true;
-        break;
+    synchronized (pendingRequests) {
+      Collection requests = pendingRequests.values();
+      for (Iterator it1 = requests.iterator(); it1.hasNext(); ) {
+        CmrQueueEntry cqe = (CmrQueueEntry) it1.next();
+        RelayAdapter ra = (RelayAdapter) cqe.request;
+        CommunityManagerRequest cmr = (CommunityManagerRequest) ra.getContent();
+        Entity entity = cmr.getEntity();
+        if (cmr.getCommunityName().equals(communityName) &&
+            cmr.getRequestType() == type &&
+            (entityName == null ||
+             (entity != null && entityName.equals(entity.getName())))) {
+          cmrQueued = true;
+          break;
+        }
       }
     }
     return cmrQueued;
@@ -1082,45 +1090,54 @@ public class CommunityPlugin extends ComponentPlugin {
      * Called  when clock-time >= getExpirationTime().
      **/
     public void expire () {
+      System.out.print('C');
       if (!expired) {
         List requestsToPublish = new ArrayList();
         List responsesToPublish = new ArrayList();
         try {
           long now = (new Date()).getTime();
           // Check for pending requests that have timed out
-          for (Iterator it = pendingRequests.values().iterator(); it.hasNext();) {
-            CmrQueueEntry cqe = (CmrQueueEntry)it.next();
-            RelayAdapter ra = (RelayAdapter)cqe.request;
-            CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
-            if (cqe.timeout < now) { // Request timeout
-              boolean retry = cqe.ttl < 0 || cqe.timeout < cqe.ttl;
-              if (logger.isDebugEnabled()) {
-                logger.debug("CommunityManagerRequest timeout:" +
-                             " source=" + cmr.getSource() +
-                             " request=" + cmr.getRequestTypeAsString() +
-                             " community=" + cmr.getCommunityName() +
-                             " cmrUid=" + cmr.getUID() +
-                             " crUid=" + (cqe.cr != null ? cqe.cr.getUID().toString() : "nullCR") +
-                             " targets=" + RelayAdapter.targetsToString(ra) +
-                             " timeout=" +
-                             (cqe.ttl < 0 ? cqe.ttl : cqe.ttl - cqe.createTime) +
-                             " sentToMgr=true" +
-                             " retrying=" + retry);
-              }
-              // remove request from BB and pending request queue
-              blackboard.openTransaction();
-              blackboard.publishRemove(ra);
-              blackboard.closeTransaction();
-              it.remove();
-              if (retry) {
-                cqe.request = ra.getContent();
-                queueCommunityManagerRequest(cqe);
-              } else {
-                // Notify requester of timeout
-                CommunityResponse resp = new CommunityResponseImpl(CommunityResponse.
-                                                                   TIMEOUT, null);
-                cqe.cr.setResponse(resp);
-                responsesToPublish.add(cqe.cr);
+          synchronized (pendingRequests) {
+            for (Iterator it = pendingRequests.values().iterator(); it.hasNext(); ) {
+              CmrQueueEntry cqe = (CmrQueueEntry) it.next();
+              RelayAdapter ra = (RelayAdapter) cqe.request;
+              CommunityManagerRequest cmr = (CommunityManagerRequest) ra.
+                  getContent();
+              if (cqe.timeout < now) { // Request timeout
+                boolean retry = cqe.ttl < 0 || cqe.timeout < cqe.ttl;
+                if (logger.isDebugEnabled()) {
+                  logger.debug("CommunityManagerRequest timeout:" +
+                               " source=" + cmr.getSource() +
+                               " request=" + cmr.getRequestTypeAsString() +
+                               " community=" + cmr.getCommunityName() +
+                               " cmrUid=" + cmr.getUID() +
+                               " crUid=" +
+                               (cqe.cr != null ? cqe.cr.getUID().toString() :
+                                "nullCR") +
+                               " targets=" + RelayAdapter.targetsToString(ra) +
+                               " timeout=" +
+                               (cqe.ttl < 0 ? cqe.ttl :
+                                cqe.ttl - cqe.createTime) +
+                               " sentToMgr=true" +
+                               " retrying=" + retry);
+                }
+                // remove request from BB and pending request queue
+                blackboard.openTransaction();
+                blackboard.publishRemove(ra);
+                blackboard.closeTransaction();
+                it.remove();
+                if (retry) {
+                  cqe.request = ra.getContent();
+                  queueCommunityManagerRequest(cqe);
+                }
+                else {
+                  // Notify requester of timeout
+                  CommunityResponse resp = new CommunityResponseImpl(
+                      CommunityResponse.
+                      TIMEOUT, null);
+                  cqe.cr.setResponse(resp);
+                  responsesToPublish.add(cqe.cr);
+                }
               }
             }
           }
@@ -1137,7 +1154,9 @@ public class CommunityPlugin extends ComponentPlugin {
                 relay.addTarget(cmAddr);
                 cqe.attempts = 0;
                 cqe.request = relay;
-                pendingRequests.put(cmr.getUID(), cqe);
+                synchronized (pendingRequests) {
+                  pendingRequests.put(cmr.getUID(), cqe);
+                }
                 requestsToPublish.add(relay);
               } else {  // community (community manager) not found
                 if (cqe.timeout < now) { // Request timeout
