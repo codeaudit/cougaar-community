@@ -185,9 +185,9 @@
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value=""/>
+      <sysproperty key="org.cougaar.community.caching" value="on"/>
+      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
       <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode"/>
     </java>
@@ -198,9 +198,10 @@
     <java dir="${basedir}" fork="yes"
       maxmemory="350m"
       classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xms100m"/>
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
+        <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar" />
         </fileset>
@@ -212,8 +213,10 @@
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.community.caching" value="on"/>
+      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
+      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode1"/>
     </java>
   </target>
@@ -223,9 +226,10 @@
     <java dir="${basedir}" fork="yes"
       maxmemory="350m"
       classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xms100m"/>
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
+        <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar" />
         </fileset>
@@ -236,10 +240,11 @@
           <include name="**/*.jar" />
         </fileset>
       </classpath>
-      <sysproperty key="log4j.rootCategory" value="DEBUG" />
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.community.caching" value="on"/>
+      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
+      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode2"/>
     </java>
   </target>
