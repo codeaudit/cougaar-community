@@ -69,7 +69,7 @@ public class CommunityServiceComponent extends ComponentSupport {
     if (initXmlFile != null )
       if (log.isDebugEnabled())
         log.debug("initXmlFile is:" +initXmlFile);
-    String value = System.getProperty("org.cougaar.community.caching"); 
+    String value = System.getProperty("org.cougaar.community.caching");
     if (value != null ) {
       if (value.equalsIgnoreCase("off")) {
         if (log.isDebugEnabled())
@@ -82,7 +82,7 @@ public class CommunityServiceComponent extends ComponentSupport {
 
     try {
       //initXmlFile only used by FileInitializerServiceProvider
-      communityConfigs = is.getCommunityDescriptions(agentId.toString(), initXmlFile);  
+      communityConfigs = is.getCommunityDescriptions(agentId.toString(), initXmlFile);
     }
     catch (Exception e) {
       System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
@@ -102,7 +102,7 @@ public class CommunityServiceComponent extends ComponentSupport {
    */
   private CommunityService loadCommunityService(ClusterIdentifier agentId) {
     ServiceBroker sb = ((AgentChildBinder)getBindingSite()).getServiceBroker();
-    CommunityServiceProvider csp = new CommunityServiceProvider(sb, agentId, useCache);   
+    CommunityServiceProvider csp = new CommunityServiceProvider(sb, agentId, useCache);
     sb.addService(CommunityService.class, csp);
     return (CommunityService)sb.getService(this, CommunityService.class,
       new ServiceRevokedListener() {
@@ -114,7 +114,7 @@ public class CommunityServiceComponent extends ComponentSupport {
    * Adds initial community relationships for this agent to Name Server.
    * Community relationships are obtained from the InitializerService which
    * in turn obtains the information from either the Configuration database or
-   * an XML file based on a system parameter. This method is recursive in tha this 
+   * an XML file based on a system parameter. This method is recursive in tha this
    * agent, if it creates a community, takes responsibility for determining if the
    * community that it created is a member of other communities and will add that
    * information to the NameServer as well.
@@ -138,28 +138,48 @@ public class CommunityServiceComponent extends ComponentSupport {
     try {
       for (Iterator it = communityConfigs.iterator(); it.hasNext();) {
         CommunityConfig cc = (CommunityConfig)it.next();
-        communityName = cc.getName();        
+        communityName = cc.getName();
         if (!cs.communityExists(communityName)) {
           if (log.isDebugEnabled())
             log.debug("Agent " + entityId + ": creating community " + communityName);
           cs.createCommunity(communityName, cc.getAttributes());
           //this agent just created this community so now have responsibility to check if this
           // community is a member of any other communities
-          Collection communityWithCommMember = is.getCommunityDescriptions(communityName, initXmlFile); 
+          Collection communityWithCommMember = is.getCommunityDescriptions(communityName, initXmlFile);
           if (!communityWithCommMember.isEmpty()) {
             initializeCommunityRelationships(cs, is, communityName, communityWithCommMember);
           }
         }
         Attributes myAttributes = cc.getEntity(entityId.toString()).getAttributes();
         if (log.isDebugEnabled()) {
-          log.debug("Adding Agent " + entityId + " to community " + communityName);
+          log.debug("Adding Entity " + entityId + " to community " + communityName);
         }
-        //entityId is either a ClusterIdentifier or a String Object
-        cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
+        // EntityId is either a ClusterIdentifier or a String Object
+        // Check to see if entity already exists.  If so, then this agent is
+        // likely being restarted.  Don't overwrite existing attributes.
+        if (!entityExists(cs, communityName, entityId.toString())) {
+          cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
+        } else {
+          if (log.isDebugEnabled()) {
+            log.debug("Entity " + entityId + " already exists in community " +
+              communityName + ", using existing attributes");
+          }
+        }
       }
     } catch (Exception ex) {
       log.error("Exception when initializing communities, " + ex, ex);
     }
   }
 
+  /**
+   * Checks for existence of entity within specified community.
+   * @param cs             Reference to CommunityService
+   * @param communityName  Name of parent community
+   * @param entityName     Name of entity to look for
+   * @return               True if an entity with specified name exists in community
+   */
+  private boolean entityExists(CommunityService cs, String communityName, String entityName) {
+    Collection entities = cs.search(communityName, "(Name=" + entityName + ")");
+    return (entities != null && !entities.isEmpty());
+  }
 }
