@@ -72,6 +72,12 @@ import org.cougaar.util.UnaryPredicate;
 public class DefaultCommunityServiceImpl extends AbstractCommunityService
   implements CommunityService, java.io.Serializable {
 
+  // Defines how long CommunityDescriptor updates should be aggregated before
+  // sending to interested agents.
+  public static final String VERIFY_MEMBERSHIPS_INTERVAL_PROPERTY =
+      "org.cougaar.community.verifyMembershipsInterval";
+  private static long VERIFY_MEMBERSHIPS_INTERVAL = 1 * 60 * 1000;
+
   protected BindingSite bindingSite;
   protected UIDService uidService;
 
@@ -223,12 +229,6 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                           crl);
             myBlackboardClient.publish(req, BlackboardClient.ADD);
           }
-        } else {
-          // Manager not found, retry
-          if (log.isDetailEnabled()) {
-            log.detail(agentName+": Community not found, retrying ...");
-          }
-          myBlackboardClient.queueFindManagerRequest(communityName, this);
         }
       }
     };
@@ -317,8 +317,23 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
    */
   public void findCommunity(final String                communityName,
                             final FindCommunityCallback fccb,
-                            long                  timeout) {
+                            final long                  timeout) {
+    if (log.isDetailEnabled()) {
+      log.detail(agentName + ": findCommunity:" +
+               " community=" + communityName +
+               " timeout=" + timeout);
+    }
+    long tryUntil = timeout >= 0 ? System.currentTimeMillis() + timeout : -1;
+    myBlackboardClient.queueFindManagerRequest(communityName, fccb, 0, tryUntil);
+  }
 
+    public void findManager(final String                communityName,
+                            final FindCommunityCallback fccb,
+                            final long                  tryUntil) {
+      if (log.isDetailEnabled()) {
+        log.detail(agentName + ": findManager:" +
+                 " community=" + communityName);
+      }
     Callback cb = new Callback() {
       public void execute(Response resp) {
         String name = null;
@@ -328,12 +343,24 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
             name = entry.getURI().getPath().substring(1);
           }
         }
-        if (log.isDetailEnabled()) {
-          log.detail(agentName+": findCommunity:" +
-                   " community=" + communityName +
-                   " manager=" + name);
+        if (name != null) {
+          if (log.isDetailEnabled()) {
+            log.detail(agentName + ": findCommunity:" +
+                       " community=" + communityName +
+                       " manager=" + name);
+          }
+          fccb.execute(name);
+        } else { // retry?
+          long now = System.currentTimeMillis();
+          if (tryUntil < 0 || now < tryUntil) {
+            myBlackboardClient.queueFindManagerRequest(communityName,
+                                                       fccb,
+                                                       5000,     // 5 sec delay
+                                                       tryUntil);
+          } else {
+            fccb.execute(null);  // Give up
+          }
         }
-        fccb.execute(name);
       }
     };
     WhitePagesService wps = (WhitePagesService)
@@ -377,7 +404,8 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
   class MyBlackboardClient extends BlackboardClient {
 
     List findManagerRequests = Collections.synchronizedList(new ArrayList());
-    WakeAlarm timer;
+    WakeAlarm findMgrTimer;
+    WakeAlarm verifyMembershipsTimer;
     boolean myCommunitiesChanged;
 
     List responses = new ArrayList();
@@ -389,13 +417,16 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
     protected long now() { return System.currentTimeMillis(); }
 
     protected void queueFindManagerRequest(String communityName,
-                                            FindCommunityCallback fmcb) {
-      findManagerRequests.add(new FindManagerRequest(now() + TIMER_INTERVAL,
+                                            FindCommunityCallback fccb,
+                                            long delay,
+                                            long tryUntil) {
+      findManagerRequests.add(new FindManagerRequest(now() + delay,
                                                      communityName,
-                                                     fmcb));
-      if (timer == null) {
-        timer = new WakeAlarm(now() + TIMER_INTERVAL);
-        alarmService.addRealTimeAlarm(timer);
+                                                     fccb,
+                                                     tryUntil));
+      if (findMgrTimer == null) {
+        findMgrTimer = new WakeAlarm(now() + TIMER_INTERVAL);
+        alarmService.addRealTimeAlarm(findMgrTimer);
       }
     }
 
@@ -430,10 +461,10 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       myCommunities.addListener(new CommunityMembershipsListener() {
         public void membershipsChanged() {
           myCommunitiesChanged = true;
-          if (!myCommunities.listCommunities().isEmpty() && timer == null) {
-            timer = new WakeAlarm(System.currentTimeMillis() +
-                                      TIMER_INTERVAL);
-            alarmService.addRealTimeAlarm(timer);
+          if (!myCommunities.listCommunities().isEmpty() && verifyMembershipsTimer == null) {
+            verifyMembershipsTimer =
+                new WakeAlarm(System.currentTimeMillis() + VERIFY_MEMBERSHIPS_INTERVAL);
+            alarmService.addRealTimeAlarm(verifyMembershipsTimer);
           }
         }
       });
@@ -445,9 +476,10 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                                 myCommunities);
 
       // Activate MembershipWatcher
-      if (!myCommunities.listCommunities().isEmpty() && timer == null) {
-        timer = new WakeAlarm(System.currentTimeMillis() + TIMER_INTERVAL);
-        alarmService.addRealTimeAlarm(timer);
+      if (!myCommunities.listCommunities().isEmpty() && verifyMembershipsTimer == null) {
+        verifyMembershipsTimer =
+            new WakeAlarm(System.currentTimeMillis() + VERIFY_MEMBERSHIPS_INTERVAL);
+        alarmService.addRealTimeAlarm(verifyMembershipsTimer);
       }
 
       // Subscribe to CommunityRequests
@@ -466,20 +498,29 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
 
       sendCommunityResponses();
 
-      // Perform periodic tasks
-      if (timer != null && timer.hasExpired()) {
+      // Resend queued FindManagerRequests
+      if (findMgrTimer != null && findMgrTimer.hasExpired()) {
         performFindManagerRetries();
+        if (!findManagerRequests.isEmpty()) {
+          findMgrTimer = new WakeAlarm(now() + TIMER_INTERVAL);
+          alarmService.addRealTimeAlarm(findMgrTimer);
+        } else {
+          findMgrTimer = null;
+        }
+      }
+
+      // Verify agent memberships
+      if (verifyMembershipsTimer != null && verifyMembershipsTimer.hasExpired()) {
         if (myCommunitiesChanged) {
           blackboard.publishChange(myCommunities);
           myCommunitiesChanged = false;
         }
         membershipWatcher.validate();
-        if (!findManagerRequests.isEmpty() ||
-            !myCommunities.listCommunities().isEmpty()) {
-          timer = new WakeAlarm(now() + TIMER_INTERVAL);
-          alarmService.addRealTimeAlarm(timer);
+        if (!myCommunities.listCommunities().isEmpty()) {
+          verifyMembershipsTimer = new WakeAlarm(now() + VERIFY_MEMBERSHIPS_INTERVAL);
+          alarmService.addRealTimeAlarm(verifyMembershipsTimer);
         } else {
-          timer = null;
+          verifyMembershipsTimer = null;
         }
       }
 
@@ -561,8 +602,8 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       }
       for (int i = 0; i < n; i++) {
         FindManagerRequest req = (FindManagerRequest)l.get(i);
-        if (now > req.getTime()) {
-          findCommunity(req.getCommunityName(), req.getCallback(), -1);
+        if (now >= req.getTime()) {
+          findManager(req.getCommunityName(), req.getCallback(), req.tryUntil);
         } else {  // requeue
           findManagerRequests.add(req);
         }
@@ -617,10 +658,15 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
     private long nextRetryTime;
     private String communityName;
     private FindCommunityCallback fmcb;
-    FindManagerRequest(long time, String cname, FindCommunityCallback cb) {
+    private long tryUntil;
+    FindManagerRequest(long time,
+                       String cname,
+                       FindCommunityCallback cb,
+                       long tu) {
       nextRetryTime = time;
       communityName = cname;
       fmcb = cb;
+      tryUntil = tu;
     }
     protected long getTime() { return nextRetryTime; }
     protected String getCommunityName() { return communityName; }

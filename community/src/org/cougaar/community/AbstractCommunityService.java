@@ -181,29 +181,25 @@ public abstract class AbstractCommunityService
     }
     switch (entityType) {
       case AGENT:
-        //if (agentName.equals(entityName)) {
-          final Agent agent = new AgentImpl(agentName, entityAttrs);
-          final CommunityResponseListener wcrl =
-              wrapResponse(Request.JOIN, crl, communityName, agent);
-          if (createIfNotFound) {
-            FindCommunityCallback fmcb = new FindCommunityCallback() {
-              public void execute(String name) {
-                if (name == null) { // community not found
-                  Community community =
-                      new CommunityImpl(communityName, newCommunityAttrs);
-                  communityManager.manageCommunity(community);
-                }
-                queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, 0);
+        final Agent agent = new AgentImpl(agentName, entityAttrs);
+        final CommunityResponseListener wcrl =
+            wrapResponse(Request.JOIN, crl, communityName, agent);
+        if (createIfNotFound) {
+          FindCommunityCallback fmcb = new FindCommunityCallback() {
+            public void execute(String name) {
+              if (name == null) { // community not found
+                Community community =
+                    new CommunityImpl(communityName, newCommunityAttrs);
+                communityManager.manageCommunity(community);
               }
-            };
-            findCommunity(communityName, fmcb, -1);
-          } else {
-            queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, 0);
-          }
-        //} else {
-          // Failed request, entity to join not caller
-          //crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
-        //}
+              queueCommunityRequest(communityName, Request.JOIN, agent, null,
+                                    wcrl, 0);
+            }
+          };
+          findCommunity(communityName, fmcb, 0);
+        } else {
+          queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, 0);
+        }
         break;
       case COMMUNITY:
         // Submit join request to add nested community iff nested community
@@ -239,7 +235,7 @@ public abstract class AbstractCommunityService
             }
           }
         };
-        findCommunity(entityName, fmcb, -1); // Look for nested community
+        findCommunity(entityName, fmcb, 0); // Look for nested community
         break;
       default:
         // Failed request, unknown entity type

@@ -31,8 +31,6 @@ import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.service.community.Agent;
 import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.service.community.CommunityChangeEvent;
-import org.cougaar.core.service.community.CommunityChangeListener;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.FindCommunityCallback;
@@ -141,7 +139,7 @@ public class MembershipWatcher {
         }
       }
     };
-    communityService.findCommunity(communityName, fccb, 10000);
+    communityService.findCommunity(communityName, fccb, 0);
   }
 
   protected void rejoin(final String communityName, Entity entity) {
