@@ -505,7 +505,6 @@ public class CommunityManager {
                             " community=" + communityName +
                             " newManager=" + communityManager);
                 bbs.publishRemove(ra);
-                bbs.closeTransaction();
               }
             }
           }
@@ -532,6 +531,7 @@ public class CommunityManager {
         } catch (Exception e) {
           e.printStackTrace();
         } finally {
+          bbs.closeTransaction();
           expired = true;
           if (as != null) {
             serviceBroker.releaseService(this, AlarmService.class, as);
@@ -573,7 +573,6 @@ public class CommunityManager {
           RelayAdapter ra = getManagedCommunityRelayAdapter(cname);
           if (ra != null)
             bbs.publishChange(ra);
-          bbs.closeTransaction();
           if (ra != null && logger.isDebugEnabled()) {
             CommunityDescriptor cd = (CommunityDescriptor) ra.getContent();
             logger.debug("PublishChange CommunityDescriptor:" +
@@ -588,6 +587,7 @@ public class CommunityManager {
           e.printStackTrace();
         }
         finally {
+          bbs.closeTransaction();
           expired = true;
         }
       }
