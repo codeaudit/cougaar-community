@@ -60,6 +60,7 @@ import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.FindCommunityCallback;
 
 import org.cougaar.community.CommunityResponseImpl;
+import org.cougaar.community.requests.ListAgentParentCommunities;
 
 import org.cougaar.core.service.wp.AddressEntry;
 import org.cougaar.core.service.wp.Callback;
@@ -188,6 +189,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                        final Entity entity,
                                        final ModificationItem[] attrMods,
                                        final CommunityResponseListener crl,
+                                       final long timeout,
                                        final long delay) {
     if (log.isDebugEnabled()) {
       log.debug(agentName + ": queueCommunityRequest: " +
@@ -198,9 +200,9 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                 " delay=" + delay);
     }
     if (delay > 0) {
-      requestQueue.add(delay, communityName, requestType, entity, attrMods, crl);
+      requestQueue.add(delay, communityName, requestType, entity, attrMods, timeout, crl);
     } else {
-      sendCommunityRequest(communityName, requestType, entity, attrMods, crl);
+      sendCommunityRequest(communityName, requestType, entity, attrMods, timeout, crl);
     }
   }
 
@@ -216,13 +218,15 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                       final int requestType,
                                       final Entity entity,
                                       final ModificationItem[] attrMods,
+                                      final long timeout,
                                       final CommunityResponseListener crl) {
     if (log.isDebugEnabled()) {
       log.debug(agentName + ": sendCommunityRequest: " +
                 " community=" + communityName +
                 " type=" + requestType +
                 " entity=" + entity +
-                " attrMods=" + attrMods);
+                " attrMods=" + attrMods +
+                " timeout=" + timeout);
     }
     FindCommunityCallback fmcb = new FindCommunityCallback() {
       public void execute(String managerName) {
@@ -254,10 +258,14 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                           crl);
             myBlackboardClient.publish(req, BlackboardClient.ADD);
           }
+        } else {
+          handleResponse(communityName,
+                         new CommunityResponseImpl(CommunityResponse.TIMEOUT, null),
+                         Collections.singleton(crl));
         }
       }
     };
-    findCommunity(communityName, fmcb, -1);
+    findCommunity(communityName, fmcb, timeout);
   }
 
   /**
@@ -423,6 +431,73 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
 
   }
 
+  /**
+   * Create list of parent communities.  For local agent this can easily be
+   * obtained from cache.  For any other agent/community a request must be sent
+   * to the agent or community manager.
+   * @param member String
+   * @param filter String
+   * @param crl CommunityResponseListener
+   * @return Collection
+   */
+  public Collection listParentCommunities(final String                    member,
+                                          String                    filter,
+                                          CommunityResponseListener crl) {
+    if(member.equals(agentName)) {
+      Collection results = listParentCommunities(member, filter);
+      if(crl != null)
+        crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, results));
+      return results;
+    }
+
+    Collection comms = listAllCommunities();
+    final List temp = new ArrayList();
+    String target = member;
+    // the member is a community, get the community manager to send the relay.
+    if(comms.contains(member)) {
+      findManager(member, new FindCommunityCallback() {
+        public void execute(String manager) {
+          temp.add(manager);
+          if(log.isDebugEnabled())
+            log.debug("get manager of community " + member + ": " + manager);
+        }
+      }, 5000);
+      while(temp.size() == 0) {
+        try { Thread.sleep(1000);} catch (Exception ex) {}
+      }
+      target = (String)temp.get(0);
+      if(target.equals(agentName)) {
+        Collection results = listParentCommunities(member, filter);
+        if(crl != null)
+          crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, results));
+        return results;
+      }
+    }
+
+    UID uid = uidService.nextUID();
+    ListAgentParentCommunities tr = new ListAgentParentCommunities(agentId, uid, member, filter);
+    RelayAdapter relay = new RelayAdapter(agentId,
+                                          tr,
+                                          uid);
+    relay.addTarget(MessageAddress.getMessageAddress(target));
+    if(log.isDebugEnabled())
+      log.debug("try to publish relay: " + relay);
+    myBlackboardClient.publish(relay, BlackboardClient.ADD);
+
+    while(relay.getResponse() == null) {
+      try { Thread.sleep(1000);} catch (Exception ex) {}
+    }
+
+    CommunityResponse cr = (CommunityResponse)relay.getResponse();
+    Collection results = (Collection)cr.getContent();
+    if(log.isDetailEnabled())
+      log.detail(agentName + ": get listParentCommunities of " + member + ": " + results);
+    if(crl != null)
+      crl.getResponse(cr);
+    return results;
+
+  }
+
   class MyBlackboardClient extends BlackboardClient {
 
     List findManagerRequests = Collections.synchronizedList(new ArrayList());
@@ -504,6 +579,9 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       communityDescriptorSub =
           (IncrementalSubscription)blackboard.subscribe(
           communityDescriptorPredicate);
+
+      // Subscribe to ListParentCommunities request
+      mylpcSub = (IncrementalSubscription)blackboard.subscribe(mylpcPredicate);
     }
 
     public void execute() {
@@ -580,6 +658,22 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
         }
         communityUpdateListener.removeCommunity(cd.getCommunity());
       }
+
+      //Fetch ListParentCommunities requests.
+      Collection list = mylpcSub.getAddedCollection();
+      for(Iterator it = list.iterator(); it.hasNext();) {
+        ListAgentParentCommunities tr = (ListAgentParentCommunities)it.next();
+        if(tr.getResponse() == null) {
+          if(logger.isDetailEnabled())
+            logger.detail("received TestRelay: source=" + tr.getSource() + ", content=" + tr);
+          Collection parents = Collections.synchronizedCollection(listParentCommunities(tr.getMember(), tr.getFilter()));
+          tr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, parents));
+          if(logger.isDetailEnabled())
+            logger.detail("publish change: " + tr);
+          blackboard.publishChange(tr);
+        }
+      }
+
     }
 
     private void sendCommunityResponses() {
@@ -626,6 +720,14 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
     }
 
     /**
+     * Predicate used to list parent communities.
+     */
+    private IncrementalSubscription mylpcSub;
+    private UnaryPredicate mylpcPredicate = new UnaryPredicate() {
+      public boolean execute(Object o) {return (o instanceof ListAgentParentCommunities);}
+    };
+
+    /**
      * Predicate used to select CommunityRequests.
      */
     private IncrementalSubscription communityRequestSub;
@@ -668,6 +770,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       }
     }
   }
+
 
   class FindManagerRequest {
     private long nextRetryTime;

@@ -123,7 +123,8 @@ public abstract class AbstractCommunityService
                             null,
                             null,
                             crl,
-                            0);
+                            -1,  // No timeout
+                            0);  // no delay
       return null;
     }
   }
@@ -154,6 +155,7 @@ public abstract class AbstractCommunityService
                           entity,
                           mods,
                           wcrl,
+                          -1, // no timeout
                           0);
   }
 
@@ -179,14 +181,15 @@ public abstract class AbstractCommunityService
                             final Attributes          entityAttrs,
                             boolean                   createIfNotFound,
                             final Attributes          newCommunityAttrs,
+                            final long                timeout,
                             final CommunityResponseListener crl) {
     if (log.isDebugEnabled()) {
       log.debug(agentName + ": joinCommunity: " +
                 " community=" + communityName +
                 " entity=" + entityName +
                 " entityAttrs=" + entityAttrs +
-                " createIfNotFound=" + createIfNotFound);
-                //" communityAttrs=" + newCommunityAttrs);
+                " createIfNotFound=" + createIfNotFound +
+                " timeout=" + timeout);
     }
     switch (entityType) {
       case AGENT:
@@ -203,12 +206,12 @@ public abstract class AbstractCommunityService
                 communityManager.manageCommunity(community);
               }
               queueCommunityRequest(communityName, Request.JOIN, agent, null,
-                                    wcrl, 0);
+                                    wcrl, timeout, 0);
             }
           };
           findCommunity(communityName, fmcb, 0);
         } else {
-          queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, 0);
+          queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 0);
         }
         break;
       case COMMUNITY:
@@ -225,6 +228,7 @@ public abstract class AbstractCommunityService
                                     member,
                                     null,
                                     wcrl,
+                                    timeout,
                                     0);
               // Add "Parent" attribute to nested community
               Community nestedCommunity =
@@ -251,6 +255,33 @@ public abstract class AbstractCommunityService
         // Failed request, unknown entity type
         crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
     }
+  }
+
+  /**
+   * Request to join a named community.  If the specified community does not
+   * exist it may be created in which case the caller becomes the community
+   * manager.  It the community doesn't exist and the caller has set the
+   * "createIfNotFound flag to false the join request will be queued until the
+   * community is found.
+   * @param communityName    Community to join
+   * @param entityName       New member name
+   * @param entityType       Type of member entity to create (AGENT or COMMUNITY)
+   * @param entityAttrs      Attributes for new member
+   * @param createIfNotFound Create community if it doesn't exist, otherwise
+   *                         wait
+   * @param newCommunityAttrs  Attributes for created community (used if
+   *                         createIfNotFound set to true, otherwise ignored)
+   * @param crl              Listener to receive response
+   */
+  public void joinCommunity(final String              communityName,
+                            final String              entityName,
+                            final int                 entityType,
+                            final Attributes          entityAttrs,
+                            boolean                   createIfNotFound,
+                            final Attributes          newCommunityAttrs,
+                            final CommunityResponseListener crl) {
+    joinCommunity(communityName, entityName, entityType, entityAttrs,
+                  createIfNotFound, newCommunityAttrs, -1, crl);
   }
 
   // Scratchpad for pending callbacks to prevent multiple invocations
@@ -361,19 +392,19 @@ public abstract class AbstractCommunityService
             crl.getResponse(resp);
             break;
           case CommunityResponse.TIMEOUT:
-            if (log.isDebugEnabled()) {
-              log.debug("Community request timeout:" +
+            if (log.isWarnEnabled()) {
+              log.warn("Community request timeout:" +
                         " type=" + type +
                         " entity=" + entity +
                         " community=" + communityName);
             }
-            // retry
-            queueCommunityRequest(communityName,
+            // retry ??
+            /*queueCommunityRequest(communityName,
                                   type,
                                   entity,
                                   null,
-                                  wrapResponse(type, crl, communityName, entity),
-                                  10 * 1000); // Requeue with delay
+                                  wrapResponse(type, crl, communityName, entity), -1,
+                                  10 * 1000); // Requeue with delay*/
 
             break;
 
@@ -390,6 +421,20 @@ public abstract class AbstractCommunityService
    */
   public void leaveCommunity(final String communityName,
                              final String entityName,
+                             final CommunityResponseListener crl) {
+    leaveCommunity(communityName, entityName, -1, crl);
+  }
+
+  /**
+   * Request to leave named community.
+   * @param communityName  Community to leave
+   * @param entityName     Entity to remove from community
+   * @param timeout        How long to attempt operation before giving up
+   * @param crl            Listener to receive response
+   */
+  public void leaveCommunity(final String communityName,
+                             final String entityName,
+                             final long timeout,
                              final CommunityResponseListener crl) {
     if (log.isDebugEnabled()) {
       log.debug(agentName + ": leaveCommunity: " +
@@ -409,6 +454,7 @@ public abstract class AbstractCommunityService
                               member,
                               null,
                               wcrl,
+                              timeout,
                               0);
       } else {  // Entity is a community
         findCommunity(communityName, new FindCommunityCallback() {
@@ -419,6 +465,7 @@ public abstract class AbstractCommunityService
                                     member,
                                     null,
                                     wcrl,
+                                    timeout,
                                     0);
               removeParentAttribute(getCommunity(entityName, null),
                                     communityName);
@@ -427,7 +474,7 @@ public abstract class AbstractCommunityService
               crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
             }
           }
-        }, -1);
+        }, timeout);
       }
     } else {
       // Failed request, nested community or entity does not exist
@@ -459,6 +506,7 @@ public abstract class AbstractCommunityService
                             null,
                             mods,
                             null,
+                            -1,
                             0);
     }
   }
@@ -484,6 +532,7 @@ public abstract class AbstractCommunityService
                             null,
                             mods,
                             null,
+                            -1,
                             0);
     }
   }
@@ -764,14 +813,9 @@ public abstract class AbstractCommunityService
     return matches;
   }
 
-  public Collection listParentCommunities(String                    member,
-                                          String                    filter,
-                                          CommunityResponseListener crl) {
-    // TODO: create list of parent communities.  For local agent this
-    // can easily be obtained from cache.  For any other agent/community
-    // a request must be sent to the agent or community manager.
-    return Collections.EMPTY_SET;
-  }
+  abstract public Collection listParentCommunities(String                    member,
+                                                   String                    filter,
+                                                   CommunityResponseListener crl);
 
   /**
    * Handle response to community request returned by manager.
@@ -821,6 +865,7 @@ public abstract class AbstractCommunityService
                                                 Entity                    entity,
                                                 ModificationItem[]        attrMods,
                                                 CommunityResponseListener crl,
+                                                long                      timeout,
                                                 long                      delay);
 
   abstract protected String getAgentName();
