@@ -55,7 +55,7 @@ import org.cougaar.util.log.Logging;
 
 
 /**
- * Community config from database.
+ * Generates a community config from database.
  **/
 class DBCommunityInitializerServiceProvider implements ServiceProvider {
 

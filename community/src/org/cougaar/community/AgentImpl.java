@@ -30,7 +30,8 @@ import javax.naming.directory.Attributes;
 import org.cougaar.core.service.community.Agent;
 
 /**
- * An agent entity.
+ * Implementation of org.cougaar.core.service.community.Agent interface used
+ * to define community member agents.
  */
 public class AgentImpl extends EntityImpl implements Agent, java.io.Serializable {
 

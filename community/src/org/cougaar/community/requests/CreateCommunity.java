@@ -32,6 +32,7 @@ import org.cougaar.core.util.UID;
 
 /**
  * Request to create a community.
+ * @deprecated Use JoinCommunity request with CreateIfNotFound flag.
  */
 public class CreateCommunity
     extends CommunityRequest implements java.io.Serializable {

@@ -39,11 +39,7 @@ import org.cougaar.community.manager.AbstractCommunityManager;
 import org.cougaar.core.service.community.Community;
 
 /**
- * Manager for one or more communities.  Handles requests to join and leave a
- * community.  Disseminates community descriptors to community members
- * and other interested agents.  This implementation is used in support
- * of stand-alone unit testing, it does not support distributed operation
- * and will not perform correctly in a live Cougaar society.
+ * Tests CommunityManager operations.
  */
 public class CommunityManagerTestImpl extends AbstractCommunityManager {
 

@@ -58,9 +58,10 @@ import org.cougaar.core.service.community.FindCommunityCallback;
 import org.cougaar.community.manager.CommunityManager;
 import org.cougaar.community.manager.Request;
 
-/** Implements CommunityService API.  Methods that are used for remote
- *  operations are abstract enabling the use of different communication
- *  mechanisms.
+/** 
+ * Base class for implementations of CommunityService API.  Methods that 
+ * are used for remote operations are abstract enabling the use of different
+ * communication mechanisms.
  **/
 public abstract class AbstractCommunityService
   implements CommunityService, java.io.Serializable {
@@ -583,7 +584,7 @@ public abstract class AbstractCommunityService
               CommunityResponseListener getCommunityListener =
                   new CommunityResponseListener() {
                 public void getResponse(CommunityResponse resp) {
-                  if (resp.getStatus() == resp.SUCCESS) {
+                  if (resp.getStatus() == CommunityResponse.SUCCESS) {
                     matches.addAll(cache.search(communityName,
                                                 searchFilter,
                                                 resultQualifier,

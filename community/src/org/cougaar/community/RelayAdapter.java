@@ -36,6 +36,8 @@ import org.cougaar.core.relay.Relay;
 import org.cougaar.core.util.UID;
 
 /**
+ * Generic wrapper for blackboard objects to be sent to remote agents
+ * using Realay.
  */
 
 public class RelayAdapter implements Relay.Source {

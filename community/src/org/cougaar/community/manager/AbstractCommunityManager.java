@@ -46,7 +46,6 @@ import org.cougaar.util.log.Logger;
 import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.service.community.FindCommunityCallback;
 
 import org.cougaar.community.CommunityServiceConstants;
 import org.cougaar.community.CommunityImpl;
@@ -54,9 +53,9 @@ import org.cougaar.community.CommunityResponseImpl;
 import org.cougaar.community.CommunityUtils;
 
 /**
- * Manager for one or more communities.  Handles requests to join and leave a
- * community.  Disseminates community descriptors to community members
- * and other interested agents.
+ * Base class for CommunityManager that can manager one or more communities.  
+ * Handles requests to join and leave a community.  Disseminates community
+ * descriptors to community members and other interested agents.
  */
 public abstract class AbstractCommunityManager
     implements CommunityManager, CommunityServiceConstants {

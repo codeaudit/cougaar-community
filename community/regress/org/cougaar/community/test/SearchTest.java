@@ -52,7 +52,6 @@ import org.apache.log4j.PropertyConfigurator;
 
 /**
  * Test community search operations.
- *
  */
 public class SearchTest extends TestCase {
 

@@ -48,7 +48,8 @@ import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.Entity;
 
 /**
- * A community entity.
+ * Implementation of org.cougaar.core.service.community.Community interface used
+ * to define communities.
  */
 public class CommunityImpl extends EntityImpl
     implements Community, java.io.Serializable, Cloneable {

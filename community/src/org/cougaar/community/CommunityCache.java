@@ -477,7 +477,7 @@ public class CommunityCache implements CommunityServiceConstants {
     if (logger.isDetailEnabled()) {
       logger.detail("notifyListeners:" +
                    " community=" + cce.getCommunityName() +
-                   " changeType=" + cce.getChangeTypeAsString(cce.getType()) +
+                   " changeType=" + CommunityChangeEvent.getChangeTypeAsString(cce.getType()) +
                    " whatChanged=" + cce.getWhatChanged() +
                    " numListeners=" + listenerSet.size());
     }

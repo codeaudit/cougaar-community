@@ -51,7 +51,7 @@ import org.cougaar.community.CommunityResponseImpl;
 
 /**
  * Implementation of CommunityService for testing outside of a running
- *  cougaar society.
+ * cougaar society.
  **/
 public class CommunityServiceTestImpl extends AbstractCommunityService
   implements CommunityService, java.io.Serializable {

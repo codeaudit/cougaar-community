@@ -37,7 +37,6 @@ import org.cougaar.community.CommunityResponseImpl;
 
 import org.cougaar.community.requests.AddChangeListener;
 import org.cougaar.community.requests.CommunityRequest;
-import org.cougaar.community.requests.CreateCommunity;
 import org.cougaar.community.requests.GetCommunity;
 import org.cougaar.community.requests.JoinCommunity;
 import org.cougaar.community.requests.LeaveCommunity;
@@ -70,7 +69,11 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.Attribute;
 
 /**
- * Joins an agents startup communities.
+ * Plugin used by an agent to automatically create/join its initial
+ * communities during startup.  The communities to create/join are defined
+ * in the communities.xml file found on the Cougaar config path.  This
+ * plugin is listens for CommunityRequests published to blackboard and
+ * invokes applicable CommunityService methods.
  */
 public class CommunityPlugin extends ComponentPlugin {
 
@@ -340,11 +343,6 @@ public class CommunityPlugin extends ComponentPlugin {
                                                  community));
         blackboard.publishChange(cr);
       }
-    } else if (cr instanceof CreateCommunity) {
-      CreateCommunity cc = (CreateCommunity)cr;
-      communityService.createCommunity(cc.getCommunityName(),
-                                       cc.getAttributes(),
-                                       new ResponseHandler(cr));
     } else if (cr instanceof ModifyAttributes) {
       ModifyAttributes ma = (ModifyAttributes)cr;
       communityService.modifyAttributes(ma.getCommunityName(),

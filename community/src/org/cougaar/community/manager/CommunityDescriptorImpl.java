@@ -27,7 +27,6 @@
 package org.cougaar.community.manager;
 
 import org.cougaar.community.CommunityDescriptor;
-import org.cougaar.community.CommunityImpl;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.persist.NotPersistable;
 import org.cougaar.core.relay.Relay;
@@ -35,7 +34,9 @@ import org.cougaar.core.service.community.Community;
 import org.cougaar.core.util.UID;
 
 /**
- * Implementation of CommunityDescriptor interface.
+ * Implementation of CommunityDescriptor interface.  The CommunityDescriptor
+ * wraps an org.cougaar.core.service.community.Community instance for
+ * transmission to remote agents using blackboard relay.
  **/
 public class CommunityDescriptorImpl
   implements CommunityDescriptor, java.io.Serializable, NotPersistable {

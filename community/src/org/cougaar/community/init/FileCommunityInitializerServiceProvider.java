@@ -41,9 +41,11 @@ import org.cougaar.util.Strings;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+/**
+ * Generates a community config from xml file.
+ */
 class FileCommunityInitializerServiceProvider implements ServiceProvider {
 
   private static final String DEFAULT_FILE = "communities.xml";

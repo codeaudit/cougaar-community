@@ -45,7 +45,9 @@ import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.Entity;
 
 /**
- * Queue for processing Community Request at a future time.
+ * Queue for processing Community Requests at a future time.  This is
+ * typically used to hold requests that have failed and are to be retried.
+ * For instance, a WP lookup.
  */
 public class CommunityRequestQueue {
 

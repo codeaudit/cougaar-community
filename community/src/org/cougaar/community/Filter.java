@@ -29,6 +29,10 @@ package org.cougaar.community;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 
+/**
+ * Interface for defining criteria for Attribute search.
+ */
+
 public interface Filter {
     boolean match(Attributes a) throws NamingException;
     void toString(StringBuffer b);

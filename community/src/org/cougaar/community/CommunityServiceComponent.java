@@ -31,7 +31,6 @@ import org.cougaar.core.component.ServiceRevokedEvent;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.AgentIdentificationService;
-import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.community.CommunityService;
 
 /**

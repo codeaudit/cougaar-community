@@ -43,7 +43,6 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.cougaar.core.blackboard.BlackboardClient;
 import org.cougaar.core.service.AgentIdentificationService;
-import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityResponse;
@@ -58,7 +57,7 @@ import EDU.oswego.cs.dl.util.concurrent.Semaphore;
 import java.util.*;
 
 /**
- * An optional servlet for viewing information of communities.
+ * A servlet for viewing community state.
  * Load into any agent:
  *   plugin = org.cougaar.community.util.CommunityViewerServlet
  */
