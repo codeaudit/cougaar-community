@@ -38,7 +38,7 @@ import org.cougaar.core.util.XMLizable;
 abstract public class CommunityChangeNotificationAdapter
   implements CommunityChangeNotification, XMLizable {
 
-  private HashSet myTargets = new HashSet();
+  private transient Set myTargets = new HashSet();
 
   private UID myUID = null;
   private MessageAddress mySource = null;
@@ -117,6 +117,10 @@ abstract public class CommunityChangeNotificationAdapter
    **/
   public Object getContent() {
     return this;
+  }
+
+  protected boolean contentChanged(CommunityChangeNotificationAdapter newCCN) {
+    return false;
   }
 
   /**

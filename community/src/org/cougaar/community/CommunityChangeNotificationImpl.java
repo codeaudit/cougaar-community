@@ -25,7 +25,6 @@ import org.cougaar.core.mts.MessageAddress;
 public class CommunityChangeNotificationImpl
   extends CommunityChangeNotificationAdapter {
 
-  private MessageAddress agentId = null;
   private String communityName = null;
   private String myToString = null;
 
@@ -60,6 +59,13 @@ public class CommunityChangeNotificationImpl
     return this.communityName;
   }
 
+  protected boolean contentChanged(CommunityChangeNotificationAdapter newCCN) {
+    CommunityChangeNotificationImpl ccn =
+      (CommunityChangeNotificationImpl) newCCN;
+
+    return (super.contentChanged(ccn) ||
+            !getCommunityName().equals(ccn.getCommunityName()));
+  }
 
   /**
    * Returns a string representation of the HealthReport
