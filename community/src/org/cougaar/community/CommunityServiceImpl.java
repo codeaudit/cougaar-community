@@ -1016,10 +1016,16 @@ public class CommunityServiceImpl extends ComponentPlugin
               if (ccn == null) {  // 1st notification to this community
                 DomainService domainService = getDomainService(serviceBroker);
                 CommunityChangeNotificationFactory ccnFactory = null;
+                // Wait for the community domain to become available
+                int ctr = 0;
                 while (ccnFactory == null) {
                   ccnFactory =
                     ((CommunityChangeNotificationFactory)domainService.getFactory("community"));
-                  if (ccnFactory == null) Thread.sleep(500);
+                  if (ccnFactory == null) {
+                    // Report a missing community domain after 2 minutes
+                    if (++ctr == 120) log.warn("Domain 'community' not found, waiting ...");
+                    Thread.sleep(1000);
+                  }
                 }
                 ccn = ccnFactory.newCommunityChangeNotification(agentId,
                                                                 communityName,
