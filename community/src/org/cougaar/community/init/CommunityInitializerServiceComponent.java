@@ -26,7 +26,6 @@ import org.cougaar.core.component.Component;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
 import org.cougaar.core.node.DBInitializerService;
-import org.cougaar.core.node.Node;
 import org.cougaar.core.node.NodeControlService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.util.GenericStateModelAdapter;
@@ -44,6 +43,9 @@ public final class CommunityInitializerServiceComponent
 extends GenericStateModelAdapter
 implements Component 
 {
+  private static final String INITIALIZER_PROP = 
+    "org.cougaar.core.node.InitializationComponent";
+
   private ServiceBroker sb;
 
   private DBInitializerService dbInit;
@@ -119,7 +121,7 @@ implements Component
   private ServiceProvider chooseSP() {
     try {
       ServiceProvider sp;
-      String prop = System.getProperty(Node.INITIALIZER_PROP);
+      String prop = System.getProperty(INITIALIZER_PROP);
       if (prop != null && prop.indexOf("DB") != -1 && dbInit != null) {
         sp = new DBCommunityInitializerServiceProvider(dbInit);
 	if (log.isInfoEnabled())
