@@ -45,11 +45,9 @@ import org.cougaar.util.DBConnectionPool;
 import org.cougaar.util.Parameters;
 import org.cougaar.util.log.Logger;
 import org.cougaar.util.log.Logging;
-import org.cougaar.core.component.Service;
-import org.cougaar.core.component.ServiceProvider;
-import org.cougaar.core.component.ServiceBroker;
-import org.cougaar.core.component.ComponentDescription;
-import org.cougaar.core.node.DBInitializerService;
+import org.cougaar.core.component.*;
+import org.cougaar.core.node.*;
+import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.planning.plugin.asset.AssetDataReader;
 import org.cougaar.planning.plugin.asset.AssetDataDBReader;
 
@@ -87,12 +85,15 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
         String empty) // bogus param?
     {
       Collection ret = new Vector();
+      Map substitutions = null;
+      String query1 = null;
+      String query2 = null;
       try {
-        Map substitutions = dbInit.createSubstitutions();
+        substitutions = dbInit.createSubstitutions();
         Connection conn = null;
         try {
-          String query1 = dbInit.getQuery("queryCommunityEntityAttributes", substitutions);
-          String query2 = dbInit.getQuery("queryCommunityAttributes", substitutions);
+          query1 = dbInit.getQuery("queryCommunityEntityAttributes", substitutions);
+          query2 = dbInit.getQuery("queryCommunityAttributes", substitutions);
           conn = dbInit.getConnection();
           ret = getParentCommunities(conn, entityName, query1, query2);
         } finally {
@@ -103,7 +104,14 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
         }
       } catch (Exception ex) {
         if (logger.isErrorEnabled()) {
-          logger.error("Exception in getCommunityDescriptions from DB", ex);
+          logger.error(
+              "Exception in getCommunityDescriptions from DB ("+
+              "entityName=\""+entityName+
+              "\", subs=\""+substitutions+
+              "\", query1=\""+query1+
+              "\", query2=\""+query2+
+              "\")",
+              ex);
         }
       }
       return ret;
@@ -197,32 +205,49 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
    */
   public static void main(String args[]) throws Exception {
     String trialId = System.getProperty("org.cougaar.experiment.id");
-    String entityName = "OSC";
-    System.out.print(
-        "<!-- load trial=\""+trialId+
-        "\" entity=\""+entityName+"\" -->");
-    //
-    DBInitializerService dbInit = null;
-    if (true) {
-      // awkward to create a DBInit, so not implemented for now.
-      //
-      // Implementation should be fairly straight forward:
-      //   create a new DBInitializerServiceComponent()
-      //   call the dBInitComp's "setBindingSite" with 
-      //     the a dummy bindingSite
-      //   call the dBInitComp's "setNodeIdent" method with
-      //     a dummy NodeIdentificationService impl
-      //   call the dBInitComp's "load()" method
-      //   call the dbInitComp's "getService(dbInit.class)"
-      throw new UnsupportedOperationException(
-          "Community DB view not implemented");
+    if (trialId == null) {
+      System.err.println(
+          "Must specify a trial id (using \"-Dorg.cougaar.experiment.id\")");
+      return;
     }
-    DBCommunityInitializerServiceProvider me = 
+    String nodeName = System.getProperty("org.cougaar.node.name");
+    String entityName = (args.length < 1 ? "OSC" : args[0]);
+    System.out.println(
+        "<!-- load trial=\""+trialId+
+        "\" node=\""+nodeName+
+        "\" entity=\""+entityName+"\" -->");
+
+    // load the db-init-service
+    Object requestor = new Object();
+    final ServiceBroker sb = new ServiceBrokerSupport();
+    if (nodeName != null) {
+      MessageAddress nodeId =
+        MessageAddress.getMessageAddress(nodeName);
+      NodeIdentificationServiceProvider nodeIdSP =
+        new NodeIdentificationServiceProvider(nodeId);
+      sb.addService(NodeIdentificationService.class, nodeIdSP);
+    }
+    BindingSite bs = new BindingSite(){
+      public ServiceBroker getServiceBroker() { return sb; }
+      public void requestStop() { }
+    };
+    DBInitializerServiceComponent dbisc = 
+      new DBInitializerServiceComponent();
+    BindingUtility.activate(dbisc, bs, sb);
+    DBInitializerService dbInit = (DBInitializerService)
+      sb.getService(requestor, DBInitializerService.class, null);
+
+    // load my db community-init-service
+    DBCommunityInitializerServiceProvider commInitSP = 
       new DBCommunityInitializerServiceProvider(dbInit);
+    sb.addService(CommunityInitializerService.class, commInitSP);
+
+    // get the service
     CommunityInitializerService cis = (CommunityInitializerService)
-      me.getService(null, null, CommunityInitializerService.class);
+      sb.getService(requestor, CommunityInitializerService.class, null);
+
+    // print the communities
     Collection configs = cis.getCommunityDescriptions(entityName, "");
-    //
     System.out.println("<Communities>");
     for (Iterator it = configs.iterator(); it.hasNext();) {
       System.out.println(((CommunityConfig)it.next()).toString());
