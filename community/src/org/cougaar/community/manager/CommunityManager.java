@@ -369,7 +369,7 @@ public class CommunityManager {
       logger.error("Unable to bind agent as community manager:" +
                    " error=" + ex.getMessage() +
                    " agent=" + agentId +
-                   " community=" + communityName, ex);
+                   " community=" + communityName);
     } finally {
       serviceBroker.releaseService(this, WhitePagesService.class, wps);
     }
@@ -384,22 +384,25 @@ public class CommunityManager {
       logger.debug("addCommunity - name=" + community.getName());
     }
     String communityName = community.getName();
-    if (getManagedCommunityRelayAdapter(communityName) != null) {
-      logger.error("Invalid request to create multiple CommunityManagers " +
-        "for community " + communityName);
-    } else {
-      assertCommunityManagerRole(communityName);
-      CommunityDescriptor cd = new CommunityDescriptorImpl(agentId, community, uidService.nextUID());
-      RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, cd.getUID());
-      ra.addTarget(agentId);
-      logger.debug("PublishAdd CommunityDescriptor:" +
-                   " targets=" + RelayAdapter.targetsToString(ra) +
-                   " community=" + cd.getCommunity().getName() +
-                   " entities=" + entityNames(cd.getCommunity().getEntities()) +
-                   " cdUid=" + cd.getUID() +
-                   " raUid=" + ra.getUID());
-      bbs.publishAdd(ra);
-      updateTimestamp(cd.getName());
+    if (communityName != null) {
+      if (getManagedCommunityRelayAdapter(communityName) != null) {
+        logger.error("Invalid request to create multiple CommunityManagers " +
+                     "for community " + communityName);
+      } else {
+        assertCommunityManagerRole(communityName);
+        CommunityDescriptor cd = new CommunityDescriptorImpl(agentId, community,
+            uidService.nextUID());
+        RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, cd.getUID());
+        ra.addTarget(agentId);
+        logger.debug("PublishAdd CommunityDescriptor:" +
+                     " targets=" + RelayAdapter.targetsToString(ra) +
+                     " community=" + cd.getCommunity().getName() +
+                     " entities=" + entityNames(cd.getCommunity().getEntities()) +
+                     " cdUid=" + cd.getUID() +
+                     " raUid=" + ra.getUID());
+        bbs.publishAdd(ra);
+        updateTimestamp(cd.getName());
+      }
     }
   }
 
