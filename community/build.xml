@@ -1,563 +1,548 @@
-<?xml version="1.0"?>
-<!-- ==================================================== -->
-<!--     Ant build file for:                              -->
-<!--     Ultralog Community Components                    -->
-<!-- ==================================================== -->
+<!-- Autobuild-generated ANT script for building the Cougaar module "community". -->
+<!-- The source for this file is in build/data/moduleTemplate.xml -->
 
-<project name="community" default="build" basedir=".">
+<!-- autobuild might execute this with something like:
+  ant -DTARGETBASE=/tmp/target -DMODSOURCE=/tmp/cougaar/latest/src/community 
+      -DTMP=/tmp/tmpdir               -->
 
-  <!-- set global properties for this build -->
-  <property environment="env"/>
-  <property name="cougaar" value="${env.COUGAAR_INSTALL_PATH}"/>
-  <property name="host" value="${env.HOST}"/>
-  <property name="workspace" value="${env.COUGAAR_INSTALL_PATH}/workspace"/>
-  <property name="packageName" value="org.cougaar.community"/>
-  <property name="packageDir" value="org/cougaar/community"/>
-  <property name="classes" value="classes"/>
-  <property name="doc" value="doc"/>
-  <property name="src" value="src"/>
-  <property name="lib" value="lib"/>
-  <property name="examples" value="examples"/>
-  <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
-  <property name="file" value="communities.xml" />
-  <property name="assembly" value="COMM-DEFAULT_CONFIG" />
-  <property name="cache" value="on" />
-  <property name="cachemode" value="LAZY" />
-  <property name="port" value="8800"/>
-  <property name="node" value="MiniTestConfigNode"/>
-  <property name="nshost" value="${host}" />
-  <property name="nsport" value="8888:5555" />
-  <property name="nameserver" value="${nshost}:${nsport}" />
-  <property name="agent" value=""/>
-  <property name="agentnumber" value="1"/>
+<!-- Instructions for individual users:
 
-  <target name="init" >
-    <mkdir dir="${classes}"/>
-    <mkdir dir="${lib}"/>
-  </target>
+     Installation layout is configurable. Standard settings:
+       TARGETBASE=.. (ie COUGAAR_INSTALL_PATH)
+       MODSOURCE=. (ie the directory containing the module)
+       TMPDIR=./tmp
+     (Where this file is MODSOURCE/build.xml, and generated class
+       files will go in TMPDIR/classes, which should therefore be the
+       value of COUGAAR_DEV_PATH, if used.)
+     A core developer working with a different arrangement would probably make the 
+     above settings point directly as specific directories. e.g.:
+       TARGETBASE=$COUGAAR_INSTALL_PATH
+       MODSOURCE=$COUGAAR_INSTALL_PATH/${Name}              
 
-  <target name="build" depends="init, compile, compile-test, jar">
-    <mkdir dir="${classes}"/>
-  </target>
+     Other settings may be over-ridden using the optional properties
+     files MODSOURCE/module.properties and TARGETBASE/global.properties
 
-  <target name="compile">
-    <!-- Compile the java code into ${classes} -->
-    <javac srcdir="${src}" destdir="${classes}"
-           debug="on">
-      <classpath>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-    </javac>
-  </target>
+     Individuals may choose to edit or override in particular the 'Tool options' below
+     (compiler, toggle deprecation warnings, etc). 
 
-  <target name="compile-test">
-    <!-- Compile the test code into ${classes} -->
-    <javac srcdir="${examples}/src" destdir="${classes}"
-           debug="on">
-      <classpath>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-    </javac>
-  </target>
+     For target options, from the "community" directory or a
+     sub-directory, do:
+          ant -projecthelp
+     Or more generally, do:
+          ant -b $COUGAAR_INSTALL_PATH/community/build.xml -projecthelp
 
-  <!-- Builds jar file -->
-  <target name="jar">
-    <!-- Put everything in ${classes} into a jar file -->
-    <delete file="${lib}/${ant.project.name}.jar" />
-    <jar jarfile="${lib}/${ant.project.name}.jar">
-      <fileset dir="${classes}"
-        includes="${packageDir}/**"
-        excludes="**/cvs/*,**/*.bak"
-      />
-    </jar>
-  </target>
+     Target default is 'compile', to compile the module, leaving class files in
+     community/tmp/classes, which should then be your setting for
+     COUGAAR_DEV_PATH.
 
-  <!-- Deletes unnecessary files -->
-  <target name="clean">
-    <!-- Delete the ${classes} and ${dist} directory trees -->
-    <delete dir="${classes}"/>
-    <delete dir="${doc}/api"/>
-  </target>
+     Other typical targets:
+     'clean' -- remove old module jar files (from TARGETBASE/lib ie
+     usually COUGAAR_INSTALL_PATH/lib), plus class files
 
-  <!-- Generates javadoc -->
-  <target name="javadoc">
-    <mkdir dir="doc/api"/>
-    <javadoc packagenames="${packageName}"
-           sourcepath="src"
-           destdir="doc/api"
-           author="false"
-           version="false"
-           use="true"
-           windowtitle="Cougaar Community Package"
-           doctitle="Cougaar Community Package">
-      <group title="Community" packages="${packageName}"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-    </javadoc>
-  </target>
+     'dist-module' -- generate a new jar file TARGETBASE/lib/community-date.jar
+         (ie typically COUGAAR_INSTALL_PATH/lib/community-date.jar)
+     -->
 
-  <!-- creates zip archive of development files -->
-  <target name="zip">
-    <tstamp/>
-    <zip zipfile="${ant.project.name}-${DSTAMP}.zip"
-      basedir="${basedir}"
-      includes="src/**,
-	data/**,
-        doc/**,
-        example/**,
-        regress/**,
-        examples/**,
-        build.xml"
-      excludes="**/cvs/**,doc/api/**,**/*.bak,.cvsignore"
-    />
-  </target>
+     <!-- Note use of JAVA_HOME, java.class.path, jikes.class.path -->
 
+  <!-- -----------------------------------------------------------   -->
+<project name="community" default="compile">
+    <property name="module" value="community"/>
+    <property name="moduleUp" value="community"/>
 
-  <!-- Loads Community configurations into database -->
-  <target name="loaddb">
-    <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.util.CsvFileLoader">
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/common;$$INSTALL/configs/common" />
-      <arg line="community_attribute.csv community_entity_attribute.csv"/>
-    </java>
-  </target>
+    <!-- ================ Tool options ================ -->
+    <!-- Individual users may choose to modify these settings. -->
 
-  <!-- Runs automated unit/integration -->
-    <target name="test">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value="off"/>
-      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
-      <arg line="org.cougaar.core.node.Node TestNode"/>
-    </java>
-  </target>
+    <!-- Note that a popular alternative build.compiler is 'jikes' -->
+    <property name="build.compiler" value="modern"/>
+    <!-- Include extra debug info in compilations -->
+    <property name="build.compiler.debug" value="on"/>
+    <!-- Do not include deprecation warnings -->
+    <property name="build.compiler.deprecation" value="off"/>
+    <!-- Don't exclude basic debug info -->
+    <property name="build.compiler.optimize" value="off"/>
 
-  <!-- Runs demo on 1 node -->
-    <target name="demo">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m"/>
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value="on"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
-      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
-      <arg line="org.cougaar.core.node.Node CommunityDemoNode"/>
-    </java>
-  </target>
+    <!-- ================ Ant options ================ -->
+    <!-- Keep the ant environment separate from the target environment -->
+    <property name="build.sysclasspath" value="ignore"/>
 
-  <!-- Runs 1st half of 2 node demo -->
-    <target name="demo1">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m"/>
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value="on"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
-      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
-      <arg line="org.cougaar.core.node.Node CommunityDemoNode1"/>
-    </java>
-  </target>
+    <!-- ================ Directories ================ -->
 
-  <!-- Runs 2nd half of 2 node demo -->
-    <target name="demo2">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m"/>
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value="on"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
-      <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
-      <arg line="org.cougaar.core.node.Node CommunityDemoNode2"/>
-    </java>
-  </target>
+    <!-- TARGETBASE is where we will install files -->
+    <!-- In a developer environment, this is usually
+    COUGAAR_INSTALL_PATH -->
+    <property name="TARGETBASE" value=".." />
+    <property file="${TARGETBASE}/global.properties" />
 
-  <!-- Runs demo node with roster watcher plugin -->
-    <target name="monitor">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/demo;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
-      <arg line="org.cougaar.core.node.Node MonitorNode"/>
-    </java>
-  </target>
+    <!-- MODSOURCE is where the sources for the module are -->
+    <!-- IE typically TARGETBASE/(module), and the directory containing
+    this file. -->
+    <property name="MODSOURCE" value="." /> 
+    <property file="${MODSOURCE}/module.properties" />  <!-- per-module properties file! -->
 
-  <!-- Runs Yellow Pages viewer -->
-  <target name="ypviewer">
-    <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.test.YellowPagesViewer">
-      <classpath>
-        <pathelement location="./classes"/>
-        <pathelement location="./lib/communities.jar"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-    </java>
-  </target>
+    <!-- TMP is a temporary location for compiling, zipping, etc -->
+    <!-- Generated classfiles will go in TMP/classes, so that would often
+    be the setting for COUGAAR_DEV_PATH in a developer environment -->
+    <property name="TMP" value="${MODSOURCE}/tmp" />
 
-  <!-- Runs minitestconfig without communities-->
-  <target name="minitestconfig">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <arg line="org.cougaar.core.node.Node MiniNode"/>
-    </java>
-  </target>
+    <!-- Individuals should not need to modify below here. -->
 
+    <!-- These are target base directories -->
+    <property name="target.lib" value="${TARGETBASE}/lib" />
+    <property name="target.sys" value="${TARGETBASE}/sys" />
+    <!-- Single module Javadocs go in doc/api.  Not used if is.unified.javadoc -->
+    <property name="javadoc.target" value="${TARGETBASE}/${module}/doc/api" />
+    <!-- Target tree for modules which contribute to the unified javadoc  -->
+    <property name="unified.target" value="${TARGETBASE}/unified" />    
 
-  <!-- Runs minitestconfig with communities activated-->
-  <target name="minitestconfig-c">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.node.name" value="${node}"/>
-      <sysproperty key="org.cougaar.name.server" value="${nameserver}"/>
-      <sysproperty key="org.cougaar.core.agent.heartbeat" value="false"/>
-      <sysproperty key="org.cougaar.core.agent.showTraffic" value="false"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.community.caching" value="${cache}"/>
-      <sysproperty key="org.cougaar.community.caching.mode" value="${cachemode}"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
-      <arg line="org.cougaar.core.node.Node"/>
-    </java>
-  </target>
+    <!-- These are source base directories -->
+    <property name="src" value="${MODSOURCE}/src" />
+    <property name="local.lib" value="${MODSOURCE}/lib" />
+    <property name="regress" value="${MODSOURCE}/regress" />
+    <property name="examples" value="${MODSOURCE}/examples" />
+    <property name="bin" value="${MODSOURCE}/bin" />
+    <property name="doc" value="${MODSOURCE}/doc" />
+    <property name="data" value="${MODSOURCE}/data" />
+    <property name="configs" value="${MODSOURCE}/configs" />
+    
+    <!-- These are temporary base directories. -->
+    <property name="examples.build" value="${TMP}/examples" />
+    <property name="build" value="${TMP}/classes" />
+    <property name="testbuild" value="${TMP}/regress" />
 
-  <!-- Imports community descriptions into Configuration database from xml file-->
-  <target name="dbimport">
-    <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.util.ConfigDbUtils">
-      <classpath>
-        <pathelement location="./lib/community.jar"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <arg line="import file=${file} assembly=${assembly} db=replace"/>
-    </java>
-  </target>
+    <!-- Set paths for use in creating zip files -->
+    <property name="zipbase" value="${TMP}/zip"/>
+    
+    <!-- where oh where oh where is java? Used to find tools.jar and such -->
+    <property name="java.home" value="${JAVA_HOME}"/>
+    
+    <!-- ================ Parameters ================ -->
+    <!-- These properties are filled out by the autobuilder -->
+    
+    <!-- jarfiles required by this module, relative to various other paths -->
+    <property name="compile.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.lib}/glm.jar,${target.lib}/planserver.jar,${target.lib}/manager.jar,${target.lib}/webserver.jar,${target.sys}/log4j.jar,${target.sys}/xerces.jar,${target.sys}/servlet.jar"/>
+    <!-- javadoc package spec for building javadocs -->
+    <property name="javadoc.packages" value=""/>
+    
+    <!-- ================ Classpaths ================ -->
 
-  <!-- Exports community descriptions from Configuration database to xml file-->
-  <target name="dbexport">
-    <java dir="${basedir}" fork="yes"
-      classname="org.cougaar.community.util.ConfigDbUtils">
-      <classpath>
-        <pathelement location="./lib/community.jar"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/data;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <arg line="export file=${file} assembly=${assembly}"/>
-    </java>
-  </target>
+    <!-- What are the dependencies of this module at compile time -->
+    <path id="compile.classpath">
+      <filelist dir="${target.lib}" files="${compile.jarlist}"/>
+    </path>
+    
+    <!-- Build up classpath for junit.jar and classes when running tests -->
+    <path id="junit.classpath">
+      <path location="${build}" />
+      <path location="${testbuild}" />
+      <path refid="compile.classpath"/>
+      <pathelement path="${java.class.path}"/>
+      <pathelement path="${jikes.class.path}"/>
+    </path> 
 
-  <!-- Runs node -->
-  <target name="node">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m" />
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar" />
-        </fileset>
-        <fileset dir="${cougaar}/sys">
-          <include name="**/*.jar" />
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.node.name" value="${node}"/>
-      <sysproperty key="org.cougaar.name.server" value="${nameserver}"/>
-      <sysproperty key="org.cougaar.core.agent.heartbeat" value="false"/>
-      <sysproperty key="org.cougaar.core.agent.showTraffic" value="false"/>
-      <sysproperty key="org.cougaar.config.path" value="${workspace}/configs;$$CWD/examples/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.community.caching" value="${cache}"/>
-      <sysproperty key="org.cougaar.community.caching.mode" value="${cachemode}"/>
-      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
-      <arg line="org.cougaar.core.node.Node"/>
-    </java>
-  </target>
+    <!-- Define paths for doing codegen stuff -->
+    <path id="codegen.path">
+      <pathelement path="${target.lib}/build.jar"/>
+      <path refid="compile.classpath"/>
+    </path>
+    <property name="genpath" refid="codegen.path"/>
 
-  <!-- Creates multiple test agents -->
-  <target name="makeagents">
-    <mkdir dir="${workspace}/configs" />
-    <delete file="${workspace}/configs/${node}.ini" />
-    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
-    <antcall target="makeagent" ><param name="agentnumber" value="01"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="02"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="03"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="04"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="05"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="06"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="07"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="08"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="09"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="10"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="11"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="12"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="13"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="14"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="15"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="16"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="17"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="18"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="19"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="20"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="21"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="22"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="23"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="24"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="25"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="26"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="27"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="28"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="29"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="30"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="31"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="32"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="33"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="34"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="35"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="36"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="37"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="38"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="39"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="40"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="41"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="42"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="43"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="44"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="45"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="46"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="47"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="48"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="49"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="50"/></antcall>
-  </target>
+    <!-- ================ Targets ================ -->
 
-  <!-- Creates multiple test agents -->
-  <target name="makeagents1">
-    <mkdir dir="${workspace}/configs" />
-    <delete file="${workspace}/configs/${node}.ini" />
-    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
-    <antcall target="makeagent" ><param name="agentnumber" value="01"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="02"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="03"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="04"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="05"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="06"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="07"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="08"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="09"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="10"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="11"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="12"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="13"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="14"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="15"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="16"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="17"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="18"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="19"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="20"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="21"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="22"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="23"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="24"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="25"/></antcall>
-  </target>
+    <!-- ========================================================== -->
+    <!-- Define dirs for copying files into for zipping -->
+    <!-- All based on property zipbase -->
+    <!-- ========================================================== -->
+    <target name="set-zip-dirs">
+      <property name="zipdir.javadocs" value="${zipbase}/${module}/doc/api"/>
+      <property name="zipdir.src" value="${zipbase}/${module}/src"/>
+      <property name="zipdir.bin" value="${zipbase}/${module}/bin"/>
+      <property name="zipdir.data" value="${zipbase}/${module}/data"/>
+      <property name="zipdir.configs" value="${zipbase}/${module}/configs"/>
+      <property name="zipdir.doc" value="${zipbase}/${module}/doc"/>
+      <property name="zipdir.regress" value="${zipbase}/${module}/regress"/>
+      <property name="zipdir.examples" value="${zipbase}/${module}/examples"/>
+      <property name="zipdir.lib" value="${zipbase}/lib"/>
+    </target>
+    
+    <!-- ========================================================== -->
+    <!-- Test for presence of JUnit. Skip JUnit targets if not found. -->
+    <!-- Also skip if there is no regress directory -->	
+    <!-- ========================================================== -->
+    <target name="junit" depends="prepare" if="has.Regress">
+      <available property="junit.present" classname="junit.framework.TestCase" classpathref="junit.classpath"/>
+    </target>
 
-  <!-- Creates multiple test agents -->
-  <target name="makeagents2">
-    <mkdir dir="${workspace}/configs" />
-    <delete file="${workspace}/configs/${node}.ini" />
-    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
-    <antcall target="makeagent" ><param name="agentnumber" value="26"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="27"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="28"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="29"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="30"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="31"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="32"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="33"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="34"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="35"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="36"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="37"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="38"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="39"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="40"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="41"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="42"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="43"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="44"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="45"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="46"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="47"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="48"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="49"/></antcall>
-    <antcall target="makeagent" ><param name="agentnumber" value="50"/></antcall>
-  </target>
+    <!-- ========================================================== -->
+    <!-- Run RMIC on built classes			                -->
+    <!-- ========================================================== -->
+    <!-- Mikes build script does: -->
+    <!-- fileset of all files named *Impl.java that contain UnicastRemoteObject-->
+    <!-- command is rmic -g -v1.2 -d destdir -classpath destdir:restofclasspath listoffiles -->
+    <!-- remove dependency on prepare-rmic cause it is currently broken -->
+    <target name="rmic-source" depends="prepare"
+	    unless="rmic.notRequired" if="has.build">
+      <rmic base="${build}" stubversion="1.2" verify="true"
+	    debug="${build.compiler.debug}"
+	    includes="**/*Impl.class"> 
+	<classpath>
+	  <path location="${build}" />
+	  <path refid="compile.classpath"/>
+	</classpath>
+      </rmic>	    
+    </target>
 
-    <!-- Creates a test agent -->
-  <target name="makeagent">
-    <delete  file="${workspace}/configs/Agent${agentnumber}.ini" />
-    <delete  file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <copy    file="examples/configs/common/AgentTemplate.ini" tofile="${workspace}/configs/Agent${agentnumber}.ini" />
-    <copy    file="examples/configs/common/AgentTemplate-prototype-ini.dat" tofile="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
-    <replace file="${workspace}/configs/${node}.ini" token="#cluster=Agent${agentnumber}" value="cluster=Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}.ini"               token="AgentName" value="Agent${agentnumber}"/>
-    <replace file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" token="AgentName" value="Agent${agentnumber}"/>
-  </target>
+    <!-- ============================================================= -->
+    <!-- Run the code generators                            	-->
+    <!-- ============================================================= -->
+    <target name="defrunner" depends="prepare-defrunner, prepare" unless="defrunner.notRequired" if="have.buildjar">
+      <apply executable="java"
+	     parallel="false"
+	     failonerror="false" >
+	<arg line="-classpath ${genpath} org.cougaar.tools.build.DefRunner" />
+	<fileset dir="${src}" >
+	  <include name="**/*.def" />
+	</fileset>
+      </apply>
+    </target>
+    
+    <!-- ============================================================= -->
+    <!-- Clean up generated code                             	-->
+    <!-- ============================================================= -->
+    <target name="clean-gencode" depends="prepare, prepare-defrunner" description="Delete generated code" if="have.buildjar">
+      <apply executable="java"
+	     parallel="false"
+	     failonerror="false" >
+	<arg line="-classpath ${genpath} org.cougaar.tools.build.DefCleaner" />
+	<fileset dir="${src}" >
+	  <include name="**/*.gen" />
+	</fileset>
+      </apply>
+    </target>
+    
+    <!-- ========================================================== -->
+    <!-- Compiles the example Code			                -->
+    <!-- ========================================================== -->	
+    <target name="compile-examples" depends="prepare, compile" description="Compiles the example Code" if="has.examples">
+      <mkdir dir="${examples.build}" />
+      <!-- source=1.4 required to allow asserts -->
+      <javac srcdir="${examples}"
+	     destdir="${examples.build}"
+	     includeAntRuntime="no"
+	     source="1.4"
+	     debug="${build.compiler.debug}"
+	     optimize="${build.compiler.optimize}"
+	     deprecation="${build.compiler.deprecation}">
+	<classpath>
+	  <path location="${build}" />
+	  <path refid="compile.classpath" />
+	</classpath>
+      </javac>
+      <!-- Copy any gifs and HTML help files over as well -->
+      <copy todir="${examples.build}" >
+	<fileset dir="${examples}">
+	  <patternset id="images.and.html.and.def"/>
+	</fileset>
+      </copy>
+    </target>
 
+    <!-- ====================================================================== -->
+    <!-- Clean up built example code     				    -->
+    <!-- ====================================================================== -->	
+    <target name="clean-examples" description="Delete compiled example code">
+      <delete dir="${examples.build}" />
+    </target>
 
+    <!-- ============================================================= -->
+    <!-- Prepares all the build directories		               	   -->
+    <!-- ============================================================= -->
+    <target name="prepare">
+      <available property="has.examples" file="${examples}"/>
+      <available property="has.build" file="${build}"/>
+      <available property="has.src" file="${src}"/>
+      <available property="has.bin" file="${bin}"/>
+      <available property="has.data" file="${data}"/>
+      <available property="has.configs" file="${configs}"/>
+      <available property="has.doc" file="${doc}"/>
+      <available property="has.Regress" file="${regress}"/>
+      
+      <!-- Create the timestamp -->
+      <tstamp/>
+    </target>
+    
+    <target name="prepare-defrunner" depends="prepare"
+	    if="has.src">
+      
+      <!-- Need build.jar -->
+      <available property="have.buildjar" file="${target.lib}/build.jar"/>
+      
+      <!-- Check if defrunner is required -->
+      <uptodate property="defrunner.notRequired">
+	<srcfiles dir="${src}" includes="**/*.def"/>
+	<!-- If file.gen newer than .def, don't rerun -->
+	<mapper type="glob" from="*.def" to="${src}/*.gen"/>
+	<!-- FIXME: even better: if above is true AND every file
+	listed in .gen exists and is newer than .def, dont
+	rerun -->
+	<!-- Even better: parse out the @generated tag and
+	ensure that the date is more recent than on the listed .def file -->
+      </uptodate>
+    </target>
+    
+    <!-- See if files already RMICed, before re-RMICing -->
+    <!-- FIXME: The identity mapper is not right!!! -->
+    <!-- FIXME: In the meantime, do not use this!  -->
+    <target name="prepare-rmic" depends="prepare" if="has.build">
+      <uptodate property="rmic.notRequired">
+	<srcfiles dir="${build}"
+		  includes="**/*Impl.java"/>
+	<!-- FIXME: What am I looking for here? -->
+	<mapper type="identity"/>
+      </uptodate>		
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Compiles the Module Code			                -->
+    <!-- ========================================================== -->	
+    <target name="compile" depends="prepare, defrunner, really-compile, rmic-source"
+	    description="Compile the source Code"> </target>
+
+    <!-- see if the jarfile needs recompiling -->
+    <target name="check-sources" depends="prepare,defrunner" if="has.src">
+      <uptodate property="jarfile.uptodate" targetfile="foo.jar">
+	<srcfiles dir="${src}" includes="**/*.java"/>
+      </uptodate>
+    </target>
+
+    <!-- This really does the compilation. The above just calls this -->
+    <target name="really-compile" depends="prepare, defrunner,check-sources" if="has.src">
+      <mkdir dir="${build}" />
+      <available property="has.build" file="${build}"/>
+      <!-- source=1.4 required for asserts -->
+      <javac srcdir="${src}" destdir="${build}"
+	     source="1.4"
+	     includeAntRuntime="no"
+	     debug="${build.compiler.debug}"
+	     optimize="${build.compiler.optimize}"
+	     deprecation="${build.compiler.deprecation}">
+	<classpath>
+	  <path refid="compile.classpath" />
+	</classpath>
+      </javac>
+      <!-- Copy any gifs and HTML help files over as well -->
+      <copy todir="${build}" >
+	<fileset dir="${src}">
+	  <patternset id="images.and.html.and.def">
+	    <include name="**/*.def"/>
+	    <include name="**/*.gif"/>
+	    <include name="**/*.html"/>
+	    <include name="**/*.htm"/>
+	    <include name="**/*.jpg"/>
+	    <include name="**/*.bmp"/>
+	    <include name="**/*.png"/>
+	  </patternset>
+	</fileset>
+      </copy>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Compile EVERYTHING			                -->
+    <!-- ========================================================== -->	
+    <target name="compile-all" depends="compile, compile-tests, compile-examples" description="Compile all Module code plus examples and unit testing code" />
+
+    <!-- ========================================================== -->
+    <!-- Clean up all built code                    	-->
+    <!-- ========================================================== -->
+    <target name="clean" depends="clean-gencode" description="Delete compiled code">
+      <delete dir="${build}" />
+      <delete>
+      <!-- FIXME: What about the -(date) jar files? -->
+	<fileset dir="${target.lib}" includes="**/${module}.jar" />
+      </delete>
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Compile regression test code     				          -->
+    <!-- ====================================================================== -->	
+    <target name="compile-tests" depends="prepare, junit, compile" description="Compile unit tests" if="junit.present"> 
+      <mkdir dir="${testbuild}" />
+      <javac srcdir="${regress}" destdir="${testbuild}" source="1.4"
+	     deprecation="${build.compiler.deprecation}"
+	     optimize="off"
+	     debug="on">
+	<classpath>
+	  <path refid="junit.classpath"/>
+	</classpath>
+      </javac>
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Clean up built regress test code     				    -->
+    <!-- ====================================================================== -->	
+    <target name="clean-tests" description="Delete compiled junit code">
+      <delete dir="${testbuild}" />
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Run the regression tests     				          -->
+    <!-- ====================================================================== -->
+    <target name="test-module" depends="compile-all" if="junit.present" description="Run JUnit tests for this module">
+      <junit printsummary="yes" fork="yes" dir="">
+	<classpath>
+	  <pathelement location="${testbuild}" />
+	  <path refid="junit.classpath" />
+	</classpath>
+	<formatter type="plain" />
+	<batchtest>				
+	  <fileset dir="${testbuild}">
+	    <include name="**/*Test.class" />
+	  </fileset>  				
+	</batchtest> 
+	<!--			<test name="Regress" /> -->
+      </junit>
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Create a Jar for the module     				          -->
+    <!-- ====================================================================== -->	
+    <target name="dist-module" depends="compile, clean-tests, clean-examples" description="Jars the module" if="has.build">
+      <jar jarfile="${target.lib}/${module}-${DSTAMP}.jar" basedir="${build}" />
+      <exec dir="${target.lib}" executable="ln" os="Linux">
+	<arg line=" -s ${module}-${DSTAMP}.jar ${module}.jar" />
+      </exec>
+    </target>
+    
+
+    <!-- ====================================================================== -->
+    <!-- Clean up the JavaDocs for the module			          -->
+    <!-- ====================================================================== -->	
+    <target name="clean-docs" description="Delete javadocs">
+      <delete dir="${javadoc.target}" />
+    </target>
+    
+    <!-- ====================================================================== -->
+    <!-- Generates the JavaDocs for the one module			          -->
+    <!-- ====================================================================== -->	
+    <!-- FIXME: Handle unified javadoc -->
+    <target name="javadocs" depends="prepare, defrunner, clean-docs" description="Create javadocs for this module" if="has.src">
+      <mkdir dir="${javadoc.target}"/>
+      <javadoc packagenames="${javadoc.packages}"
+	       sourcepath="${src}"
+	       destdir="${javadoc.target}"
+	       author="true"
+	       version="true"
+	       doclet="org.cougaar.tools.javadoc.CougaarDoclet"
+	       docletpath="${target.lib}/build.jar"
+	       additionalparam="-breakiterator -source 1.4 -tagletpath ${target.lib}/build.jar -taglet org.cougaar.tools.javadoc.PropertyTaglet -taglet org.cougaar.tools.javadoc.NoteTaglet -taglet org.cougaar.tools.javadoc.ToDoTaglet -taglet org.cougaar.tools.javadoc.GeneratedTaglet"
+	       windowtitle="${moduleUp} API"
+	       doctitle="${moduleUp} API"
+	       bottom="Copyright &#169; 2002 by BBNT Solutions LLC, all rights reserved.">
+	<classpath refid="compile.classpath" />
+      </javadoc>
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Zip up the built JavaDocs				          -->
+    <!-- ====================================================================== -->	
+    <target name="zip-docs" depends="javadocs, set-zip-dirs, zip-copy-docs" description="Zip up built javadocs" if="has.src">
+    <!-- FIXME: Put zip files someplace relative to TARGETBASE? -->
+      <zip zipfile="../${module}-api.zip" basedir="${zipbase}" />
+      <delete dir="${zipdir.javadocs}"/>
+    </target>
+    <target name="zip-copy-docs" depends="javadocs, set-zip-dirs" if="has.src">
+      <mkdir dir="${zipdir.javadocs}"/>
+      <copy todir="${zipdir.javadocs}">
+	<fileset dir="${javadoc.target}" />
+      </copy>
+    </target>
+    
+
+    <!-- ====================================================================== -->
+    <!-- Zip up the source: src, examples, regress		          -->
+    <!-- ====================================================================== -->	
+    <target name="zip-dev" depends="clean-gencode, set-zip-dirs, zip-prep, zip-copy-src, zip-copy-ex, zip-copy-test"
+	    description="Create -dev zip file">
+    <!-- FIXME: Put zip files someplace relative to TARGETBASE? -->
+      <zip zipfile="../${module}-dev.zip" basedir="${zipbase}" />
+      <delete dir="${zipdir.src}"/>
+      <delete dir="${zipdir.examples}"/>
+      <delete dir="${zipdir.regress}"/>
+    </target>
+    <target name="zip-prep">
+      <delete dir="${zipbase}"/>
+    </target>
+    <target name="zip-copy-src" depends="set-zip-dirs, prepare" if="has.src">
+      <mkdir dir="${zipdir.src}"/>
+      <copy todir="${zipdir.src}">
+	<!-- skip CVS, #, ~, .class -->
+	<fileset dir="${src}">
+	  <patternset id="real.sources">
+	    <exclude name="**/CVS"/>
+	    <exclude name="**/*#"/>
+	    <exclude name="**/*~"/>
+	    <exclude name="**/*.class"/>
+	    <exclude name="**/.cvsignore"/>
+	  </patternset>
+	</fileset>
+      </copy>
+    </target>
+    <target name="zip-copy-ex" depends="set-zip-dirs, prepare" if="has.examples">
+      <mkdir dir="${zipdir.examples}"/>
+      <copy todir="${zipdir.examples}">
+	<fileset dir="${examples}">
+	  <patternset id="real.sources"/>
+	</fileset>
+      </copy>
+    </target>
+    <target name="zip-copy-test" depends="set-zip-dirs, junit" if="has.Regress">
+      <mkdir dir="${zipdir.regress}"/>
+      <copy todir="${zipdir.regress}">
+	<fileset dir="${regress}">
+	  <patternset id="real.sources"/>
+	</fileset>
+      </copy>
+    </target>
+
+    <!-- ====================================================================== -->
+    <!-- Zip up the runtime: bin, data, doc (less javadocs), plus the jar file -->
+    <!-- ====================================================================== -->	
+    <target name="zip-runtime" depends="clean-docs, compile, dist-module,
+	    set-zip-dirs, zip-prep, zip-copy-bin, zip-copy-data, zip-copy-configs, zip-copy-doc" description="Create runtime zip file">
+      <copy todir="${zipdir.lib}">
+      <!-- FIXME: This will get possibly multiple dated version of the
+	jar? And get glmtrans when want just glm -->
+	<fileset dir="${target.lib}" includes="${module}*.jar"/>
+      </copy>
+    <!-- FIXME: Put zip files someplace relative to TARGETBASE? -->
+      <zip zipfile="../${module}.zip" basedir="${zipbase}"/>
+      <delete dir="${zipdir.lib}"/>
+      <delete dir="${zipdir.bin}"/>
+      <delete dir="${zipdir.data}"/>
+      <delete dir="${zipdir.configs}"/>
+      <delete dir="${zipdir.doc}"/>
+    </target>
+    <target name="zip-copy-bin" depends="prepare, set-zip-dirs" if="has.bin">
+      <mkdir dir="${zipdir.bin}"/>
+      <copy todir="${zipdir.bin}">
+	<fileset dir="${bin}" />
+      </copy>
+    </target>
+    <target name="zip-copy-data" depends="prepare, set-zip-dirs" if="has.data">
+      <mkdir dir="${zipdir.data}"/>
+      <copy todir="${zipdir.data}">
+	<fileset dir="${data}" />
+      </copy>
+    </target>
+    <target name="zip-copy-configs" depends="prepare, set-zip-dirs" if="has.configs">
+      <mkdir dir="${zipdir.configs}"/>
+      <copy todir="${zipdir.configs}">
+	<fileset dir="${configs}" />
+      </copy>
+    </target>
+    <target name="zip-copy-doc" depends="prepare, set-zip-dirs" if="has.doc">
+      <mkdir dir="${zipdir.doc}"/>
+      <copy todir="${zipdir.doc}">
+	<fileset dir="${doc}" />
+      </copy>
+    </target>
   </project>
