@@ -37,6 +37,7 @@ public interface TestRelay
    */
 
   public String getMessage();
+  public void setMessage(String message);
 
   public String getCommunityName();
 

@@ -29,6 +29,7 @@ import org.cougaar.core.plugin.ComponentPlugin;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.service.UIDService;
 import org.cougaar.core.service.LoggingService;
+import org.cougaar.core.agent.service.alarm.Alarm;
 
 import org.cougaar.community.RelayAdapter;
 
@@ -79,29 +80,7 @@ public class SampleABAPlugin extends ComponentPlugin {
     if (isSender()) {
       // Subscribe to TestRelay responses
       testRelayRespSub = (IncrementalSubscription)blackboard.subscribe(testRelayRespPredicate);
-
-      // Compose TestRelay
-      UIDService uidService =
-        (UIDService) getBindingSite().getServiceBroker().getService(this,
-                                                                    UIDService.class,
-                                                                    null);
-      TestRelay content = new TestRelayImpl(agentId, "Test Message", uidService.nextUID());
-      RelayAdapter myTestRelay = new RelayAdapter(content.getSource(),
-                                                  content,
-                                                  content.getUID());
-
-      // Address ABA to all member agents in destination community
-      AttributeBasedAddress target =
-        AttributeBasedAddress.getAttributeBasedAddress(destinationCommunity,
-                                                       "Role",
-                                                       "Member");
-      myTestRelay.addTarget(target);
-
-      // Publish relay
-      blackboard.publishAdd(myTestRelay);
-      logger.info("TestRelay published:" +
-                  " message=" + content.getMessage() +
-                  " target=" + target);
+      sendRelay();
     }
   }
 
@@ -110,14 +89,24 @@ public class SampleABAPlugin extends ComponentPlugin {
     // Get test relays
     for (Iterator it = testRelaySub.getAddedCollection().iterator(); it.hasNext();) {
       TestRelay tr = (TestRelay)it.next();
-      logger.debug("TestRelay received:" +
+      logger.info("Added TestRelay received:" +
                   " sender=" + tr.getSource() +
                   " message=" + tr.getMessage());
       // Send response back to sender
       Set responders = (Set)tr.getResponse();
       responders.add(agentId.toString());
       tr.setResponse(responders);
-      blackboard.publishChange(tr);
+    }
+
+    for (Iterator it = testRelaySub.getChangedCollection().iterator(); it.hasNext();) {
+      TestRelay tr = (TestRelay)it.next();
+      logger.info("Changed TestRelay received:" +
+                  " sender=" + tr.getSource() +
+                  " message=" + tr.getMessage());
+      // Send response back to sender
+      Set responders = (Set)tr.getResponse();
+      responders.add(agentId.toString());
+      tr.setResponse(responders);
     }
 
     // Get responses from recipients
@@ -144,6 +133,37 @@ public class SampleABAPlugin extends ComponentPlugin {
   // collecting responses.
   private boolean isSender() { return destinationCommunity != null; }
 
+  private void sendRelay() {
+    // Compose TestRelay
+    UIDService uidService =
+        (UIDService) getBindingSite().getServiceBroker().getService(this,
+        UIDService.class,
+        null);
+    TestRelay content = new TestRelayImpl(agentId, now(), uidService.nextUID());
+    RelayAdapter myTestRelay = new RelayAdapter(content.getSource(),
+                                                content,
+                                                content.getUID());
+
+    // Address ABA to all member agents in destination community
+    AttributeBasedAddress target =
+        AttributeBasedAddress.getAttributeBasedAddress(destinationCommunity,
+        "Role",
+        "Member");
+    myTestRelay.addTarget(target);
+
+    // Publish relay
+    blackboard.publishAdd(myTestRelay);
+    logger.info("TestRelay published:" +
+                " message=" + content.getMessage() +
+                " target=" + target);
+
+    getAlarmService().addRealTimeAlarm(new UpdateTimer(myTestRelay, 60000));
+  }
+
+  private String now() {
+    return (new Date()).toString();
+  }
+
   // Select TestRelay objects
   private IncrementalSubscription testRelaySub;
   private UnaryPredicate testRelayPredicate = new UnaryPredicate() {
@@ -159,4 +179,51 @@ public class SampleABAPlugin extends ComponentPlugin {
               ((RelayAdapter)o).getContent() instanceof TestRelay);
   }};
 
+/**
+ * Relay update timer
+ */
+private class UpdateTimer implements Alarm {
+  private RelayAdapter ra;
+  private long expTime = -1;
+  private long delay;
+  private boolean expired = false;
+
+  public UpdateTimer(RelayAdapter ra,
+                     long delay) {
+    this.ra = ra;
+    this.delay = delay;
+    expTime = delay + System.currentTimeMillis();
+  }
+
+  /**
+   * Called  when clock-time >= getExpirationTime().
+   **/
+  public void expire () {
+    if (!expired) {
+      try {
+        TestRelay tr = (TestRelay)ra.getContent();
+        tr.setMessage(now());
+        tr.updateContent(tr, null);
+        logger.info("TestRelay updated:" +
+                    " message=" + tr.getMessage());
+        blackboard.openTransaction();
+        blackboard.publishChange(ra);
+        blackboard.closeTransaction();
+        getAlarmService().addRealTimeAlarm(new UpdateTimer(ra, delay));
+      } catch (Exception e) {
+        e.printStackTrace();
+      } finally {
+        expired = true;
+      }
+    }
+  }
+
+  public long getExpirationTime () { return expTime; }
+  public boolean hasExpired () { return expired; }
+  public synchronized boolean cancel () {
+    if (!expired)
+      return expired = true;
+    return false;
+  }
+}
 }
