@@ -137,7 +137,9 @@ public class CommunityManager extends BlackboardClientComponent {
       TIMER_INTERVAL =
           Long.parseLong(System.getProperty(MANAGER_CHECK_INTERVAL_PROPERTY, Long.toString(TIMER_INTERVAL)));
     } catch (Exception ex) {
-      logger.warn("Exception setting parameter from system property", ex);
+      if (logger.isWarnEnabled()) {
+        logger.warn("Exception setting parameter from system property", ex);
+      }
     }
   }
 
@@ -155,7 +157,9 @@ public class CommunityManager extends BlackboardClientComponent {
          it.hasNext(); ) {
       RelayAdapter ra = (RelayAdapter) it.next();
       CommunityDescriptor cd = (CommunityDescriptor) ra.getContent();
-      logger.info("Found CommunityDescriptor Relay: community=" + cd.getName());
+      if (logger.isInfoEnabled()) {
+        logger.info("Found CommunityDescriptor Relay: community=" + cd.getName());
+      }
       communities.put(cd.getName(), cd.getCommunity());
       distributer.add(ra);
       assertCommunityManagerRole(cd.getName());
@@ -282,11 +286,11 @@ public class CommunityManager extends BlackboardClientComponent {
         Entity entity = cmr.getEntity();
         if (entity != null) {
           String entitiesBeforeAdd = "";
-          if (logger.isDetailEnabled()) {
+          if (logger.isDebugEnabled()) {
             entitiesBeforeAdd = entityNames(community.getEntities());
           }
           community.addEntity(entity);
-          if (logger.isDetailEnabled()) {
+          if (logger.isDebugEnabled()) {
             logger.debug("Add entity: " +
                          " community=" + community.getName() +
                          " entity=" + entity.getName() +
@@ -296,9 +300,11 @@ public class CommunityManager extends BlackboardClientComponent {
           }
           if (entity instanceof Community) {
             // Add manager for nested community to Relay targets
-            logger.debug("Adding nested community:" +
-                        " parent=" + cmr.getCommunityName() +
-                        " child=" + entity.getName());
+            if (logger.isDebugEnabled()) {
+              logger.debug("Adding nested community:" +
+                           " parent=" + cmr.getCommunityName() +
+                           " child=" + entity.getName());
+            }
             addNestedCommunity(cmr.getCommunityName(), entity.getName());
           }
           distributer.update(cmr.getCommunityName(), CommunityChangeEvent.ADD_ENTITY, entity.getName());
@@ -317,7 +323,7 @@ public class CommunityManager extends BlackboardClientComponent {
           }
           community.removeEntity(cmr.getEntity().getName());
           if (logger.isDetailEnabled()) {
-            logger.debug("Removing entity: " +
+            logger.detail("Removing entity: " +
                          " community=" + community.getName() +
                          " entity=" + cmr.getEntity().getName() +
                          " before=" + entitiesBeforeRemove +
@@ -497,7 +503,9 @@ public class CommunityManager extends BlackboardClientComponent {
    */
   public MessageAddress findManager(String communityName, Callback cb) {
     MessageAddress ret = null;
-    logger.detail("findManager: community=" + communityName);
+    if (logger.isDetailEnabled()) {
+      logger.detail("findManager: community=" + communityName);
+    }
     if (communityName != null) {
       CacheEntry ce = (CacheEntry)communityManagerCache.get(communityName);
       if (ce != null && ce.expiration > now()) {
@@ -511,12 +519,17 @@ public class CommunityManager extends BlackboardClientComponent {
         }
         wps.get(communityName + ".comm", "community", cb);
       } catch (Exception ex) {
-        logger.error(ex.getMessage());
+        if (logger.isErrorEnabled()) {
+          logger.error(ex.getMessage());
+        }
       } finally {
         serviceBroker.releaseService(this, WhitePagesService.class, wps);
       }
     }
-    logger.detail("findManager: community=" + communityName + " manager=" + ret);
+    if (logger.isDetailEnabled()) {
+      logger.detail("findManager: community=" + communityName + " manager=" +
+                    ret);
+    }
     return ret;
   }
 
@@ -583,10 +596,12 @@ public class CommunityManager extends BlackboardClientComponent {
           bindCommunityManager(wps, communityName, override);
         }
         catch (Throwable ex) {
-          logger.warn("Unable to (re)bind agent as community manager:" +
-                      " error=" + ex +
-                      " agent=" + agentId +
-                      " community=" + communityName);
+          if (logger.isWarnEnabled()) {
+            logger.warn("Unable to (re)bind agent as community manager:" +
+                        " error=" + ex +
+                        " agent=" + agentId +
+                        " community=" + communityName);
+          }
         }
         finally {
           serviceBroker.releaseService(this, WhitePagesService.class, wps);
@@ -613,7 +628,9 @@ public class CommunityManager extends BlackboardClientComponent {
               communityManagerCache.put(communityName,
                                         new CacheEntry(agentId, now() + CACHE_TTL));
               managedCommunities.add(communityName);
-              logger.debug("Managing community " + communityName);
+              if (logger.isDebugEnabled()) {
+                logger.debug("Managing community " + communityName);
+              }
             } else {
               if (logger.isDetailEnabled())
                 logger.detail(
@@ -649,7 +666,9 @@ public class CommunityManager extends BlackboardClientComponent {
             managedCommunities.add(communityName);
             communityManagerCache.put(communityName,
                                       new CacheEntry(agentId, now() + CACHE_TTL));
-            logger.debug("Managing community (rebind)" + communityName);
+            if (logger.isDebugEnabled()) {
+              logger.debug("Managing community (rebind)" + communityName);
+            }
           } else {
             if (logger.isDetailEnabled())
               logger.detail("Unable to rebind agent as community manager:" +
@@ -671,7 +690,9 @@ public class CommunityManager extends BlackboardClientComponent {
    *         on failure
    */
   public MessageAddress manageCommunity(Community community) {
-    logger.debug("manageCommunity: community=" + community.getName());
+    if (logger.isDebugEnabled()) {
+      logger.debug("manageCommunity: community=" + community.getName());
+    }
     MessageAddress mgrAddr = null;
     String communityName = community.getName();
       communities.put(communityName, community);
@@ -700,11 +721,13 @@ public class CommunityManager extends BlackboardClientComponent {
       if (childAddr != null) {
         if (!distributer.getTargets(parent).contains(childAddr)) {
           distributer.addTargets(parent, Collections.singleton(childAddr));
-          logger.debug("addNestedCommunity:" +
-                      " parent=" + parent +
-                      " child=" + child +
-                      " childManager=" + childAddr +
-                      " source=fromCache");
+          if (logger.isDebugEnabled()) {
+            logger.debug("addNestedCommunity:" +
+                         " parent=" + parent +
+                         " child=" + child +
+                         " childManager=" + childAddr +
+                         " source=fromCache");
+          }
         }
       } else {
         Callback cb = new Callback() {
@@ -849,13 +872,17 @@ public class CommunityManager extends BlackboardClientComponent {
         try {
            wps.get(communityName + ".comm", "community", cb);
         } catch (Exception ex) {
-          logger.error(ex.getMessage());
+          if (logger.isErrorEnabled()) {
+            logger.error(ex.getMessage());
+          }
         } finally {
           serviceBroker.releaseService(this, WhitePagesService.class, wps);
         }
       }
     } catch (Exception ex) {
-      logger.error(ex.getMessage());
+      if (logger.isErrorEnabled()) {
+        logger.error(ex.getMessage());
+      }
     }
     verifyMgrAlarm = new WakeAlarm(now() + TIMER_INTERVAL);
     alarmService.addRealTimeAlarm(verifyMgrAlarm);

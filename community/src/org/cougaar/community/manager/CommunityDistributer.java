@@ -150,11 +150,13 @@ public class CommunityDistributer extends BlackboardClientComponent {
     }
     for (Iterator it = l.iterator(); it.hasNext();) {
       DescriptorEntry de = (DescriptorEntry) it.next();
-      logger.debug("publishDescriptors:" +
-                   " community=" + de.cd.getName() +
-                   " ra=" + de.ra +
-                   " doRemove=" + de.doRemove +
-                   " didChange=" + de.didChange);
+      if (logger.isDebugEnabled()) {
+        logger.debug("publishDescriptors:" +
+                     " community=" + de.cd.getName() +
+                     " ra=" + de.ra +
+                     " doRemove=" + de.doRemove +
+                     " didChange=" + de.didChange);
+      }
       if (de.lastSent == 0) {
         if (!de.nodeTargets.isEmpty()) {
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
@@ -271,9 +273,11 @@ public class CommunityDistributer extends BlackboardClientComponent {
    * @param agentNames  Targets to remove
    */
   protected void removeTargets(String communityName, Set agentNames) {
-    logger.debug("removeTargets:" +
-                 " community=" + communityName +
-                 " agents=" + agentNames);
+    if (logger.isDebugEnabled()) {
+      logger.debug("removeTargets:" +
+                   " community=" + communityName +
+                   " agents=" + agentNames);
+    }
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
       de.ra.getInterestedAgents().removeAll(agentNames);
@@ -318,10 +322,12 @@ public class CommunityDistributer extends BlackboardClientComponent {
    * @param what  Entity affected by change
    */
   protected void update(String communityName, int type, String what) {
-    logger.debug("update:" +
-                 " community=" + communityName +
-                 " type=" + CommunityChangeEvent.getChangeTypeAsString(type) +
-                 " whatChanged=" + what);
+    if (logger.isDebugEnabled()) {
+      logger.debug("update:" +
+                   " community=" + communityName +
+                   " type=" + CommunityChangeEvent.getChangeTypeAsString(type) +
+                   " whatChanged=" + what);
+    }
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
       de.didChange = true;
@@ -366,7 +372,9 @@ public class CommunityDistributer extends BlackboardClientComponent {
                   }
                 }
               } else {
-                logger.debug("AddressEntry is null: agent=" + agentName);
+                if (logger.isDebugEnabled()) {
+                  logger.debug("AddressEntry is null: agent=" + agentName);
+                }
                 DescriptorEntry de = (DescriptorEntry) descriptors.get(
                     communityName);
                 if (de != null) {
@@ -374,7 +382,9 @@ public class CommunityDistributer extends BlackboardClientComponent {
                 }
               }
             } catch (Exception ex) {
-              logger.error("Exception in addNodeToTargets:", ex);
+              if (logger.isErrorEnabled()) {
+                logger.error("Exception in addNodeToTargets:", ex);
+              }
             } finally {
               resp.removeCallback(this);
             }
