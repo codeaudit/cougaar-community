@@ -40,8 +40,8 @@ import org.cougaar.util.GenericStateModelAdapter;
  * It can initialize from the CSMART database, using the <code>DBInitializerService</code>,
  * or from XML files, depending on where components were intialized from.
  * <p>
- * @see FileCommunityInitializerServiceProvider
- * @see DBCommunityInitializerServiceProvider
+ * @see org.cougaar.community.init.FileCommunityInitializerServiceProvider
+ * @see org.cougaar.community.init.DBCommunityInitializerServiceProvider
  **/
 public final class CommunityInitializerServiceComponent
 extends GenericStateModelAdapter
