@@ -1,0 +1,24 @@
+[Prototype]     SupportOrganization
+
+[UniqueId]      "UTC/SupportOrg"
+
+[UIC]           "UIC/AgentName"
+
+[Relationship]
+
+[TypeIdentificationPG]
+TypeIdentification              String               "UTC/RTOrg"
+Nomenclature                    String               "Test Agent"
+AlternateTypeIdentification     String               "SRC/87004L100100"
+
+[ClusterPG]
+ClusterIdentifier	ClusterIdentifier "AgentName"
+
+[OrganizationPG]
+Roles                    Collection<Role>       "AgentName"
+
+[MilitaryOrgPG]
+UIC                   String   "WAQJA1"
+Echelon                     String  "08"
+UTC                   String   ""
+SRC                         String   "87004L100100"

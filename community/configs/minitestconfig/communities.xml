@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Communities>
+  <Community Name="MiniTestConfig" >
+    <Entity Name="3ID" >
+      <Attribute ID="Role" Value="Member" />
+    </Entity>
+    <Entity Name="1BDE" >
+      <Attribute ID="Role" Value="Member" />
+    </Entity>
+    <Entity Name="3-69-ARBN" >
+      <Attribute ID="Role" Value="Member" />
+    </Entity>
+    <Entity Name="MCCGlobalMode" >
+      <Attribute ID="Role" Value="Member" />
+    </Entity>
+  </Community>
+</Communities>
