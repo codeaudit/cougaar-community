@@ -95,7 +95,7 @@ public class JoinTestPlugin extends ComponentPlugin {
 	.subscribe(communityRequestPredicate);
 
     // Wait for community to initialize itself.
-    try { Thread.sleep(5000); } catch (Exception ex) {}
+    try { Thread.sleep(30000); } catch (Exception ex) {}
 
    // Join MiniTestConfig community
     log.info("Joining community " + communityToJoin);
@@ -123,7 +123,7 @@ public class JoinTestPlugin extends ComponentPlugin {
           log.debug("Join " + communityName + ": " + resp);
           getBlackboardService().publishRemove(req);
 
-          try { Thread.sleep(10000); } catch (Exception ex) {}
+          try { Thread.sleep(30000); } catch (Exception ex) {}
           log.info("Leaving community " + communityName);
           req = new CommunityRequestImpl();
           req.setVerb("LEAVE_COMMUNITY");
