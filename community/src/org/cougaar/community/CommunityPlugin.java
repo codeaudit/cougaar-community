@@ -163,6 +163,14 @@ public class CommunityPlugin extends ComponentPlugin {
     // Initialize cache
     //cache = new CommunityCache(getServiceBroker(), agentId.toString() + ".pi");
     cache = CommunityCache.getCache(getServiceBroker());
+    cache.addListener(new CommunityChangeListener() {
+      public void communityChanged(CommunityChangeEvent cce) {
+        if (blackboard != null) {
+          applyUpdate(cce);
+        }
+      }
+      public String getCommunityName() { return "ALL_COMMUNITIES"; }
+    });
 
     communityManager = new CommunityManager(getBindingSite());
 
@@ -244,6 +252,7 @@ public class CommunityPlugin extends ComponentPlugin {
       checkRequestQueues();
       validateCommunityMemberships();
       validateCompletedRequests();
+      //logger.info("queuedManagerRequests=" + cmrQueue.size() + " " + cache.getStats());
     }
 
     // Gets CommunityDescriptors from community managers.  A CommunityDescriptor
@@ -830,16 +839,6 @@ public class CommunityPlugin extends ComponentPlugin {
           case CommunityResponse.SUCCESS:
             updateCommunityDescriptor((CommunityDescriptor)resp.getContent());
             final String communityName = cmr.getCommunityName();
-            communityService.addListener(new CommunityChangeListener() {
-              public void communityChanged(CommunityChangeEvent cce) {
-                if (blackboard != null) {
-                  applyUpdate(cce.getCommunity());
-                } else {
-                  communityService.removeListener(this);
-                }
-              }
-              public String getCommunityName() { return communityName; }
-            });
             cqe.status = CommunityManagerRequestQueue.COMPLETED;
             cqe.timeout = System.currentTimeMillis() + 60000;
             if (cqe.cr != null) {
@@ -913,12 +912,15 @@ public class CommunityPlugin extends ComponentPlugin {
     }
   }
 
-  private void applyUpdate(Community community) {
+  private void applyUpdate(CommunityChangeEvent cce) {
+    Community community = cce.getCommunity();
     blackboard.openTransaction();
     validateCompletedRequests();
     updateSearchRequests(community.getName());
-    addParentAttribute(community);
     validateCommunityContents(community);
+    if (cce.getType() == cce.ADD_COMMUNITY) {
+      addParentAttribute(community);
+    }
     blackboard.closeTransaction();
   }
 
