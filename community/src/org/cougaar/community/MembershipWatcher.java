@@ -76,6 +76,19 @@ public class MembershipWatcher {
         LoggerFactory.getInstance().createLogger(MembershipWatcher.class);
   }
 
+  public MembershipWatcher(String agentName,
+                           CommunityService commSvc) {
+    this.thisAgent = agentName;
+    this.myCommunities = new CommunityMemberships();
+    this.communityService = commSvc;
+    this.logger =
+        LoggerFactory.getInstance().createLogger(MembershipWatcher.class);
+  }
+
+  public void setMemberships(CommunityMemberships memberships) {
+    this.myCommunities = memberships;
+  }
+
   public synchronized void validate() {
     if (logger.isDebugEnabled()) {
       logger.debug(thisAgent + ": validate community memberships: " + thisAgent +

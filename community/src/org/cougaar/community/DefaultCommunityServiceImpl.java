@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -110,6 +110,10 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       }
     }
     requestQueue =  new CommunityRequestQueue(getServiceBroker(), this);
+    myCommunities = new CommunityMemberships();
+    membershipWatcher = new MembershipWatcher(agentName,
+                                              DefaultCommunityServiceImpl.this,
+                                              myCommunities);
   }
 
   protected void getSystemProperties() {
@@ -465,14 +469,11 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
           }
         });
         if (cms.isEmpty()) {
-          myCommunities = new CommunityMemberships();
           blackboard.publishAdd(myCommunities);
         } else {
           myCommunities = (CommunityMemberships)cms.iterator().next();
+          membershipWatcher.setMemberships(myCommunities);
         }
-
-      } else { // Initial start
-        myCommunities = new CommunityMemberships();
       }
 
       myCommunities.addListener(new CommunityMembershipsListener() {
@@ -485,12 +486,6 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
           }
         }
       });
-
-      // Add listener to maintain memberships if this agent restarts or if
-      // Community Manager state gets out of sync due to manager change/restart
-      membershipWatcher = new MembershipWatcher(agentName,
-                                                DefaultCommunityServiceImpl.this,
-                                                myCommunities);
 
       // Activate MembershipWatcher
       if (!myCommunities.listCommunities().isEmpty() && verifyMembershipsTimer == null) {
