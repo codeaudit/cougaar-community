@@ -159,7 +159,7 @@
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
-      <sysproperty key="org.cougaar.community.caching" value=""/>
+      <sysproperty key="org.cougaar.community.caching" value="off"/>
       <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node TestNode"/>
     </java>
