@@ -49,27 +49,6 @@ public class CommunityServiceComponent extends ComponentSupport {
   private LoggingService log = null;
   private boolean useCache = true;
 
-  /**
-   * Defines start-up arguments.  The parameter "file=XXX" is used
-   * to identify an XML file that contains community configuration information.
-   * If the argument is not provided community configuration information is
-   * obtained from the Configuration database.
-   * @param obj
-   */
-  public void setParameter(Object obj) {
-    List args = (List)obj;
-    for (Iterator it = args.iterator(); it.hasNext();) {
-      String arg = (String)it.next();
-      if (arg.startsWith("file=")) {
-        initXmlFile = arg.substring(arg.indexOf('=')+1);
-      } else if (arg.startsWith("cache=")) {
-        String value = arg.substring(arg.indexOf('=')+1);
-        if (value.equalsIgnoreCase("off"))
-          useCache = false;
-      }
-    }
-  }
-
   public CommunityServiceComponent() {
     super();
   }
@@ -85,9 +64,22 @@ public class CommunityServiceComponent extends ComponentSupport {
     if (log.isDebugEnabled())
       log.debug ("Loading CommunityServiceComponent");
     ClusterIdentifier agentId = (ClusterIdentifier)
-      ((AgentChildBinder)getBindingSite()).getAgentIdentifier();
+      ((AgentChildBinder) getBindingSite()).getAgentIdentifier();
+    initXmlFile = System.getProperty("org.cougaar.community.configfile");
+    if (initXmlFile != null )
+      if (log.isDebugEnabled())
+        log.debug("initXmlFile is:" +initXmlFile);
+    String value = System.getProperty("org.cougaar.community.caching"); 
+    if (value != null ) {
+      if (value.equalsIgnoreCase("off")) {
+        if (log.isDebugEnabled())
+          log.debug("System property for caching is off.\n");
+        useCache = false;
+      }
+    }
     CommunityService cs = loadCommunityService(agentId);
     InitializerService is = (InitializerService) sb.getService(this, InitializerService.class, null);
+
     try {
       //initXmlFile only used by FileInitializerServiceProvider
       communityConfigs = is.getCommunityDescriptions(agentId.toString(), initXmlFile);  
@@ -95,11 +87,11 @@ public class CommunityServiceComponent extends ComponentSupport {
       //      -need to add functionality to load info for communities that are members of communities.
     }
     catch (Exception e) {
-        System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
-        e.printStackTrace();
-      } finally {
-        sb.releaseService(this, InitializerService.class, is);
-      }
+      System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
+      e.printStackTrace();
+    } finally {
+      sb.releaseService(this, InitializerService.class, is);
+    }
     initializeCommunityRelationships(cs, agentId, communityConfigs);  
 
     super.load();
