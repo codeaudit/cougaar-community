@@ -29,6 +29,10 @@ import org.cougaar.core.service.community.Agent;
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.Community;
 
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -74,10 +78,10 @@ public class CommunityImpl extends EntityImpl
    * @return  Collection of Entity objects
    */
   public Collection getEntities() {
-    return entities.values();
+    return new ArrayList(entities.values());
   }
 
-  public void setEntities(Collection newEntities) {
+  public synchronized void setEntities(Collection newEntities) {
     entities = new HashMap();
     for (Iterator it = newEntities.iterator(); it.hasNext();) {
       Entity entity = (Entity)it.next();
@@ -89,7 +93,7 @@ public class CommunityImpl extends EntityImpl
    * Returns the named Entity or null if it doesn't exist.
    * @return  Entity referenced by name
    */
-  public Entity getEntity(String name) {
+  public synchronized Entity getEntity(String name) {
     return (Entity)entities.get(name);
   }
 
@@ -98,7 +102,7 @@ public class CommunityImpl extends EntityImpl
    * @param  Name of requested entity
    * @return true if community contains entity
    */
-  public boolean hasEntity(String name) {
+  public synchronized boolean hasEntity(String name) {
     return entities.containsKey(name);
   }
 
@@ -106,7 +110,7 @@ public class CommunityImpl extends EntityImpl
    * Adds an Entity to the community.
    * @param entity  Entity to add to community
    */
-  public void addEntity(Entity entity) {
+  public synchronized void addEntity(Entity entity) {
     entities.put(entity.getName(), entity);
   }
 
@@ -114,7 +118,7 @@ public class CommunityImpl extends EntityImpl
    * Removes an Entity from the community.
    * @param entity  Name of entity to remove from community
    */
-  public void removeEntity(String name) {
+  public synchronized void removeEntity(String name) {
     entities.remove(name);
   }
 
@@ -127,22 +131,25 @@ public class CommunityImpl extends EntityImpl
    * @return Set of Entity objects satisfying search filter
    */
   public Set search(String filter,
-                    int    qualifier) {
+                    int qualifier) {
     Set matches = new HashSet();
     SearchStringParser parser = new SearchStringParser();
     try {
       Filter f = parser.parse(filter);
-      for (Iterator it = entities.values().iterator(); it.hasNext();) {
-        Entity entity = (Entity)it.next();
-        if (f.match(entity.getAttributes())) {
-          if ((qualifier == ALL_ENTITIES) ||
-              (qualifier == AGENTS_ONLY && entity instanceof Agent) ||
-              (qualifier == COMMUNITIES_ONLY && entity instanceof Community)) {
-            matches.add(entity);
+      synchronized (this) {
+        for (Iterator it = entities.values().iterator(); it.hasNext(); ) {
+          Entity entity = (Entity) it.next();
+          if (f.match(entity.getAttributes())) {
+            if ( (qualifier == ALL_ENTITIES) ||
+                (qualifier == AGENTS_ONLY && entity instanceof Agent) ||
+                (qualifier == COMMUNITIES_ONLY && entity instanceof Community)) {
+              matches.add(entity);
+            }
           }
         }
       }
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       System.out.println("Exception in Community search, filter=" + filter);
       ex.printStackTrace();
     }
@@ -152,10 +159,10 @@ public class CommunityImpl extends EntityImpl
   // Converts a collection of entities to a compact string representation of names
   private String entityNames(Collection members) {
     StringBuffer sb = new StringBuffer("[");
-    for (Iterator it = members.iterator(); it.hasNext();) {
+    for (Iterator it = members.iterator(); it.hasNext(); ) {
       sb.append(it.next().toString() + (it.hasNext() ? "," : ""));
     }
-    return(sb.append("]").toString());
+    return (sb.append("]").toString());
   }
 
   public String qualifierToString(int qualifier) {
@@ -180,14 +187,33 @@ public class CommunityImpl extends EntityImpl
    *               indentation formatting
    */
   public String toXml(String indent) {
-    StringBuffer sb = new StringBuffer(indent + "<Community name=\"" + getName() + "\" >\n");
+    StringBuffer sb = new StringBuffer(indent + "<Community name=\"" + getName() +
+                                       "\" >\n");
     Attributes attrs = getAttributes();
     if (attrs != null && attrs.size() > 0)
       sb.append(attrsToString(getAttributes(), indent + "  "));
-    for (Iterator it = entities.values().iterator(); it.hasNext();) {
-      sb.append(((Entity)it.next()).toXml(indent + "  "));
+    synchronized (this) {
+      for (Iterator it = entities.values().iterator(); it.hasNext(); ) {
+        sb.append( ( (Entity) it.next()).toXml(indent + "  "));
+      }
     }
     sb.append(indent + "</Community>\n");
     return sb.toString();
+  }
+
+  private void writeObject(ObjectOutputStream stream) throws IOException {
+    stream.defaultWriteObject();
+    stream.writeObject(this.getName());
+    stream.writeObject(this.getAttributes());
+    synchronized (this) {
+      stream.writeObject(this.entities);
+    }
+  }
+
+  private void readObject(ObjectInputStream stream) throws ClassNotFoundException, IOException {
+    stream.defaultReadObject();
+    setName((String)stream.readObject());
+    setAttributes((Attributes)stream.readObject());
+    entities = (HashMap)stream.readObject();
   }
 }
