@@ -101,25 +101,33 @@ a. The community system requires 3 separate components to operate.  Each must
       community=org.cougaar.community.CommunityDomain
 
    2) Community Service.  The CommunityService provider is installed by the
-      CommunityServiceComponent.  The CommunityServiceComponent is loaded
-      using the following entry in the "[CLUSTER]" section of the agents ".ini"
-      file.  An equivalent recipe must be defined if running from CSMART.
-      "Node.AgentManager.Agent.Component(BINDER) = org.cougaar.community.CommunityServiceComponent"
+      CommunityServiceComponent.  The CommunityServiceComponent is loaded automatically
+      for each agent.  
 
-      The CommunityServiceComponent takes two optional arguments.
+      The CommunityServiceComponent uses two optional arguments that can be 
+      defined as System properties.
 
-      - The argument "file=XXX" may be used to load community configuration data
-        from an XML file rather than the Configuration database.  The specified
-        file is loaded from the cougaar config path.
+      - When running usig ".ini" files, to load community configuration data from 
+        a specified XML file rather than the default 'communities.xml' file, specify the
+        System parameter on the command line as follows: 
+        -Dorg.cougaar.community.configfile="yourfilename.xml"
+         
+        The file is loaded from the cougaar config path.
 
-      - The argument "cache=off" will deactivate local caching of community
+      - To turn caching at the CommunityService level off, specify the 
+        System parameter on the command line with the value "off" as follows:
+        -Dorg.cougaar.community.caching="off"
+
+        The value "off" will deactivate local caching of community
         information in Name Server.  By default this capability is active.
+        This parameter can be set whether running using ".ini" files or
+        using CSMART.
 
    3) Community Plugin.  The community plugin is required to perform assignment
       of agents to their startup communities and to provide the blackboard
       Publish/Subscribe interface.
 
-      - When running in CSMART a "Specific Component Recipe" must be created
+      - When running in CSMART a "Specific Insertion Recipe" must be created
         that consists of the following parameters:
 
         Class Name = org.cougaar.community.CommunityPlugin
@@ -136,12 +144,13 @@ a. The community system requires 3 separate components to operate.  Each must
 III.  COMMUNITY CONFIGURATION
       -----------------------
 
-During startup agents are assigned to their initial communities.  The definition
-of these startup communities and associated entities is retrieved from the
-Cougaar configuration database tables "community_attribute" and
-"community_entity_attribute".  Alternately, the startup community configuration
-data may be obtained from an XML file by providing the "file=XXX" argument to
-the CommunityServiceComponent.
+During startup agents are assigned to their initial communities.  When running in 
+CSMART, the definition of these startup communities and associated entities is retrieved 
+from the Cougaar configuration database tables "community_attribute" and
+"community_entity_attribute".  Alternately, if running using ".ini" files, a startup 
+community configuration data may be obtained from the default XML file "communities.xml" located 
+in the config path or by a particular xml file that is specifed by a System parameter on the 
+command line read by CommunityServiceComponent.  (See above.) 
 
 a. Community configuration attributes.  The creation and use of communities is
    based on the definition of attribute id/value pairs.
@@ -172,8 +181,9 @@ a. Community configuration attributes.  The creation and use of communities is
       Role             Member     Identifies an entity (agent or another
                                   community as a member of the parent
                                   community.
-                       Associate  Identifies an agent as an associate of a
-                                  community.  For instance, the ManagementAgent
+                       Associate  Not currently used.  Identifies an agent 
+                                  as an associate of a community.
+                                  For instance, the ManagementAgent
                                   in a robustness community would generally
                                   have this community role attribute.
       EntityType       Agent      Specifies that the entity is an Agent.
@@ -195,8 +205,8 @@ yellow pages.
 
 The yellow pages servlet must be loaded for the viewer to operate.
 
-- When running in CSMART a "Servlet Insertion Group Recipe" must be used
-  that includes the servlet "community.demo.YellowPagesServlet".
+- When running in CSMART a "Servlet Group Insertion Recipe" must be used
+  that includes the servlet "org.cougaar.community.test.YellowPagesServlet".
 
 - When running using ".ini" files the following entry must be created in
   an agent-level ".ini" file in the "[ Plugins ]" section:
