@@ -231,11 +231,7 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
       public ServiceBroker getServiceBroker() { return sb; }
       public void requestStop() { }
     };
-    DBInitializerServiceComponent dbisc = 
-      new DBInitializerServiceComponent();
-    BindingUtility.activate(dbisc, bs, sb);
-    DBInitializerService dbInit = (DBInitializerService)
-      sb.getService(requestor, DBInitializerService.class, null);
+    DBInitializerService dbInit = new DBInitializerServiceImpl(trialId);
 
     // load my db community-init-service
     DBCommunityInitializerServiceProvider commInitSP = 
