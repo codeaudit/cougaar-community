@@ -66,7 +66,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * are used to trigger a cache update.
    */
   private void initBlackboardSubscriber() {
-    Thread initThread = new Thread() {
+    Thread initThread = new Thread("CommunityService-BBSubscriberInit") {
       public void run() {
         // Wait for required services to become available
         while (!serviceBroker.hasService(BlackboardService.class) ||
