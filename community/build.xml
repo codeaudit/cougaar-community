@@ -565,7 +565,7 @@
 	       additionalparam="-breakiterator -source 1.4 -tagletpath ${target.clib}/build.jar -taglet org.cougaar.tools.javadoc.PropertyTaglet -taglet org.cougaar.tools.javadoc.NoteTaglet -taglet org.cougaar.tools.javadoc.ToDoTaglet -taglet org.cougaar.tools.javadoc.GeneratedTaglet"
 	       windowtitle="${moduleUp} API"
 	       doctitle="${moduleUp} API"
-	       bottom="Copyright &#169; 2002 by BBNT Solutions LLC, all rights reserved.">
+	       bottom="Copyright &#169; 2003 by BBNT Solutions LLC, all rights reserved.">
 	<classpath refid="javadoc.path" />
       </javadoc>
     </target>
@@ -665,7 +665,14 @@
       </copy>
     <!-- FIXME: Put zip files someplace relative to TARGETBASE? -->
     <!-- FIXME: This fails if no zipbase: If these dirs dont exist. -->
+		<!-- Ant zip target loses execute bit. Invoke zip
+		directly therefore. Note OS dependency!  -->
+		<!-- Note that Ant copy target also loses permissions,
+		so you must call chmod after the copy below -->
       <zip zipfile="../${module}.zip" basedir="${zipbase}"/>
+<!--      <exec dir="${zipbase}" executable="zip">
+	 <arg line="-qr ../${module} ." />
+      </exec> -->
       <delete dir="${zipdir.lib}"/>
       <delete dir="${zipdir.bin}"/>
       <delete dir="${zipdir.data}"/>
@@ -677,12 +684,20 @@
       <copy todir="${zipdir.bin}">
 	<fileset dir="${bin}" />
       </copy>
+      <!-- copy drops execute bits -->
+      <!-- Note this only works on Un*x platforms -->
+<!--      <chmod dir="${zipdir.bin}" perm="ugo+rx"
+      includes="**/*.sh"/> -->
     </target>
     <target name="zip-copy-data" depends="prepare, set-zip-dirs" if="has.data">
       <mkdir dir="${zipdir.data}"/>
       <copy todir="${zipdir.data}">
 	<fileset dir="${data}" />
       </copy>
+      <!-- copy drops execute bits -->
+      <!-- Note this only works on Un*x platforms -->
+<!--      <chmod dir="${zipdir.data}" perm="ugo+rx"
+      includes="**/*.sh"/> -->
     </target>
     <target name="zip-copy-configs" depends="prepare, set-zip-dirs" if="has.configs">
       <mkdir dir="${zipdir.configs}"/>
