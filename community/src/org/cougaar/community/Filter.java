@@ -1,12 +1,12 @@
 /*
  * <copyright>
- *  Copyright 1997-2003 Mobile Intelligence Corp
+ *  Copyright 1997-2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- *
+ * 
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- *
+ * 
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -19,25 +19,12 @@
  * </copyright>
  */
 
-package org.cougaar.community.requests;
+package org.cougaar.community;
 
-import org.cougaar.core.util.UID;
+import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
 
-/**
- * Request to get a community descriptor from community manager.
- */
-public class GetCommunity
-    extends CommunityRequest implements java.io.Serializable {
-
-  public GetCommunity(String   communityName,
-                          UID  uid) {
-    super(communityName, uid);
-  }
-
-  public GetCommunity(String   communityName,
-                          UID  uid,
-                          long timeout) {
-    super(communityName, uid, timeout);
-  }
-
+public interface Filter {
+    boolean match(Attributes a) throws NamingException;
+    void toString(StringBuffer b);
 }

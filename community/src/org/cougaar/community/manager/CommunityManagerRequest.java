@@ -28,6 +28,7 @@ import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.relay.Relay;
 import org.cougaar.core.util.UniqueObject;
+import org.cougaar.core.mts.MessageAddress;
 
 /**
  * Requests action to be performed by Community Manger.
@@ -35,16 +36,18 @@ import org.cougaar.core.util.UniqueObject;
 public interface CommunityManagerRequest
   extends Relay.Target, UniqueObject {
 
-  public static final int UNDEFINED                = -1;
-  public static final int JOIN                     = 0;
-  public static final int LEAVE                    = 1;
-  public static final int GET_COMMUNITY_DESCRIPTOR = 2;
-  public static final int MODIFY_ATTRIBUTES        = 3;
+  public static final int UNDEFINED                    = -1;
+  public static final int JOIN                         = 0;
+  public static final int LEAVE                        = 1;
+  public static final int GET_COMMUNITY_DESCRIPTOR     = 2;
+  public static final int RELEASE_COMMUNITY_DESCRIPTOR = 3;
+  public static final int MODIFY_ATTRIBUTES            = 4;
 
   public String getCommunityName();
   public void setRequestType(int reqType);
   public int getRequestType();
   public String getRequestTypeAsString();
+  public void setSource(MessageAddress addr);
 
   public void setEntity(Entity entity);
   public Entity getEntity();

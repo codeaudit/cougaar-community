@@ -48,7 +48,6 @@ import org.cougaar.core.service.LoggingService;
 public class CommunityServiceComponent extends ComponentSupport {
 
   private LoggingService log = null;
-  private boolean useCache = true;
 
   public CommunityServiceComponent() {
     super();
@@ -75,7 +74,8 @@ public class CommunityServiceComponent extends ComponentSupport {
    */
   private CommunityService loadCommunityService(MessageAddress agentId) {
     ServiceBroker sb = getBindingSite().getServiceBroker();
-    CommunityServiceProvider csp = new CommunityServiceProvider(sb, agentId, useCache);
+    CommunityServiceProvider csp =
+        new CommunityServiceProvider(getBindingSite(), agentId);
     sb.addService(CommunityService.class, csp);
     return (CommunityService)sb.getService(this, CommunityService.class,
       new ServiceRevokedListener() {

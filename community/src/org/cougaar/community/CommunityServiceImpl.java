@@ -27,14 +27,9 @@ import org.cougaar.community.requests.GetCommunity;
 import org.cougaar.community.requests.JoinCommunity;
 import org.cougaar.community.requests.LeaveCommunity;
 import org.cougaar.community.requests.ModifyAttributes;
+import org.cougaar.community.requests.ReleaseCommunity;
 import org.cougaar.community.requests.SearchCommunity;
-
-import org.cougaar.community.RelayAdapter;
-
-import org.cougaar.core.service.community.CommunityResponse;
-import org.cougaar.core.service.community.CommunityChangeEvent;
-
-import org.cougaar.community.CommunityCache;
+import org.cougaar.community.requests.ListParentCommunities;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -70,31 +65,30 @@ import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.CommunityRoster;
 
+import org.cougaar.core.agent.service.alarm.Alarm;
+
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.blackboard.IncrementalSubscription;
+import org.cougaar.core.blackboard.BlackboardClientComponent;
 
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.mts.SimpleMessageAddress;
 
+import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceBroker;
-import org.cougaar.core.component.ServiceRevokedListener;
-import org.cougaar.core.component.ServiceRevokedEvent;
 
+import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDService;
 import org.cougaar.core.service.wp.WhitePagesService;
-import org.cougaar.core.service.wp.AddressEntry;
 import org.cougaar.core.service.SchedulerService;
 import org.cougaar.core.service.AlarmService;
-import org.cougaar.core.service.ThreadService;
-import org.cougaar.core.thread.Schedulable;
 
-import org.cougaar.core.blackboard.BlackboardClient;
+import org.cougaar.core.component.ServiceAvailableListener;
+import org.cougaar.core.component.ServiceAvailableEvent;
 
 import org.cougaar.util.UnaryPredicate;
-
-import org.cougaar.core.plugin.ComponentPlugin;
 
 import EDU.oswego.cs.dl.util.concurrent.Semaphore;
 
@@ -102,35 +96,33 @@ import EDU.oswego.cs.dl.util.concurrent.Semaphore;
  * ServiceProvider registered in a ServiceBroker that provides
  * access to community management capabilities.
  **/
-public class CommunityServiceImpl extends ComponentPlugin
+public class CommunityServiceImpl extends BlackboardClientComponent
   implements CommunityService, java.io.Serializable {
 
-  protected LoggingService log;
+  private static long TIMER_INTERVAL = 10 * 1000;
 
+  private LoggingService log;
+  private UIDService uidService;
   private CommunityCache cache;
+  private final List todo = new ArrayList(5);
+  private final Map myRequests = Collections.synchronizedMap(new HashMap());
 
-  //private List listeners = new ArrayList();
+  private static Map instances = Collections.synchronizedMap(new HashMap());
 
-  private BlackboardService blackboardService = null;
-  private UIDService uidService = null;
-
-  private MessageAddress agentId;
-  private ServiceBroker serviceBroker;
-
-  /**
-   * @deprecated use getInstance(ServiceBroker sb, MessageAddress addr).
-   */
-  public static CommunityService getInstance(ServiceBroker sb,
-    MessageAddress addr, boolean useCache) {
-      return getInstance(sb, addr);
-  }
+  // Timer
+  private WakeAlarm wakeAlarm;
 
   /**
    * Returns CommunityService instance.
    */
-  public static CommunityService getInstance(ServiceBroker sb,
-      MessageAddress addr) {
-      return new CommunityServiceImpl(sb, addr);
+  public static CommunityService getInstance(BindingSite    bs,
+                                             MessageAddress addr) {
+    CommunityService cs = (CommunityService)instances.get(addr);
+    if (cs == null) {
+      cs = new CommunityServiceImpl(bs, addr);
+      instances.put(addr, cs);
+    }
+    return cs;
   }
 
   /**
@@ -138,20 +130,80 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @param sb       Reference to agent ServiceBroker
    * @param addr     Address of parent agent
    */
-  protected CommunityServiceImpl(ServiceBroker sb, MessageAddress addr) {
-    serviceBroker = sb;
-    agentId = addr;
-    this.log = getLoggingService();
-    this.log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log, agentId + ": ");
-    cache = new CommunityCache(serviceBroker, agentId.toString() + ".cs");
-    initBlackboardSubscriber();
+  protected CommunityServiceImpl(BindingSite bs, MessageAddress addr) {
+    setBindingSite(bs);
+    ServiceBroker sb = getServiceBroker();
+    setAgentIdentificationService(
+        (AgentIdentificationService)sb.getService(this,
+                                                  AgentIdentificationService.class, null));
+    log = (LoggingService)sb.getService(this, LoggingService.class, null);
+    log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log,
+        agentId + ": ");
+    initUidService();
+    if (sb.hasService(org.cougaar.core.service.BlackboardService.class)) {
+      init();
+    } else {
+      sb.addServiceListener(new ServiceAvailableListener() {
+        public void serviceAvailable(ServiceAvailableEvent sae) {
+          if (sae.getService().equals(BlackboardService.class)) {
+            init();
+          }
+        }
+      });
+    }
+    cache = CommunityCache.getCache(sb);
   }
 
+  Object blackboardLock = new Object();
+  /**
+   * Set essential services and invoke GenericStateModel methods.
+   */
+  private void init() {
+    ServiceBroker sb = getServiceBroker();
+    setSchedulerService(
+        (SchedulerService)sb.getService(this, SchedulerService.class, null));
+    setAlarmService((AlarmService)sb.getService(this, AlarmService.class, null));
+    synchronized (blackboardLock) {
+      setBlackboardService(
+          (BlackboardService)sb.getService(CommunityServiceImpl.this,
+                                           BlackboardService.class, null));
+    }
+    initialize();
+    load();
+    start();
+  }
+
+  /**
+   * Initialize UIDService using ServiceAvailableListener if service not
+   * immediately available.
+   */
+  private void initUidService() {
+    ServiceBroker sb = getServiceBroker();
+    if (sb.hasService(org.cougaar.core.service.UIDService.class)) {
+      uidService = (UIDService)sb.getService(this, UIDService.class, null);
+    } else {
+      sb.addServiceListener(new ServiceAvailableListener() {
+        public void serviceAvailable(ServiceAvailableEvent sae) {
+          if (sae.getService().equals(UIDService.class)) {
+            uidService = (UIDService)getServiceBroker().getService(this, UIDService.class, null);
+          }
+        }
+      });
+    }
+  }
+
+  protected AlarmService getAlarmService() {
+    if (alarmService == null) {
+      alarmService = (AlarmService) getServiceBroker().getService(this,
+          AlarmService.class, null);
+    }
+    return alarmService;
+  }
 
   /**
    * Request to create a community.  If the specified community does not
    * exist it will be created and the caller will become the community
-   * manager.  It the community already exists a descriptor is obtained
+   * manager.  It the community already exists a Community reference is obtained
    * from its community manager and returned.
    * @param communityName    Name of community to create
    * @param attrs            Attributes to associate with new community
@@ -160,29 +212,41 @@ public class CommunityServiceImpl extends ComponentPlugin
   public void createCommunity(String                    communityName,
                               Attributes                attrs,
                               CommunityResponseListener crl) {
-    publishCommunityRequest(new CreateCommunity(communityName,
-                                                attrs,
-                                                getUID()), crl);
+    queueCommunityRequest(new CreateCommunity(communityName,
+                                              attrs,
+                                              getUID()), crl);
   }
 
   /**
-   * Request to add named community to local cache and register for update
-   * notifications.
-   * @param communityName  Community of interest, if null listener will receive
-   *                       notification of changes in all communities
-   * @param timeout        Time (in milliseconds) to wait for operation to
-   *                       complete before returning response (-1 = wait forever)
-   * @param crl            Listener to receive response
+   * Request to get a Community instance from local cache.  If community is
+   * found in cache a reference is returned by method call.  If the community
+   * is not found in the cache a null value is returned and the Community
+   * reference is requested from the community manager.  After the Community
+   * instance has been obtained from the community manager the supplied
+   * CommunityResponseListener callback is invoked to notify the requester.
+   * Note that the supplied callback is not invoked if a non-null value is
+   * returned.
+   * @param communityName  Community of interest
+   * @param crl            Listener to receive response after remote fetch
+   * @return               Community instance if found in cache or null if not
+   *                       found
    */
-  public void getCommunity(String                    communityName,
-                           long                      timeout,
-                           CommunityResponseListener crl) {
+  public Community getCommunity(String                    communityName,
+                                CommunityResponseListener crl) {
+    if (log.isDebugEnabled()) {
+      log.debug("getCommunity:" +
+                " name=" + communityName +
+                " inCache=" + cache.contains(communityName) +
+                " community=" + (cache.contains(communityName)
+                                 ? cache.get(communityName).getEntities().size() + " entities"
+                                 : null));
+    }
     if (cache.contains(communityName)) {
-      crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
-                                                cache.get(communityName)));
+      return cache.get(communityName);
     } else {
-      publishCommunityRequest(new GetCommunity(communityName, getUID(), timeout),
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
                               crl);
+      return null;
     }
   }
 
@@ -198,7 +262,7 @@ public class CommunityServiceImpl extends ComponentPlugin
                                String                    entityName,
                                ModificationItem[]        mods,
                                CommunityResponseListener crl) {
-    publishCommunityRequest(new ModifyAttributes(communityName,
+    queueCommunityRequest(new ModifyAttributes(communityName,
                                                  entityName,
                                                  mods,
                                                  getUID()), crl);
@@ -227,7 +291,7 @@ public class CommunityServiceImpl extends ComponentPlugin
                             boolean                   createIfNotFound,
                             Attributes                newCommunityAttrs,
                             CommunityResponseListener crl) {
-    publishCommunityRequest(new JoinCommunity(communityName,
+    queueCommunityRequest(new JoinCommunity(communityName,
                                               entityName,
                                               entityType,
                                               entityAttrs,
@@ -245,14 +309,21 @@ public class CommunityServiceImpl extends ComponentPlugin
   public void leaveCommunity(String                    communityName,
                              String                    entityName,
                              CommunityResponseListener crl) {
-    publishCommunityRequest(new LeaveCommunity(communityName,
+    queueCommunityRequest(new LeaveCommunity(communityName,
                                                entityName,
                                                getUID()), crl);
   }
 
   /**
-   * Initiates a community search operation. The results are provided via a
-   * call back to a specified CommunitySearchListener.
+   * Initiates a community search operation.  The results of the search are
+   * immediately returned as part of the method call if the search can be
+   * resolved using locally cached data.  However, if the search requires
+   * interaction with a remote community manager a null value is returned by
+   * the method call and the search results are returned via the
+   * CommunityResponseListener callback after the remote operation has been
+   * completed.  In the case where the search can be satisified using local
+   * data (i.e., the method returns a non-null value) the
+   * CommunityResponseListener is not invoked.
    * @param communityName   Name of community to search
    * @param searchFilter    JNDI compliant search filter
    * @param recursiveSearch True for recursive search into nested communities
@@ -260,32 +331,122 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @param resultQualifier Type of entities to return in result [ALL_ENTITIES,
    *                        AGENTS_ONLY, or COMMUNITIES_ONLY]
    * @param crl             Callback object to receive search results
+   * @return                Collection of Entity objects matching search
+   *                        criteria if available in local cache.  A null value
+   *                        is returned if cache doesn't contained named
+   *                        community.
    */
-  public void searchCommunity(String                    communityName,
+  public Collection searchCommunity(String              communityName,
                               String                    searchFilter,
                               boolean                   recursiveSearch,
                               int                       resultQualifier,
                               CommunityResponseListener crl) {
-    publishCommunityRequest(new SearchCommunity(communityName,
-                                                searchFilter,
-                                                recursiveSearch,
-                                                resultQualifier,
-                                                getUID()), crl);
+    Collection results = null;
+    if (communityName == null) {
+      // Search all parent communities
+      results = cache.search(searchFilter);
+      if (results == null) {
+        // Cache didn't contain any parent communities, submit request
+        // with callback
+        queueCommunityRequest(new SearchCommunity(null,
+                                                    searchFilter,
+                                                    recursiveSearch,
+                                                    resultQualifier,
+                                                    getUID()), crl);
+      }
+    } else {
+      if (cache.contains(communityName)) {
+        results = cache.search(communityName,
+                            searchFilter,
+                            resultQualifier,
+                            recursiveSearch);
+      } else {
+        queueCommunityRequest(new SearchCommunity(communityName,
+                                                    searchFilter,
+                                                    recursiveSearch,
+                                                    resultQualifier,
+                                                    getUID()), crl);
+      }
+    }
+    if (log.isDebugEnabled()) {
+      boolean inCache = cache.contains(communityName);
+      log.debug("searchCommunity:" +
+                " community=" + communityName +
+                " filter=" + searchFilter +
+                " recursive=" + recursiveSearch +
+                " qualifier=" + resultQualifier +
+                " inCache=" + inCache +
+                " results=" + (results != null
+                                 ? Integer.toString(results.size())
+                                 : null));
+    }
+    return results;
   }
 
   /**
-   * Returns a list of all communities of which caller is a member.
+   * Returns an array of community names of all communities of which caller is
+   * a member.
    * @param allLevels Set to false if the list should contain only those
    *                  communities in which the caller is explicitly
    *                  referenced.  If true the list will also include those
    *                  communities in which the caller is implicitly a member
    *                  as a result of community nesting.
-   * @param crl       Callback object to receive search results
+   * @return          Array of community names
    */
-  public void getParentCommunities(boolean                   allLevels,
-                                   CommunityResponseListener crl) {
-    final Set ancestors = cache.getAncestorNames(agentId.toString(), allLevels);
-    crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, ancestors));
+  public String[] getParentCommunities(boolean allLevels) {
+    return (String[])cache.getAncestorNames(agentId.toString(), allLevels).toArray(new String[0]);
+  }
+
+  /**
+   * Requests a collection of community names identifying the communities that
+   * contain the specified member.  If the member name is null the immediate
+   * parent communities for calling agent are returned.  If member is
+   * the name of a nested community the names of all immediate parent communities
+   * is returned.  The results are returned directly if the member name is
+   * null or if a copy of the specified community is available in local cache.
+   * Otherwise, the results will be returned in the CommunityResponseListener
+   * callback in which case the method returns a null value.
+   * @param name   Member name (either null or name of a nested community)
+   * @param crl    Listner to receive results if remote lookup is required
+   * @return A collection of community names if operation can be resolved using
+   *         data from local cache, otherwise null
+   */
+  public Collection listParentCommunities(String                    member,
+                                          CommunityResponseListener crl) {
+    Collection results = null;
+    // if member == null, return parent names for this agent
+    if (member == null || member.equals(agentId.toString())) {
+      results = cache.getAncestorNames(agentId.toString(), false);
+    } else {  // get parent names for specified community
+      if (cache.contains(member)) {
+        results = new HashSet();
+        Attributes attrs = cache.get(member).getAttributes();
+        if (attrs != null) {
+          Attribute parentAttr = attrs.get("Parent");
+          if (parentAttr != null) {
+            try {
+              for (NamingEnumeration enum = parentAttr.getAll(); enum.hasMore();) {
+                results.add((String)enum.next());
+              }
+            } catch (NamingException ne) {
+              log.error("Error parsing attributes for " + member, ne);
+            }
+          }
+        }
+      } else {
+        queueCommunityRequest(new ListParentCommunities(member,
+                              getUID()), crl);
+      }
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunities:" +
+                " entity=" + member +
+                " inCache=" + (results != null) +
+                " results=" + (results != null
+                                 ? Integer.toString(results.size())
+                                 : null));
+    }
+    return results;
   }
 
   /**
@@ -300,47 +461,96 @@ public class CommunityServiceImpl extends ComponentPlugin
   }
 
   /**
+   * Check for availability of essential services
+   * @return True if needed services available
+   */
+  private boolean servicesReady() {
+    return blackboard != null && uidService != null;
+  }
+
+  /**
    * Remove listener for CommunityChangeEvents.
    * @param l  Listener
    */
   public void removeListener(CommunityChangeListener l) {
-    cache.removeListener(l);
-  }
-
-  private Map myRequests = new HashMap();
-  protected void publishCommunityRequest(final CommunityRequest    cr,
-                                         CommunityResponseListener crl) {
-    ThreadService ts =
-      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
-    Schedulable communityRequestThread =
-      ts.getThread(this, new Runnable() {
-      public void run() {
-        try {
-          if (log.isDebugEnabled()) {
-            log.debug("Publishing CommunityRequest, type=" + cr.getRequestType() +
-                      " community=" + cr.getCommunityName());
+    if (l != null) {
+      String communityName = l.getCommunityName();
+      cache.removeListener(l);
+      // Remove community descriptors from cache if no more listeners
+      // and if agent is not a member
+      if (cache.contains(communityName) &&
+          cache.getListeners(communityName).isEmpty()) {
+        Community community = cache.get(l.getCommunityName());
+        if (!community.hasEntity(agentId.toString())) {
+          queueCommunityRequest(new ReleaseCommunity(communityName,
+              getUID(),
+              -1), null);
+          Collection ancestors = cache.getNestedCommunityNames(community);
+          for (Iterator it = ancestors.iterator(); it.hasNext(); ) {
+            String nestedCommunityName = (String) it.next();
+            if (cache.getListeners(nestedCommunityName).isEmpty()) {
+              Community nestedCommunity = cache.get(nestedCommunityName);
+              if (!nestedCommunity.hasEntity(agentId.toString())) {
+                queueCommunityRequest(new ReleaseCommunity(nestedCommunityName,
+                    getUID(),
+                    -1), null);
+              }
+            }
           }
-          BlackboardService bbs = getBlackboardService(serviceBroker);
-          bbs.openTransaction();
-          bbs.publishAdd(cr);
-          bbs.closeTransaction();
-          if (log.isDebugEnabled()) {
-            log.debug("Done Publishing CommunityRequest, type=" +
-                      cr.getRequestType() +
-                      " community=" + cr.getCommunityName());
-          }
-        } catch (Exception ex) {
-          log.error("Exception in publishCommunityRequest", ex);
         }
       }
-    }, "CommunityRequestThread");
-    serviceBroker.releaseService(this, ThreadService.class, ts);
-    communityRequestThread.start();
-    myRequests.put(cr.getUID(), crl);
-    log.debug("Adding request to myRequests:" +
-              " request=" + cr.getRequestType() +
-              " uid=" + cr.getUID());
-    communityRequestThread.start();
+    }
+  }
+
+  /**
+   * Queue Community Service Request.
+   * @param pr
+   */
+  protected void fireLater(PendingRequest pr) {
+    synchronized (todo) {
+      todo.add(pr);
+    }
+    if (servicesReady()) {
+      blackboard.signalClientActivity();
+    } else {
+      AlarmService as = getAlarmService();
+      if (as != null) {
+        // Start timer to check service availability later
+        wakeAlarm = new WakeAlarm(System.currentTimeMillis() + TIMER_INTERVAL);
+        as.addRealTimeAlarm(wakeAlarm);
+      }
+    }
+  }
+
+  /**
+   * Process queued Community Service Reauests.
+   */
+  private void fireAll() {
+    int n;
+    List l;
+    synchronized (todo) {
+      n = todo.size();
+      if (n <= 0 || !servicesReady()) {
+        return;
+      }
+      l = new ArrayList(todo);
+      todo.clear();
+    }
+    for (int i = 0; i < n; i++) {
+      PendingRequest pr = (PendingRequest) l.get(i);
+      if (pr.request.getUID() == null) {
+        pr.request.setUID(getUID());
+      }
+      myRequests.put(pr.request.getUID(), pr);
+      blackboard.publishAdd(pr.request);
+      log.debug("publishAdd: " + pr.request);
+    }
+  }
+
+  protected void queueCommunityRequest(CommunityRequest          cr,
+                                       CommunityResponseListener crl) {
+    log.debug("queueCommunityRequest: " + cr);
+    fireLater(new PendingRequest(cr, crl));
   }
 
 
@@ -381,17 +591,25 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              True if community was found
    */
   public boolean communityExists(String communityName) {
-    final Status status = new Status(false);
-    final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, 0, new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp) {
-        status.setValue(resp != null &&
-                        resp.getStatus() == CommunityResponse.SUCCESS);
-        s.release();
+    if (cache.contains(communityName)) {
+      return true;
+    } else {
+      final Status status = new Status(false);
+      final Semaphore s = new Semaphore(0);
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), 0),
+                              new CommunityResponseListener() {
+        public void getResponse(CommunityResponse resp) {
+          status.setValue(resp != null &&
+                          resp.getStatus() == CommunityResponse.SUCCESS);
+          s.release();
+        }
+      });
+      try {
+        s.acquire();
       }
-    });
-    try { s.acquire(); } catch (Exception ex) {}
-    return status.getValue();
+      catch (Exception ex) {}
+      return status.getValue();
+    }
   }
 
 
@@ -403,7 +621,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     List commNames = new ArrayList();
     try {
       WhitePagesService wps = (WhitePagesService)
-        serviceBroker.getService(this, WhitePagesService.class, null);
+        getServiceBroker().getService(this, WhitePagesService.class, null);
       recursiveFindCommunities(
           commNames,
           wps,
@@ -453,7 +671,8 @@ public class CommunityServiceImpl extends ComponentPlugin
     } else {
       final CommunityHolder ch = new CommunityHolder();
       final Semaphore s = new Semaphore(0);
-      getCommunity(communityName, -1, new CommunityResponseListener() {
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
+                              new CommunityResponseListener() {
         public void getResponse(CommunityResponse resp) {
           ch.setCommunity( (Community) resp.getContent());
           s.release();
@@ -497,7 +716,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         s.release();
       }
     };
-    getCommunity(communityName, -1, crl);
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), crl);
     try {
       s.acquire();
       if (ch.getCommunity() != null) {
@@ -517,17 +736,23 @@ public class CommunityServiceImpl extends ComponentPlugin
     return status.getValue();
   }
 
-  private ModificationItem[] getAttributeModificationItems(Attributes olds, Attributes news) {
-    ModificationItem[] items = new ModificationItem[olds.size() + news.size()];
-    int count = 0;
-    for(NamingEnumeration enums = olds.getAll(); enums.hasMoreElements();)
-    {
-      items[count++] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, (Attribute)enums.nextElement());
+  private ModificationItem[] getAttributeModificationItems(Attributes oldAttrs, Attributes newAttrs) {
+    List modsList = new ArrayList();
+    for(NamingEnumeration enums = oldAttrs.getAll(); enums.hasMoreElements();) {
+      Attribute oldAttr = (Attribute) enums.nextElement();
+      Attribute newAttr = (Attribute) newAttrs.get(oldAttr.getID());
+      if (newAttr == null || !newAttr.equals(oldAttr)) {
+        modsList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, oldAttr));
+      }
     }
-    for(NamingEnumeration enums = news.getAll(); enums.hasMoreElements();) {
-      items[count++] = new ModificationItem(DirContext.ADD_ATTRIBUTE, (Attribute)enums.nextElement());
+    for(NamingEnumeration enums = newAttrs.getAll(); enums.hasMoreElements();) {
+      Attribute newAttr = (Attribute) enums.nextElement();
+      Attribute oldAttr = (Attribute) oldAttrs.get(newAttr.getID());
+      if (oldAttr != null || !newAttr.equals(oldAttr)) {
+        modsList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, newAttr));
+      }
     }
-    return items;
+    return (ModificationItem[])modsList.toArray(new ModificationItem[0]);
   }
 
 
@@ -570,6 +795,8 @@ public class CommunityServiceImpl extends ComponentPlugin
     final Semaphore s = new Semaphore(0);
     CommunityResponseListener cl = new CommunityResponseListener(){
       public void getResponse(CommunityResponse resp){
+        log.debug("addToCommunity: " +
+                  " resp=" + resp);
         status.setValue(resp != null &&
                         resp.getStatus() == CommunityResponse.SUCCESS);
         s.release();
@@ -627,7 +854,8 @@ public class CommunityServiceImpl extends ComponentPlugin
   public Collection listEntities(String communityName) {
     final CommunityHolder ch = new CommunityHolder();
     final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, -1, new CommunityResponseListener(){
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
+                            new CommunityResponseListener() {
       public void getResponse(CommunityResponse resp){
         ch.setCommunity((Community)resp.getContent());
         s.release();
@@ -666,7 +894,8 @@ public class CommunityServiceImpl extends ComponentPlugin
     } else {
       final CommunityHolder ch = new CommunityHolder();
       final Semaphore s = new Semaphore(0);
-      getCommunity(communityName, -1, new CommunityResponseListener() {
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
+                              new CommunityResponseListener() {
         public void getResponse(CommunityResponse resp) {
           ch.setCommunity( (Community) resp.getContent());
           s.release();
@@ -712,7 +941,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         s.release();
       }
     };
-    getCommunity(communityName, -1, crl);
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), crl);
     try{
       s.acquire();
       if (ch.getCommunity() != null &&
@@ -795,6 +1024,17 @@ public class CommunityServiceImpl extends ComponentPlugin
   }
 
   public Collection search(final String communityName, final String filter, boolean block) {
+    if (log.isDebugEnabled()) {
+      boolean inCache = cache.contains(communityName);
+      log.debug("search" +
+                " community=" + communityName +
+                " filter=" + filter +
+                " blocking=" + block +
+                " inCache=" + inCache);
+      if (inCache) {
+        log.detail(cache.get(communityName).toXml());
+      }
+    }
     Collection matches = Collections.EMPTY_SET;
     final Semaphore s = new Semaphore((block) ? 0 : 1);
     if (cache.contains(communityName)) {
@@ -815,7 +1055,7 @@ public class CommunityServiceImpl extends ComponentPlugin
           s.release();
         }
       };
-      getCommunity(communityName, -1, crl);
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), crl);
       try { s.acquire(); } catch (Exception ex) {}
     }
     if (log.isDebugEnabled()) {
@@ -856,7 +1096,8 @@ public class CommunityServiceImpl extends ComponentPlugin
     } else {
       final CommunityHolder ch = new CommunityHolder();
       final Semaphore s = new Semaphore(0);
-      getCommunity(communityName, 0, new CommunityResponseListener() {
+      queueCommunityRequest(new GetCommunity(communityName, getUID(), 0),
+                              new CommunityResponseListener() {
         public void getResponse(CommunityResponse resp) {
           ch.setCommunity( (Community) resp.getContent());
           s.release();
@@ -893,18 +1134,7 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return A collection of community names
    */
   public Collection listParentCommunities(String member, String filter) {
-    //if(!member.equals(agentId)) return new Vector();
-    final ResultsHolder rh = new ResultsHolder();
-    final Semaphore s = new Semaphore(0);
-    getParentCommunities(true, new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        rh.setResults((Collection)resp.getContent());
-        s.release();
-      }
-    });
-    try{s.acquire();}catch(Exception e){log.error("Error in listParentCommunities: " + e);}
-    return rh.getResults();
-
+    return cache.getAncestorNames(member, true);
   }
 
   /**
@@ -971,7 +1201,8 @@ public class CommunityServiceImpl extends ComponentPlugin
   public Collection getEntityRoles(String communityName, String entityName) {
     final CommunityHolder ch = new CommunityHolder();
     final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, -1, new CommunityResponseListener(){
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
+                            new CommunityResponseListener() {
       public void getResponse(CommunityResponse resp){
         ch.setCommunity((Community)resp.getContent());
         s.release();
@@ -1008,6 +1239,64 @@ public class CommunityServiceImpl extends ComponentPlugin
     return new ArrayList();
   }
 
+  public void setupSubscriptions() {
+    communityRequestSub =
+        (IncrementalSubscription)blackboard.subscribe(communityRequestPredicate);
+  }
+
+  /**
+   * Get all pending community requests that match the specified
+   * request.
+   * @param cr Rquest to match
+   * @return Collection of PendingRequest objects
+   */
+  private Collection getMatchingRequests(CommunityRequest cr) {
+    Collection matches = new ArrayList();
+    synchronized (myRequests) {
+      for (Iterator it = myRequests.values().iterator(); it.hasNext();) {
+        PendingRequest pr = (PendingRequest)it.next();
+        if (cr.equals(pr.request)) matches.add(pr);
+      }
+    }
+    return matches;
+  }
+
+  public void execute() {
+
+    // get queued CommunityRequests and publish for processing by CommunityPlugin
+    fireAll();
+
+    // Check for completed requests (requests with a response)
+    //    Notify listeners and remove request from BB
+    Collection communityRequests = communityRequestSub.getChangedCollection();
+    for (Iterator it = communityRequests.iterator(); it.hasNext(); ) {
+      CommunityRequest cr = (CommunityRequest) it.next();
+      if (cr.getResponse() != null) {
+        // Find all pending requests satisfied by this response
+        for (Iterator it1 = getMatchingRequests(cr).iterator(); it1.hasNext();) {
+          PendingRequest pr = (PendingRequest)it1.next();
+          // Notify listeners
+          if (pr.listener != null) {
+            pr.listener.getResponse(cr.getResponse());
+            log.debug("Fire CommunityResponseListener callback:" +
+                      " request=" + pr.request.getRequestType() +
+                      " community=" + pr.request.getCommunityName() +
+                      " uid=" + pr.request.getUID());
+          }
+          // Remove request from BB and pending request list
+          if (log.isDebugEnabled()) {
+            log.debug("Removing CommunityRequest:" +
+                      " request=" + pr.request.getRequestType() +
+                      " uid=" + pr.request.getUID());
+          }
+          myRequests.remove(pr.request.getUID());
+          if (!(pr.request instanceof SearchCommunity)) {
+            blackboard.publishRemove(pr.request);
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Returns a list of all external roles supported by the specified community.
@@ -1017,7 +1306,8 @@ public class CommunityServiceImpl extends ComponentPlugin
   public Collection getCommunityRoles(String communityName) {
     final CommunityHolder ch = new CommunityHolder();
     final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, -1, new CommunityResponseListener(){
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1),
+                            new CommunityResponseListener() {
       public void getResponse(CommunityResponse resp){
         ch.setCommunity((Community)resp.getContent());
         s.release();
@@ -1076,7 +1366,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         s.release();
       }
     };
-    getCommunity(communityName, -1, cl);
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), cl);
     try {
       s.acquire();
       if (ch.getCommunity() != null &&
@@ -1132,7 +1422,7 @@ public class CommunityServiceImpl extends ComponentPlugin
         s.release();
       }
     };
-    getCommunity(communityName, -1, cl);
+    queueCommunityRequest(new GetCommunity(communityName, getUID(), -1), cl);
     try {
       s.acquire();
       if (ch.getCommunity() != null &&
@@ -1167,41 +1457,11 @@ public class CommunityServiceImpl extends ComponentPlugin
     return status.getValue();
   }
 
-  private BlackboardClient blackboardClient;
   /**
-   * Gets reference to Blackboard service.
+   * Get Unique identifier.
    */
-  protected BlackboardService getBlackboardService(ServiceBroker sb) {
-    if (blackboardService == null) {
-      while (!sb.hasService(org.cougaar.core.service.BlackboardService.class)) {
-        try { Thread.sleep(500); } catch (Exception ex) {}
-        log.debug("Waiting for BlackboardService");
-      }
-      if (blackboardClient == null) {
-        blackboardClient = new MyBlackboardClient();
-      }
-      blackboardService = (BlackboardService)sb.getService(blackboardClient,
-        BlackboardService.class, null);
-    }
-    return blackboardService;
-  }
-
   private UID getUID() {
-    return getUIDService(serviceBroker).nextUID();
-  }
-
-  /**
-   * Gets reference to UID service.
-   */
-  protected UIDService getUIDService(ServiceBroker sb) {
-    if (uidService == null) {
-      while (!sb.hasService(org.cougaar.core.service.UIDService.class)) {
-        try { Thread.sleep(500); } catch (Exception ex) {}
-        log.debug("Waiting for UIDService");
-      }
-      uidService = (UIDService)sb.getService(this, UIDService.class, null);
-    }
-    return uidService;
+    return uidService != null ? uidService.nextUID() : null;
   }
 
 
@@ -1214,112 +1474,15 @@ public class CommunityServiceImpl extends ComponentPlugin
 
 
   /**
-   * Initialize a Blackboard subscriber to receive changed Community Requests.
-   */
-  private void initBlackboardSubscriber() {
-    ThreadService ts =
-      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
-    Schedulable initThread =
-          ts.getThread(this, new Runnable() {
-      public void run() {
-        // Wait for required services to become available
-        while (getBlackboardService(serviceBroker) == null ||
-               !serviceBroker.hasService(SchedulerService.class) ||
-               !serviceBroker.hasService(AlarmService.class)) {
-          try { Thread.sleep(500); } catch(Exception ex) {}
-          if (log.isDebugEnabled())
-            log.debug("initBlackboardSubscriber: waiting for services ...");
-        }
-        SchedulerService ss = (SchedulerService)serviceBroker.getService(this,
-          SchedulerService.class, new ServiceRevokedListener() {
-          public void serviceRevoked(ServiceRevokedEvent re) {}
-        });
-        AlarmService as = (AlarmService)serviceBroker.getService(this,
-          AlarmService.class, new ServiceRevokedListener() {
-          public void serviceRevoked(ServiceRevokedEvent re) {}
-        });
-        setBlackboardService(getBlackboardService(serviceBroker));
-        setSchedulerService(ss);
-        setAlarmService(as);
-        initialize();
-        load();
-        CommunityServiceImpl.this.start();
-      }
-    }, "CommunityInitThread");
-    serviceBroker.releaseService(this, ThreadService.class, ts);
-    initThread.start();
-  }
-
-  public void setupSubscriptions() {
-    // Subscribe to CommunityRequests
-    getBlackboardService().subscribe(communityRequestPredicate);
-    AddChangeListener acl =
-      new AddChangeListener("ALL_COMMUNITIES", getUID(), cache);
-    myRequests.put(acl.getUID(), null);
-    getBlackboardService(serviceBroker).publishAdd(acl);
-  }
-  public void execute() {
-    BlackboardService bbs = getBlackboardService(serviceBroker);
-    Collection communityRequests = bbs.query(communityRequestPredicate);
-    for (Iterator it = communityRequests.iterator(); it.hasNext();) {
-      CommunityRequest cr = (CommunityRequest)it.next();
-      //log.debug("CommunityRequestPredicate cr=" + cr + " response=" + cr.getResponse());
-      if (myRequests.containsKey(cr.getUID())) {
-        if (cr.getResponse() != null) {
-          // Remove request
-          if (log.isDebugEnabled()){
-            log.debug("Removing CommunityRequest:" +
-                      " request=" + cr.getRequestType() +
-                      " uid=" + cr.getUID() +
-                      " removingRequest=" + bbs.isTransactionOpen());
-          }
-          CommunityResponseListener crl =
-            (CommunityResponseListener)myRequests.remove(cr.getUID());
-          if (crl != null) {
-            crl.getResponse(cr.getResponse());
-          }
-          if (bbs.isTransactionOpen()) {
-            bbs.publishRemove(cr);
-          }
-        }
-      }
-    }
-  }
-
-  /**
    * Predicate for Community Requests that are published locally.  These
    * requests are used to create CommunityManagerRequest relays that are
    * forwarded to the appropriate community manager.
    */
+  private IncrementalSubscription communityRequestSub;
   private UnaryPredicate communityRequestPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
       return (o instanceof CommunityRequest);
   }};
-
-
-  /**
-   * Gets reference to LoggingService.
-   */
-  private LoggingService getLoggingService() {
-    return (LoggingService)serviceBroker.getService(
-        this, LoggingService.class, null);
-  }
-
-  class MyBlackboardClient implements BlackboardClient {
-
-    public long currentTimeMillis() {
-      return System.currentTimeMillis();
-    }
-
-    public String getBlackboardClientName() {
-      return "CommunityService";
-    }
-
-    public boolean triggerEvent(Object event) {
-      return false;
-    }
-
-  }
 
   /**
    * Creates a string representation of an Attribute set.
@@ -1344,6 +1507,18 @@ public class CommunityServiceImpl extends ComponentPlugin
     return sb.toString();
   }
 
+  /**
+   * Container for community request/listener pair.
+   */
+  class PendingRequest {
+    CommunityRequest request;
+    CommunityResponseListener listener;
+    PendingRequest (CommunityRequest req, CommunityResponseListener crl) {
+      this.request = req;
+      this.listener = crl;
+    }
+  }
+
   class Status {
     boolean value = false;
     Status (boolean v) { value = v; }
@@ -1358,11 +1533,31 @@ public class CommunityServiceImpl extends ComponentPlugin
     Community getCommunity() { return community; }
   }
 
-  class ResultsHolder {
-    Collection results = Collections.EMPTY_SET;
-    ResultsHolder () {}
-    void setResults(Collection c) { results = c; }
-    Collection getResults() { return results; }
+  // Timer for periodically checking blackboard availability.
+  // Blackboard activity is signaled once the blackboard service is available
+  // to check for queued requests
+  private class WakeAlarm implements Alarm {
+    private long expiresAt;
+    private boolean expired = false;
+    public WakeAlarm (long expirationTime) { expiresAt = expirationTime; }
+    public long getExpirationTime() { return expiresAt; }
+    public synchronized void expire() {
+      if (!expired) {
+        expired = true;
+        if (servicesReady()) {
+          blackboard.signalClientActivity();
+        } else {  // Not ready yet, wait for awhile
+          wakeAlarm = new WakeAlarm(System.currentTimeMillis() + TIMER_INTERVAL);
+          alarmService.addRealTimeAlarm(wakeAlarm);
+        }
+      }
+    }
+    public boolean hasExpired() { return expired; }
+    public synchronized boolean cancel() {
+      boolean was = expired;
+      expired = true;
+      return was;
+    }
   }
 
 }

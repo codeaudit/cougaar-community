@@ -116,22 +116,11 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
   //The first page when user call this servlet will show all communities who are
   //direct parents of calling agent.
   private void showFrontPage() {
-    List comms = new ArrayList();
-    Collection communityDescriptors = null;
-    try{
-      blackboard.openTransaction();
-      communityDescriptors = blackboard.query(communityPredicate);
-    }finally{blackboard.closeTransactionDontReset();}
-    for(Iterator it = communityDescriptors.iterator(); it.hasNext();) {
-      Community community = (Community)it.next();
-      if(community.hasEntity(agentId))
-        if(!comms.contains(community.getName()))
-          comms.add(community.getName());
-    }
+    String parentCommunities[] = cs.getParentCommunities(true);
     out.print("<html><title>communityViewer</title>\n");
     out.print("<body>\n<ol>");
-    for(int i=0; i<comms.size(); i++){
-      out.print("<li><a href=./communityViewer?community=" + (String)comms.get(i) + ">" + (String)comms.get(i) + "</a>\n");
+    for (int i = 0; i < parentCommunities.length; i++) {
+      out.print("<li><a href=./communityViewer?community=" + parentCommunities[i] + ">" + parentCommunities[i] + "</a>\n");
     }
     out.print("</body>\n</html>\n");
   }
@@ -141,22 +130,30 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     try{
       Community community = null;
       final Semaphore s = new Semaphore(0);
-      cs.getCommunity(communityShown, -1, new CommunityResponseListener(){
+      community = cs.getCommunity(communityShown, new CommunityResponseListener(){
         public void getResponse(CommunityResponse resp){
           communityChangeNotification((Community)resp.getContent());
           s.release();
         }
       });
-      try{
-        s.acquire();
-      }catch(InterruptedException e){}
+      if (community != null) {
+        communityChangeNotification(community);
+      } else {
+        try {
+          s.acquire();
+        } catch (InterruptedException e) {}
+      }
       community = (Community)table.get(communityShown);
       currentXML = community.toXml();
       if(format.equals("xml"))
-        out.print(convertSignals(currentXML));
+        out.write(currentXML);
       else {
-        if(command.equals("showCommunity"))
+        if(command.equals("showCommunity")){
+          //log.error("xml file:\n" + currentXML);
+          //String html = getHTMLFromXML(currentXML, communityViewer);
           out.print(getHTMLFromXML(currentXML, communityViewer));
+          //log.error("html file:\n" + html);
+        }
         else {
           String xml = "";
           if(value.equals(communityShown)) {
@@ -249,7 +246,7 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
 
   // BlackboardClient method:
   public String getBlackboardClientName() {
-		return toString();
+                return toString();
   }
 
   // unused BlackboardClient method:
@@ -338,18 +335,18 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
     "<xsl:text>./communityViewer?attributes=</xsl:text>" +
     "<xsl:value-of select=\"$community\" /></xsl:attribute>" +
     "<xsl:text>Community </xsl:text><xsl:value-of select=\"$community\" />" +
-    "</xsl:element></H1><br /><ul>" +
+    "</xsl:element></H1><br /><ol>" +
     "<xsl:for-each select=\"Community/Community\">" +
     "<li><xsl:element name=\"a\"><xsl:attribute name=\"href\">" +
     "<xsl:text>./communityViewer?attributes=</xsl:text>" +
     "<xsl:value-of select=\"@name\" /></xsl:attribute>" +
     "<xsl:text>Community </xsl:text><xsl:value-of select=\"@name\" />" +
     "</xsl:element></li></xsl:for-each>" +
-    "<xsl:for-each select=\"//Agent\"><li>" +
+    "<xsl:for-each select=\"//Agent\"><xsl:sort select=\"@name\" /><li>" +
     "<xsl:element name=\"a\"><xsl:attribute name=\"href\">" +
     "<xsl:text>./communityViewer?attributes=</xsl:text>" +
     "<xsl:value-of select=\"@name\" /></xsl:attribute>" +
     "<xsl:value-of select=\"@name\" /></xsl:element></li>" +
-    "</xsl:for-each></ul></body></html></xsl:template></xsl:stylesheet>";
+    "</xsl:for-each></ol></body></html></xsl:template></xsl:stylesheet>";
 
 }

@@ -24,17 +24,17 @@ package org.cougaar.community.requests;
 import org.cougaar.core.util.UID;
 
 /**
- * Request to get a community descriptor from community manager.
+ * Request to remove community descriptor from local cache.
  */
-public class GetCommunity
+public class ReleaseCommunity
     extends CommunityRequest implements java.io.Serializable {
 
-  public GetCommunity(String   communityName,
+  public ReleaseCommunity(String   communityName,
                           UID  uid) {
     super(communityName, uid);
   }
 
-  public GetCommunity(String   communityName,
+  public ReleaseCommunity(String   communityName,
                           UID  uid,
                           long timeout) {
     super(communityName, uid, timeout);

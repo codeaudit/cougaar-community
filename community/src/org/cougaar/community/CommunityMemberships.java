@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.Collection;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Identifies the entities that an agent has added (via a join request) to
@@ -56,6 +57,14 @@ class CommunityMemberships implements Serializable {
       parentCommunities.put(communityName, entities);
     }
     entities.put(entity.getName(), entity);
+  }
+
+  /**
+   * Get names of all parent communities.
+   * @return Set of community names.
+   */
+  protected synchronized Set listCommunities() {
+    return parentCommunities.keySet();
   }
 
   /**

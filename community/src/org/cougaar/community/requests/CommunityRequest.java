@@ -30,7 +30,8 @@ import org.cougaar.core.util.UID;
  */
 public class CommunityRequest implements java.io.Serializable, UniqueObject {
 
-  public static final long DEFAULT_TIMEOUT = 60000;
+  public static final long NEVER = -1;
+  public static final long DEFAULT_TIMEOUT = NEVER;
 
   private String communityName;
   private String requestType;
@@ -87,6 +88,23 @@ public class CommunityRequest implements java.io.Serializable, UniqueObject {
            " community=" + getCommunityName() +
            " timeout=" + getTimeout() +
            " uid=" + getUID();
+  }
+
+  /**
+   * Returns true if CommunityRequests have same request type
+   * and target community.
+   * @param o
+   * @return
+   */
+  public boolean equals(Object o) {
+    if (!(o instanceof CommunityRequest)) return false;
+    CommunityRequest cr = (CommunityRequest)o;
+    if (!requestType.equals(cr.getRequestType())) return false;
+    if (communityName == null) {
+      return cr.getCommunityName() == null;
+    } else {
+      return communityName.equals(cr.getCommunityName());
+    }
   }
 
   //

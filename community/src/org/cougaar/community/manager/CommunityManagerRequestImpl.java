@@ -118,6 +118,10 @@ public class CommunityManagerRequestImpl
     return source;
   }
 
+  public void setSource(MessageAddress addr) {
+    source = addr;
+  }
+
   public int updateContent(Object content, Relay.Token token) {
     CommunityManagerRequest cmr = (CommunityManagerRequest)content;
     this.communityName = cmr.getCommunityName();
@@ -167,9 +171,30 @@ public class CommunityManagerRequestImpl
    * @return String - a string representation of the request.
    **/
   public String toString() {
-    return "CommunityManagerRequest:" +
+    return "request=" + getRequestTypeAsString() +
            " community=" + communityName +
-           " entity=" + (entity == null ? "null" : entity.getName()) +
-           " request=" + getRequestTypeAsString();
+           " entity=" + (entity == null ? "null" : entity.getName());
   }
+
+  public boolean equals(Object o) {
+    if (!(o instanceof CommunityManagerRequest)) return false;
+    CommunityManagerRequest cmr = (CommunityManagerRequest)o;
+    if (!communityName.equals(cmr.getCommunityName()) ||
+        requestType != cmr.getRequestType())
+      return false;
+    Entity cmrEntity = cmr.getEntity();
+    if ((cmrEntity == null && entity != null) ||
+        (cmrEntity != null && entity == null))
+      return false;
+    if (entity != null && !entity.getName().equals(cmrEntity.getName()))
+        return false;
+    ModificationItem[] cmrAttrMods = cmr.getAttributeModifications();
+      if ((mods == null && cmrAttrMods != null) ||
+          (mods != null && cmrAttrMods == null))
+        return false;
+      if (mods != null && !mods.equals(cmrAttrMods))
+          return false;
+    return true;
+  }
+
 }

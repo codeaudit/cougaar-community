@@ -26,9 +26,6 @@ import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.service.community.CommunityChangeListener;
 
-import org.cougaar.core.naming.Filter;
-import org.cougaar.core.naming.SearchStringParser;
-
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
@@ -38,12 +35,14 @@ import org.cougaar.core.thread.Schedulable;
 
 import org.cougaar.util.log.*;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
@@ -54,18 +53,27 @@ import java.util.Vector;
 public class CommunityCache
   implements CommunityChangeListener {
 
+  private static CommunityCache cache;
+
   private Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
   private ServiceBroker serviceBroker;
   private Map communities = new HashMap();
   private Map listenerMap = new HashMap();
   private String cacheId;
 
-  public CommunityCache(ServiceBroker serviceBroker, String cacheId) {
-    this.serviceBroker =serviceBroker;
+  public static CommunityCache getCache(ServiceBroker serviceBroker) {
+    if (cache == null) {
+      cache = new CommunityCache(serviceBroker);
+    }
+    return cache;
+  }
+
+  private CommunityCache(ServiceBroker serviceBroker, String cacheId) {
+    this.serviceBroker = serviceBroker;
     this.cacheId = cacheId;
   }
 
-  public CommunityCache(ServiceBroker serviceBroker) {
+  private CommunityCache(ServiceBroker serviceBroker) {
     this(serviceBroker, "");
   }
 
@@ -118,10 +126,10 @@ public class CommunityCache
    * @param entityName
    * @param recursive If true all ancestors are retrieved, if false only immediate
    *                  parents
-   * @return Set of communities having specified community as a descendent
+   * @return List of communities having specified community as a descendent
    */
-  public Set getAncestorNames(String entityName, boolean recursive) {
-    Set ancestors = new HashSet();
+  public List getAncestorNames(String entityName, boolean recursive) {
+    List ancestors = new ArrayList();
     findAncestors(entityName, ancestors, recursive);
     return ancestors;
   }
@@ -131,7 +139,7 @@ public class CommunityCache
    * @param communityName
    * @param ancestors
    */
-  private synchronized void findAncestors(String entityName, Set ancestors, boolean recursive) {
+  private synchronized void findAncestors(String entityName, List ancestors, boolean recursive) {
     Collection allCommunities = communities.values();
     for (Iterator it = allCommunities.iterator(); it.hasNext();) {
       CacheEntry ce = (CacheEntry)it.next();
@@ -178,7 +186,7 @@ public class CommunityCache
    */
   protected synchronized Set search(String filter) {
     if (communities.isEmpty())
-      return Collections.EMPTY_SET;
+      return null;
     Set matches = new HashSet();
     try {
       Filter f = new SearchStringParser().parse(filter);
@@ -320,7 +328,7 @@ public class CommunityCache
    * @param l  Listener to be notified
    */
   protected void addListener(CommunityChangeListener l) {
-    addListener(l.getCommunityName(), l);
+    if (l != null) addListener(l.getCommunityName(), l);
   }
 
   protected synchronized void addListener(String communityName, CommunityChangeListener l) {
@@ -406,7 +414,11 @@ public class CommunityCache
       case CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED:
       case CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED:
         CacheEntry ce = (CacheEntry)communities.get(affectedCommunity.getName());
-        if (ce != null) ce.timeStamp = new Date();
+        if (ce != null) {
+          ce.timeStamp = new Date();
+          ((CommunityImpl)ce.community).setAttributes(affectedCommunity.getAttributes());
+          ((CommunityImpl)ce.community).setEntities(affectedCommunity.getEntities());
+        }
         break;
     }
     notifyListeners(cce);

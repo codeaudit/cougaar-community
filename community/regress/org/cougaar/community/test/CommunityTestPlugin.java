@@ -40,6 +40,7 @@ import org.cougaar.core.service.community.*;
 import javax.naming.*;
 import javax.naming.directory.*;
 
+import EDU.oswego.cs.dl.util.concurrent.Semaphore;
 
 /**
  * Plugin for testing community operations.
@@ -53,7 +54,7 @@ public class CommunityTestPlugin extends SimplePlugin {
 
   // Configurable test parameters
   private String testCommunityName = "TestCommunity";
-  private String testAgentName = "TestAgent";
+  private String testAgentName = "UnitTestAgent";
   private String testRole = "TestRole";
 
   /**
@@ -120,16 +121,15 @@ public class CommunityTestPlugin extends SimplePlugin {
     System.out.println("Method: createCommunity (null name)              " +
       (result ? "fail" : "pass"));
 
-    // Test: getRoster - 1 member
+    // Test: getRoster - no members
     roster = cs.getRoster(testCommunityName);
     result = (roster.communityExists() &&
-              roster.getMemberAgents().size() == 1);
-    System.out.println("Method: getRoster (1 member)                     " +
+              roster.getMemberAgents().size() == 0);
+    System.out.println("Method: getRoster (no members)                   " +
       (result ? "pass" : "fail"));
     if (result == false) log.info(roster.toString() +
                                   " exists=" + roster.communityExists() +
                                   " numAgents=" + roster.getMemberAgents().size());
-    System.out.println("  Roster=" + roster);
 
     // Test: communityExists - Yes
     result = cs.communityExists(testCommunityName);
@@ -155,8 +155,25 @@ public class CommunityTestPlugin extends SimplePlugin {
       }
     }
 
+    // Test: addToCommunity - add entity to a valid community
+    attrs = new BasicAttributes();
+    attrs.put("Name", testAgentName);
+    attrs.put("EntityType", "Agent");
+    attrs.put("Role", "Member");
+    //log.info("Before=" + entityNames(cs.listEntities(testCommunityName)));
+    result = cs.addToCommunity(testCommunityName,
+      MessageAddress.getMessageAddress(testAgentName), testAgentName, attrs);
+    //log.info("After=" + entityNames(cs.listEntities(testCommunityName)));
+    System.out.println("Method: addToCommunity (to valid community)      " +
+      (result ? "pass" : "fail"));
+
+    //Community community = cs.getCommunity(testCommunityName, null);
+    //if (community != null) {
+    //  System.out.println(community.toXml());
+    //}
+
     // Test: setCommunityAttributes
-    attrs = cs.getCommunityAttributes(testCommunityName);
+    attrs = (Attributes)cs.getCommunityAttributes(testCommunityName).clone();
     // Should already have 1 attribute defined (Domain)
     Attribute attr = new BasicAttribute("TestAttribute");
     attr.add("TestValue");
@@ -191,18 +208,6 @@ public class CommunityTestPlugin extends SimplePlugin {
       }
     }
 
-    // Test: addToCommunity - add entity to a valid community
-    attrs = new BasicAttributes();
-    attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
-    attrs.put("Role", "Member");
-    //log.info("Before=" + entityNames(cs.listEntities(testCommunityName)));
-    result = cs.addToCommunity(testCommunityName,
-      MessageAddress.getMessageAddress(testAgentName), testAgentName, attrs);
-    //log.info("After=" + entityNames(cs.listEntities(testCommunityName)));
-    System.out.println("Method: addToCommunity (to valid community)      " +
-      (result ? "pass" : "fail"));
-
     // Test: removeFromCommunity - removes an entity from a valid community
     result = cs.removeFromCommunity(testCommunityName, testAgentName);
     System.out.println("Method: removeFromCommunity (valid community)    " +
@@ -212,7 +217,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     // First, add an entity to community
     attrs = new BasicAttributes();
     attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
     cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
@@ -256,7 +261,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     // Test: modifyEntityAttributes
     attrs = new BasicAttributes();
     attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
     cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
@@ -314,11 +319,19 @@ public class CommunityTestPlugin extends SimplePlugin {
     System.out.println("Method: search for entity                        " +
       (result ? "pass" : "fail"));
 
+    // Test: search (for entity)
+    entities = cs.searchCommunity(testCommunityName, "(TestAttribute=TestValue)", true, Community.ALL_ENTITIES, null);
+    result = (entities != null &&
+              entities.size() == 1);
+    System.out.println("Method: searchCommunity for entity               " +
+      (result ? "pass" : "fail"));
+
     // Test: addMember - to a valid community
     attrs = new BasicAttributes();
     attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
+    cs.removeFromCommunity(testCommunityName, testAgentName);
     result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     System.out.println("Method: addToCommunity (to valid community)      " +
@@ -337,27 +350,27 @@ public class CommunityTestPlugin extends SimplePlugin {
       (result ? "fail" : "pass"));
 
     // Test: addMember - null attributes
-    result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
-      testAgentName, null);
-    System.out.println("Method: addToCommunity (null attributes)         " +
-      (result ? "pass" : "fail"));
+    //result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
+   //   testAgentName, null);
+    //System.out.println("Method: addToCommunity (null attributes)         " +
+    //  (result ? "pass" : "fail"));
     cs.removeFromCommunity(testCommunityName, testAgentName);
 
     // Test: getRoster - 1 member
     attrs = new BasicAttributes();
     attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
     result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     roster = cs.getRoster(testCommunityName);
     result = (roster.communityExists() &&
-              roster.getMemberAgents().size() == 2 &&
+              roster.getMemberAgents().size() == 1 &&
               roster.getCommunityName().equals(testCommunityName) &&
               roster.getMemberAgents().contains(testAgentName));
-    System.out.println("Method: getRoster (community has 2 members)      " +
+    System.out.println("Method: getRoster (community has 1 member)       " +
       (result ? "pass" : "fail"));
-    System.out.println("  Roster=" + roster);
+    //System.out.println("  Roster=" + roster);
 
     // Test: listParentCommunities
     communityList = cs.listParentCommunities(testAgentName);
@@ -402,12 +415,12 @@ public class CommunityTestPlugin extends SimplePlugin {
     // Test: removeMember - member exists
     result = cs.removeFromCommunity(testCommunityName, testAgentName);
     System.out.println("Method: removeFromCommunity(entity doesn't exist)" +
-      (result ? "pass" : "fail"));
+      (result ? "fail" : "pass"));
 
     // Test: getCommunityRoles
     attrs = new BasicAttributes();
     attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     attrs.put("Role", "Member");
     attrs.put("ExternalRole", "TestExternalRole");
     MessageAddress testAgentCid = MessageAddress.getMessageAddress(testAgentName);
@@ -478,7 +491,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     cs.removeFromCommunity(testCommunityName, testAgentName);
     attrs = new BasicAttributes();
     attrs.put("Name", "Agent1");
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     Attribute roleAttr = new BasicAttribute("Role");
     roleAttr.add("Member");
     roleAttr.add("TransportProvider");
@@ -488,7 +501,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     cs.addToCommunity(testCommunityName, agent1Cid, "Agent1", attrs);
     attrs = new BasicAttributes();
     attrs.put("Name", "Agent2");
-    attrs.put("Type", "Agent");
+    attrs.put("EntityType", "Agent");
     roleAttr = new BasicAttribute("Role");
     roleAttr.add("Member");
     roleAttr.add("AmmoSupplyProvider");
@@ -529,155 +542,12 @@ public class CommunityTestPlugin extends SimplePlugin {
 
     System.exit(0);
 
-    //////////////////////////////////////////////////////////////////
-    //
-    // Test Community Request/Response protocol using CommunityPlugin
-    //
-    //////////////////////////////////////////////////////////////////
-
-    // Subscribe to CommunityRequests to get roster updates
-    /*
-    requests = (IncrementalSubscription)getBlackboardService()
-  .subscribe(communityRequestPredicate);
-
-    attrs.put("Name", testAgentName);
-    attrs.put("Type", "Agent");
-    roleAttr = new BasicAttribute("Role");
-    roleAttr.add("Member");
-    roleAttr.add("TestRole");
-    cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
-      testAgentName, attrs);
-
-    System.out.println();
-    System.out.println("Testing Community Blackboard Publish/Subscribe Interface");
-    System.out.println("--------------------------------------------------------");
-    testNum = 1;
-    CommunityRequest cr = new CommunityRequestImpl();
-    cr.setVerb("GET_ROSTER");
-    cr.setTargetCommunityName(testCommunityName);
-    getBlackboardService().publishAdd(cr);
-    */
   }
 
   /**
   * Print community roster when changes are received.
   */
-  protected void execute () {
-
-    /*
-     boolean doNextTest = false;
-
-    // Evaluate test results
-    Enumeration crs = requests.getChangedList();
-    while (crs.hasMoreElements()) {
-      boolean result = false;
-      CommunityRequest cr = (CommunityRequest)crs.nextElement();
-      if (testNum == 1) {
-        if (cr.getVerb() != null &&
-            cr.getVerb().equals("GET_ROSTER") &&
-            cr.getTargetCommunityName().equals(testCommunityName)) {
-          CommunityResponse resp = cr.getCommunityResponse();
-          if (resp.getStatus() == CommunityResponse.SUCCESS) {
-            //CommunityRoster roster = (CommunityRoster)resp.getContent();
-            // FIXME: convert rest.getCommunity() to CommunityRoster
-            CommunityRoster roster = null;
-            result = (roster.getMembers().size() == 1);
-          }
-        }
-        System.out.println("Verb: GET_ROSTER               " + (result ? "pass" : "fail"));
-        ++testNum; doNextTest = true;
-      } else if (testNum == 2) {
-        if (cr.getVerb() != null &&
-            cr.getVerb().equals("LIST_PARENT_COMMUNITIES")) {
-          CommunityResponse resp = cr.getCommunityResponse();
-          if (resp.getStatus() == CommunityResponse.SUCCESS) {
-            Collection myCommunities = (Collection)resp.getContent();
-            result = (myCommunities.size()== 1);
-          }
-        }
-        System.out.println("Verb: LIST_PARENT_COMMUNITIES  " + (result ? "pass" : "fail"));
-        ++testNum; doNextTest = true;
-      } else if (testNum == 3) {
-        if (cr.getVerb() != null &&
-            cr.getVerb().equals("FIND_AGENTS_WITH_ROLE")) {
-          CommunityResponse resp = cr.getCommunityResponse();
-          if (resp.getStatus() == CommunityResponse.SUCCESS) {
-            Collection agentsWithRole = (Collection)resp.getContent();
-            result = (agentsWithRole != null && agentsWithRole.size()== 1);
-          }
-        }
-        System.out.println("Verb: FIND_AGENTS_WITH_ROLE    " + (result ? "pass" : "fail"));
-        ++testNum; doNextTest = true;
-      } else if (testNum == 4) {
-        if (cr.getVerb() != null &&
-            cr.getVerb().equals("GET_ROLES")) {
-          CommunityResponse resp = cr.getCommunityResponse();
-          if (resp.getStatus() == CommunityResponse.SUCCESS) {
-            Collection roles = (Collection)resp.getContent();
-            result = (roles != null && roles.size()== 2);
-          }
-        }
-        System.out.println("Verb: GET_ROLES                " + (result ? "pass" : "fail"));
-        ++testNum; doNextTest = true;
-      } else if (testNum == 5) {
-        Collection communityNames = null;
-        if (cr.getVerb() != null &&
-            cr.getVerb().equals("LIST_ALL_COMMUNITIES")) {
-          CommunityResponse resp = cr.getCommunityResponse();
-          if (resp.getStatus() == CommunityResponse.SUCCESS) {
-            communityNames = (Collection)resp.getContent();
-            result = (communityNames != null && communityNames.size()== 1);
-          }
-        }
-        System.out.println("Verb: LIST_ALL_COMMUNITIES     " + (result ? "pass" : "fail"));
-        if (result == false) {
-          if (communityNames == null) {
-            log.error("CommunityList is null");
-          } else if (communityNames.isEmpty()) {
-            log.error("CommunityList is empty");
-          } else {
-            log.error("CommunityList has " + communityNames.size() +
-              " entries, expected 1");
-            for (Iterator it = communityNames.iterator(); it.hasNext();) {
-              log.error("  " + (String)it.next());
-            }
-          }
-        }
-        ++testNum; doNextTest = true;
-      }
-    }
-
-    // Start next test
-    if (doNextTest) {
-      // Start new test
-      if (testNum == 2) {
-        CommunityRequest cr = new CommunityRequestImpl();
-        cr.setVerb("LIST_PARENT_COMMUNITIES");
-        cr.setAgentName(testAgentName);
-        getBlackboardService().publishAdd(cr);
-      } else if (testNum == 3) {
-        CommunityRequest cr = new CommunityRequestImpl();
-        cr.setVerb("FIND_AGENTS_WITH_ROLE");
-        cr.setTargetCommunityName(testCommunityName);
-        cr.setRole("Member");
-        getBlackboardService().publishAdd(cr);
-      } else if (testNum == 4) {
-        CommunityRequest cr = new CommunityRequestImpl();
-        cr.setVerb("GET_ROLES");
-        cr.setTargetCommunityName(testCommunityName);
-        cr.setAgentName(testAgentName);
-        getBlackboardService().publishAdd(cr);
-      } else if (testNum == 5) {
-        CommunityRequest cr = new CommunityRequestImpl();
-        cr.setVerb("LIST_ALL_COMMUNITIES");
-        getBlackboardService().publishAdd(cr);
-      } else {
-        System.exit(0);
-      }
-    }
-    */
-
-  }
+  protected void execute () {}
 
   /**
    * Gets reference to CommunityService.
@@ -728,6 +598,4 @@ public class CommunityTestPlugin extends SimplePlugin {
       System.out.println("  " + ((Class)it.next()).getName());
     }
   }
-
-
 }

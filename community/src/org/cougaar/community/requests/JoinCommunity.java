@@ -44,7 +44,14 @@ public class JoinCommunity
                        int                       entityType,
                        Attributes                entityAttrs,
                        UID                       uid) {
-    this(communityName, entityName, entityType, entityAttrs, false, null, uid);
+    this(communityName,
+         entityName,
+         entityType,
+         entityAttrs,
+         false,
+         null,
+         uid,
+         CommunityRequest.DEFAULT_TIMEOUT);
   }
 
   public JoinCommunity(String                    communityName,
@@ -54,7 +61,26 @@ public class JoinCommunity
                        boolean                   createIfNotFound,
                        Attributes                communityAttrs,
                        UID                       uid) {
-    super(communityName, uid);
+
+    this(communityName,
+         entityName,
+         entityType,
+         entityAttrs,
+         createIfNotFound,
+         communityAttrs,
+         uid,
+         CommunityRequest.DEFAULT_TIMEOUT);
+  }
+
+  public JoinCommunity(String                    communityName,
+                       String                    entityName,
+                       int                       entityType,
+                       Attributes                entityAttrs,
+                       boolean                   createIfNotFound,
+                       Attributes                communityAttrs,
+                       UID                       uid,
+                       long                      timeout) {
+    super(communityName, uid, timeout);
     this.entityName = entityName;
     this.entityType = entityType;
     this.entityAttrs = entityAttrs;

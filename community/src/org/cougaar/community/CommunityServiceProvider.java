@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 2003 BBNT Solutions, LLC
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -22,6 +22,7 @@ package org.cougaar.community;
 
 import org.cougaar.core.service.community.*;
 
+import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
 import org.cougaar.core.component.Service;
@@ -36,9 +37,8 @@ public class CommunityServiceProvider implements ServiceProvider {
 
   private CommunityService cs;
 
-  public CommunityServiceProvider (ServiceBroker sb, MessageAddress cid,
-    boolean useCache) {
-    cs = CommunityServiceImpl.getInstance(sb, cid, useCache);
+  public CommunityServiceProvider (BindingSite bs, MessageAddress agentId) {
+    cs = CommunityServiceImpl.getInstance(bs, agentId);
   }
 
   public Object getService(ServiceBroker sb, Object requestor,

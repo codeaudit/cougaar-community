@@ -24,19 +24,20 @@ package org.cougaar.community.requests;
 import org.cougaar.core.util.UID;
 
 /**
- * Request to get a community descriptor from community manager.
+ * Request to get the names of communities that are the direct ancestor
+ * of specified Community.
  */
-public class GetCommunity
+public class ListParentCommunities
     extends CommunityRequest implements java.io.Serializable {
 
-  public GetCommunity(String   communityName,
-                          UID  uid) {
+  public ListParentCommunities(String communityName,
+                               UID    uid) {
     super(communityName, uid);
   }
 
-  public GetCommunity(String   communityName,
-                          UID  uid,
-                          long timeout) {
+  public ListParentCommunities(String communityName,
+                               UID    uid,
+                               long   timeout) {
     super(communityName, uid, timeout);
   }
 

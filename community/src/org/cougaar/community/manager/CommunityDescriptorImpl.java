@@ -131,6 +131,6 @@ public class CommunityDescriptorImpl
    * @return String - a string representation
    **/
   public String toString() {
-    return toXML();
+    return "CommunityDescriptor: community=" + community.getName();
   }
 }

@@ -34,6 +34,7 @@ import java.io.ObjectInputStream;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,18 +46,13 @@ import java.util.HashMap;
 
 import javax.naming.directory.Attributes;
 
-import org.cougaar.util.log.*;
-
-import org.cougaar.core.naming.Filter;
-import org.cougaar.core.naming.SearchStringParser;
-
 /**
  * A community entity.
  */
 public class CommunityImpl extends EntityImpl
     implements Community, java.io.Serializable {
 
-  private Map entities = new HashMap();
+  private Map entities = Collections.synchronizedMap(new HashMap());
 
   /**
    * Constructor
@@ -77,15 +73,22 @@ public class CommunityImpl extends EntityImpl
    * community.
    * @return  Collection of Entity objects
    */
-  public synchronized Collection getEntities() {
-    return new ArrayList(entities.values());
+  public Collection getEntities() {
+    synchronized (entities) {
+      if (entities.isEmpty()) {
+        return new ArrayList();
+      } else {
+        return new ArrayList(entities.values());
+      }
+    }
   }
 
-  public synchronized void setEntities(Collection newEntities) {
-    entities = new HashMap();
-    for (Iterator it = newEntities.iterator(); it.hasNext();) {
-      Entity entity = (Entity)it.next();
-      entities.put(entity.getName(), entity);
+  public void setEntities(Collection newEntities) {
+    synchronized (entities) {
+      entities = Collections.synchronizedMap(new HashMap());
+    }
+    for (Iterator it = newEntities.iterator(); it.hasNext(); ) {
+      addEntity((Entity)it.next());
     }
   }
 
@@ -93,7 +96,7 @@ public class CommunityImpl extends EntityImpl
    * Returns the named Entity or null if it doesn't exist.
    * @return  Entity referenced by name
    */
-  public synchronized Entity getEntity(String name) {
+  public Entity getEntity(String name) {
     return (Entity)entities.get(name);
   }
 
@@ -102,7 +105,7 @@ public class CommunityImpl extends EntityImpl
    * @param  Name of requested entity
    * @return true if community contains entity
    */
-  public synchronized boolean hasEntity(String name) {
+  public boolean hasEntity(String name) {
     return entities.containsKey(name);
   }
 
@@ -110,16 +113,22 @@ public class CommunityImpl extends EntityImpl
    * Adds an Entity to the community.
    * @param entity  Entity to add to community
    */
-  public synchronized void addEntity(Entity entity) {
-    entities.put(entity.getName(), entity);
+  public void addEntity(Entity entity) {
+    if (entity != null) {
+      synchronized (entities) {
+        entities.put(entity.getName(), entity);
+      }
+    }
   }
 
   /**
    * Removes an Entity from the community.
    * @param entity  Name of entity to remove from community
    */
-  public synchronized void removeEntity(String name) {
-    entities.remove(name);
+  public void removeEntity(String name) {
+    synchronized (entities) {
+      entities.remove(name);
+    }
   }
 
   /**
@@ -136,20 +145,17 @@ public class CommunityImpl extends EntityImpl
     SearchStringParser parser = new SearchStringParser();
     try {
       Filter f = parser.parse(filter);
-      synchronized (this) {
-        for (Iterator it = entities.values().iterator(); it.hasNext(); ) {
-          Entity entity = (Entity) it.next();
-          if (f.match(entity.getAttributes())) {
-            if ( (qualifier == ALL_ENTITIES) ||
-                (qualifier == AGENTS_ONLY && entity instanceof Agent) ||
-                (qualifier == COMMUNITIES_ONLY && entity instanceof Community)) {
-              matches.add(entity);
-            }
+      for (Iterator it = getEntities().iterator(); it.hasNext(); ) {
+        Entity entity = (Entity)it.next();
+        if (entity != null && f.match(entity.getAttributes())) {
+          if ((qualifier == ALL_ENTITIES) ||
+              (qualifier == AGENTS_ONLY && entity instanceof Agent) ||
+              (qualifier == COMMUNITIES_ONLY && entity instanceof Community)) {
+            matches.add(entity);
           }
         }
       }
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       System.out.println("Exception in Community search, filter=" + filter);
       ex.printStackTrace();
     }
@@ -192,28 +198,23 @@ public class CommunityImpl extends EntityImpl
     Attributes attrs = getAttributes();
     if (attrs != null && attrs.size() > 0)
       sb.append(attrsToString(getAttributes(), indent + "  "));
-    synchronized (this) {
-      for (Iterator it = entities.values().iterator(); it.hasNext(); ) {
-        sb.append( ( (Entity) it.next()).toXml(indent + "  "));
-      }
+    for (Iterator it = getEntities().iterator(); it.hasNext(); ) {
+      sb.append(((Entity)it.next()).toXml(indent + "  "));
     }
     sb.append(indent + "</Community>\n");
     return sb.toString();
   }
 
   private void writeObject(ObjectOutputStream stream) throws IOException {
-    //stream.defaultWriteObject();
     stream.writeObject(this.getName());
     stream.writeObject(this.getAttributes());
-    synchronized (this) {
-      stream.writeObject(this.entities);
-    }
+    stream.writeObject(getEntities());
   }
 
   private void readObject(ObjectInputStream stream) throws ClassNotFoundException, IOException {
-    //stream.defaultReadObject();
+    entities = Collections.synchronizedMap(new HashMap());
     setName((String)stream.readObject());
     setAttributes((Attributes)stream.readObject());
-    entities = (HashMap)stream.readObject();
+    setEntities((Collection)stream.readObject());
   }
 }
