@@ -846,12 +846,24 @@ public class CommunityServiceImpl extends ComponentPlugin
               BlackboardService bbs = getBlackboardService(serviceBroker);
               CommunityChangeNotification ccn =
                 ccnFactory.newCommunityChangeNotification(communityName, agentId);
+
+			  /*
+			  log.debug("NotifyListeners: agent=" + agentId + " community=" +
+			  	communityName + " attributeID=Role attributeValue=ChangeListener");
+              ccn.addTarget(new AttributeBasedAddress(communityName,
+                                                "Role",
+                                                "ChangeListener"));
+			  */
+
+			  // Uses explicit addresses for listeners rather than ABA
               for (Iterator it = listeners.iterator(); it.hasNext();) {
                 MessageAddress listener = (MessageAddress)it.next();
-                ccn.addTarget(new AttributeBasedAddress(communityName,
-                                                    "Role",
-                                                    "ChangeListener"));
+			  	log.debug("NotifyListeners: agent=" + agentId +
+              	  " community=" + communityName + " listener=" + listener);
+                ccn.addTarget(listener);
               }
+
+
               bbs.openTransaction();
               bbs.publishAdd(ccn);
               bbs.closeTransaction();
