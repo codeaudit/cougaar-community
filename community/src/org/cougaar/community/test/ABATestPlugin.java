@@ -42,7 +42,6 @@ import javax.naming.directory.*;
  */
 public class ABATestPlugin extends SimplePlugin {
 
-  private static Map responders = new HashMap();
   private static int ctr = 0;
 
   private static String communityName = "MiniTestConfig-COMM";
@@ -54,8 +53,10 @@ public class ABATestPlugin extends SimplePlugin {
 
   private TestRelay myTestRelay;
 
-  private String sender;
+  // Map of agents within node that have received the Relay
+  private static Map responders = new HashMap();
 
+  // Adds an agent to nodes responder Map
   public static synchronized int addResponder(String name) {
     if (!responders.containsKey(name)) {
       responders.put(name, new Integer(++ctr));
@@ -63,13 +64,6 @@ public class ABATestPlugin extends SimplePlugin {
     return ((Integer)responders.get(name)).intValue();
   }
 
-  public static synchronized void clearResponders() {
-    responders = new HashMap();
-  }
-
-  public static synchronized int getResponderCount() {
-    return responders.size();
-  }
 
   public void setParameter(Object obj) {
     List args = (List)obj;
@@ -81,8 +75,6 @@ public class ABATestPlugin extends SimplePlugin {
 
     log =  (LoggingService) getBindingSite().getServiceBroker().
       getService(this, LoggingService.class, null);
-
-    //log.info("communityName=" + communityName + " sender=" + sender);
 
     DomainService domainService =
       (DomainService) getBindingSite().getServiceBroker().getService(this, DomainService.class, null);
@@ -112,57 +104,26 @@ public class ABATestPlugin extends SimplePlugin {
       (IncrementalSubscription)getBlackboardService()
 	      .subscribe(testRelayPredicate);
 
+    // The community manager is responsible for publishing the TestRelay
     if (communityManager != null && communityManager.equals(myAgent.toString())) {
-
       myTestRelay =
         testRelayFactory.newTestRelay("TestRelay published: agent=" +
           myAgent.toString() + " to=" + communityName, myAgent);
       myTestRelay.addTarget(new AttributeBasedAddress(communityName, "Role", "Member"));
-      //log.info("TestRelay published: type=added source=" + myAgent +
-      //  " community=" + communityName + " Role=Member");
-      clearResponders();
       log.info("TestRelay published");
       publishAdd(myTestRelay);
-
-      //sendRelay(true);
-      //getAlarmService().addRealTimeAlarm(new WakeupAlarm(120000));
-      //getAlarmService().addRealTimeAlarm(new WakeupAlarm(20000));
     }
-  }
-
-  private void sendRelay(boolean useABA) {
-    TestRelay tr =
-      testRelayFactory.newTestRelay("TestRelay published: agent=" +
-      myAgent.toString() + " to=" + communityName, myAgent);
-    if (useABA) {
-      tr.addTarget(new AttributeBasedAddress(communityName, "Role", "Member"));
-      log.info("TestRelay published: type=added source=" + myAgent +
-         " community=" + communityName + " Role=Member");
-    } else { //use explicit addressing
-      String searchString = "(&(Role=Member)(EntityType=Agent))";
-      Collection agents = cs.search(communityName, searchString);
-      for (Iterator it = agents.iterator(); it.hasNext();) {
-        tr.addTarget((ClusterIdentifier)it.next());
-      }
-      //log.info("TestRelay published: type=added source=" + myAgent +
-      //  " targets=" + targetsToString(tr) + " Role=Member");
-    }
-    publishAdd(tr);
   }
 
   public void execute() {
     Enumeration enum  = testRelaySub.getAddedList();
     while (enum.hasMoreElements()) {
       TestRelay tr = (TestRelay)enum.nextElement();
-      //log.info("TestRelay received: type=added dest=" + myAgent +
-      //  " source=" + tr.getSource());
       log.info("  " + addResponder(myAgent.toString()) + " - " + myAgent);
     }
     enum  = testRelaySub.getChangedList();
     while (enum.hasMoreElements()) {
       TestRelay tr = (TestRelay)enum.nextElement();
-      //log.info("TestRelay received: type=changed dest=" + myAgent +
-      //  " source=" + tr.getSource());
       log.info("  " + addResponder(myAgent.toString()) + " - " + myAgent);
     }
   }
@@ -199,67 +160,4 @@ public class ABATestPlugin extends SimplePlugin {
     return sb.toString();
   }
 
-  private class WakeupAlarm implements Alarm {
-    private long expirationTime = -1;
-    private boolean expired = false;
-
-    /**
-     * Create an Alarm to go off in the milliseconds specified,.
-     **/
-    public WakeupAlarm (long delay) {
-      expirationTime = delay + System.currentTimeMillis();
-    }
-
-    /** @return absolute time (in milliseconds) that the Alarm should
-     * go off.
-     * This value must be implemented as a fixed value.
-     **/
-    public long getExpirationTime () {
-      return expirationTime;
-    }
-
-    /**
-     * Called by the cluster clock when clock-time >= getExpirationTime().
-     **/
-    public void expire () {
-      if (!expired) {
-        try {
-          openTransaction();
-          //log.info("TestRelay published: type=changed source=" + myAgent +
-          //  " community=" + communityName + " Role=Member");
-          //clearCtr();
-          //log.info("TestRelay published");
-          //publishChange(myTestRelay);
-          //sendRelay(true);
-          if (getResponderCount() == 50) {
-            log.info("ABA Test PASSED");
-            System.exit(0);
-          } else {
-            log.info("ABA Test FAILED (" + getResponderCount() + "/50 agents received ABA/Relay)");
-            System.exit(-1);
-          }
-        } catch (Exception e) {
-          e.printStackTrace();
-        } finally {
-         expired = true;
-         closeTransaction();
-        }
-      }
-    }
-
-    /** @return true IFF the alarm has expired or was canceled. **/
-    public boolean hasExpired () {
-      return expired;
-    }
-
-    /** can be called by a client to cancel the alarm.  May or may not remove
-     * the alarm from the queue, but should prevent expire from doing anything.
-     * @return false IF the the alarm has already expired or was already canceled.
-     **/
-    public synchronized boolean cancel () {
-      if (!expired)
-        return expired = true;
-      return false;
-    }
-  }
 }

@@ -150,4 +150,213 @@
     </Entity>
   </Community>
 
+  <Community Name="Test-COMM" >
+    <Attribute ID="CommunityType"    Value="Domain" />
+    <Attribute ID="CommunityManager" Value="TestNode" />
+    <Entity Name="TestNode" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="NodeAgent" />
+    </Entity>
+    <Entity Name="Agent01" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent02"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent03"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent04"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent05"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent06"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent07"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent08"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent09"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent10"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent11" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent12"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent13"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent14"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent15"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent16"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent17"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent18"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent19"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent20"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent21" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent22"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent23"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent24"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent25"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent26"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent27"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent28"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent29"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent30"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent31" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent32"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent33"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent34"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent35"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent36"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent37"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent38"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent39"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent40"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent41" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent42"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent43"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent44"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent45"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent46"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent47"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent48"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent49"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+    <Entity Name="Agent50"  >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="Member" />
+    </Entity>
+  </Community>
+
   </Communities>
