@@ -26,6 +26,7 @@
 package org.cougaar.community;
 
 import org.cougaar.core.component.Service;
+import javax.naming.directory.ModificationItem;
 
 /**
  * Interface defining CommunityProtectionService used to authorize
@@ -42,12 +43,15 @@ public interface CommunityProtectionService extends Service {
    *                              for valid op codes)
    * @param target String         Name of affected community member or null if
    *                              target is community
+   * @param attrMods              Requested attribute modifications if request
+   *                              type is MODIFY_ATTRIBUTES, ignored otherwise
    * @return boolean              Return true if request is authorized by
    *                              current policy
    */
-  boolean authorize(String communityName,
-                    String requester,
-                    int    operation,
-                    String target);
+  boolean authorize(String             communityName,
+                    String             requester,
+                    int                operation,
+                    String             target,
+                    ModificationItem[] attrMods);
 
 }

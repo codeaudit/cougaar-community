@@ -100,8 +100,8 @@ public abstract class AbstractCommunityManager
                                           int                reqType,
                                           Entity             entity,
                                           ModificationItem[] attrMods) {
-    if (logger.isDetailEnabled()) {
-      logger.detail(agentName+": processRequest:" +
+    if (logger.isDebugEnabled()) {
+      logger.debug(agentName+": processRequest:" +
                    " source=" + source +
                    " community=" + communityName +
                    " reqType=" + reqType +

@@ -33,6 +33,8 @@ import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.mts.MessageAddress;
 
+import javax.naming.directory.ModificationItem;
+
 /**
  * Performs access control for community manager.  All authorization requests
  * are delegated to the CommunityProtectionService if available.  If the
@@ -67,24 +69,26 @@ public class CommunityAccessManager
    *                              for valid op codes)
    * @param target String         Name of affected community member or null if
    *                              target is community
+   * @param attrMods              Requested attribute changes
    * @return boolean              Return true if request is authorized by
    *                              current policy
    */
   public final boolean authorize(String communityName,
                                  String requester,
                                  int    operation,
-                                 String target) {
+                                 String target,
+                                 ModificationItem[] attrMods) {
     boolean isAuthorized = false;
     CommunityProtectionService cps =
         (CommunityProtectionService)serviceBroker.getService(this,
                                                              CommunityProtectionService.class,
                                                              null);
     if (cps != null) {
-      isAuthorized = cps.authorize(communityName, requester, operation, target);
+      isAuthorized = cps.authorize(communityName, requester, operation, target, attrMods);
       serviceBroker.releaseService(this, CommunityProtectionService.class, cps);
     } else {
       isAuthorized =
-        authorizeUsingDefaultPolicy(communityName, requester, operation, target);
+        authorizeUsingDefaultPolicy(communityName, requester, operation, target, attrMods);
     }
     return isAuthorized;
   }
@@ -102,10 +106,11 @@ public class CommunityAccessManager
    * @return boolean              Return true if request is authorized by
    *                              current policy
    */
-  protected boolean authorizeUsingDefaultPolicy(String communityName,
-                                                String requester,
-                                                int    operation,
-                                                String target) {
+  protected boolean authorizeUsingDefaultPolicy(String             communityName,
+                                                String             requester,
+                                                int                operation,
+                                                String             target,
+                                                ModificationItem[] attrMods) {
     return true;
   }
 
