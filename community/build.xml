@@ -133,7 +133,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/data;$$CWD/examples/configs/common;$$INSTALL/configs/common" />
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/common;$$INSTALL/configs/common" />
       <arg line="community_attribute.csv community_entity_attribute.csv"/>
     </java>
   </target>
@@ -175,7 +175,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node ManagerNode"/>
     </java>
   </target>
@@ -195,7 +195,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CombinedNode"/>
     </java>
   </target>
@@ -215,7 +215,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.community.caching" value=""/>
       <sysproperty key="org.cougaar.community.configfile" value="communities.xml"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode"/>
@@ -236,7 +236,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode1"/>
     </java>
   </target>
@@ -256,7 +256,7 @@
       <sysproperty key="log4j.rootCategory" value="DEBUG" />
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/${examples}/configs/demo;$$CWD/${examples}/configs/minitestconfig;$$CWD/${examples}/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node CommunityDemoNode2"/>
     </java>
   </target>
@@ -275,7 +275,7 @@
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/demo;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/demo;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
       <arg line="org.cougaar.core.node.Node MonitorNode"/>
     </java>
   </target>
@@ -328,7 +328,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/{examples}/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.class.path" value="./classes"/>
       <sysproperty key="org.cougaar.system.path" value="./lib"/>
@@ -349,85 +349,5 @@
     </copy>
   </target>
 
-  <!-- Copies latest working files to TIC release directory -->
-  <target name="updatetic">
-    <copy todir="${tic-dir}" >
-      <fileset dir="${basedir}"
-        includes="build.xml,**/*.java,**/*.properties,**/*.dat,**/*.ini,**.*.xml,**/*.csv"
-        excludes="src/org/cougaar/core/service/**,
-                  src/org/cougaar/community/**,
-                  examples/src/org/cougaar/community/**,
-                  examples/src/org/cougaar/tools/robustness/ma/test/simulator/**" />
-    </copy>
-  </target>
-
-
-  <!-- Gets most current Cougaar build -->
-  <target name="getlatest" depends="getlatestzips,unziplatest">
-  </target>
-
-  <!-- Gets latest Cougaar build -->
-  <target name="getlatestzips">
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/aggagent-dev.zip" dest="${cougaar}/zips/aggagent-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/bol.zip" dest="${cougaar}/zips/bol.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/bootstrap-dev.zip" dest="${cougaar}/zips/bootstrap-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/build-dev.zip" dest="${cougaar}/zips/build-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/community-dev.zip" dest="${cougaar}/zips/community-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/contract-dev.zip" dest="${cougaar}/zips/contract-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/core-dev.zip" dest="${cougaar}/zips/core-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar-api.zip" dest="${cougaar}/zips/cougaar-api.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar-support.zip" dest="${cougaar}/zips/cougaar-support.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/cougaar.zip" dest="${cougaar}/zips/cougaar.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/csmart-dev.zip" dest="${cougaar}/zips/csmart-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/datagrabber-dev.zip" dest="${cougaar}/zips/datagrabber-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/glm-dev.zip" dest="${cougaar}/zips/glm-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/glmtrans-dev.zip" dest="${cougaar}/zips/glmtrans-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/javaiopatch-dev.zip" dest="${cougaar}/zips/javaiopatch-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/manager-dev.zip" dest="${cougaar}/zips/manager-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/planserver-dev.zip" dest="${cougaar}/zips/planserver-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/qos-dev.zip" dest="${cougaar}/zips/qos-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/quo-dev.zip" dest="${cougaar}/zips/quo-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/scalability-dev.zip" dest="${cougaar}/zips/scalability-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/server-dev.zip" dest="${cougaar}/zips/server-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/toolkit-dev.zip" dest="${cougaar}/zips/toolkit-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/tutorial-dev.zip" dest="${cougaar}/zips/tutorial-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/uiframework-dev.zip" dest="${cougaar}/zips/uiframework-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/util-dev.zip" dest="${cougaar}/zips/util-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/vishnu-dev.zip" dest="${cougaar}/zips/vishnu-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/webserver-dev.zip" dest="${cougaar}/zips/webserver-dev.zip" usetimestamp="true" />
-    <get src="http://www.alpine.bbn.com/~mthome/HEAD/latest/webtomcat-dev.zip" dest="${cougaar}/zips/webtomcat-dev.zip" usetimestamp="true" />
-  </target>
-
-  <!-- Unzip nightly build -->
-  <target name="unziplatest">
-    <unzip src="${cougaar}/zips/aggagent-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/bol.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/bootstrap-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/build-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/community-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/contract-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/core-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/cougaar-api.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/cougaar-support.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/cougaar.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/csmart-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/datagrabber-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/glm-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/glmtrans-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/javaiopatch-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/manager-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/planserver-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/qos-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/quo-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/scalability-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/server-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/toolkit-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/tutorial-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/uiframework-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/util-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/vishnu-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/webserver-dev.zip" dest="${cougaar}" />
-    <unzip src="${cougaar}/zips/webtomcat-dev.zip" dest="${cougaar}" />
-  </target>
 
   </project>
