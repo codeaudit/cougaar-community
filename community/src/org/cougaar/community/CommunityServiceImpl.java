@@ -339,6 +339,47 @@ public class CommunityServiceImpl extends ComponentPlugin
     return attrs;
   }
 
+  /**
+   * Merges two Attribute objects into one.  Use in conjunction with
+   * DirContext.modifyAttributes to preserve multi-valued attributes.
+   * @param a1 Attribute set 1
+   * @param a2 Attribute set 2
+   * @return   Merged attributes
+   */
+  private Attributes mergeAttributes(Attributes a1, Attributes a2) {
+    Attributes newAttrs = new BasicAttributes();
+    try {
+      for (NamingEnumeration a1Enum = a1.getAll(); a1Enum.hasMore();) {
+        Attribute attr1 = (Attribute)a1Enum.next();
+        Attribute attr2 = a2.get(attr1.getID());
+        if (attr2 == null) { // Attribute is unique to a1
+          newAttrs.put(attr1);
+        } else { // Both a1 and a2 contain attribute, merge values
+          Attribute newAttr = new BasicAttribute(attr1.getID());
+          // Add all values from attr1
+          for (NamingEnumeration valEnum = attr1.getAll(); valEnum.hasMore();) {
+            newAttr.add(valEnum.nextElement());
+          }
+          // Add unique values from attr2
+          for (NamingEnumeration valEnum = attr2.getAll(); valEnum.hasMore();) {
+            Object val = valEnum.nextElement();
+            if (!newAttr.contains(val)) newAttr.add(val);
+          }
+          newAttrs.put(newAttr);
+        }
+      }
+      for (NamingEnumeration a2Enum = a2.getAll(); a2Enum.hasMore();) {
+        Attribute attr2 = (Attribute)a2Enum.next();
+        Attribute attr1 = a1.get(attr2.getID());
+        if (attr1 == null) { // Attribute is unique to a2
+          newAttrs.put(attr2);
+        }
+      }
+    } catch (Exception ex) {
+      log.error("Exception merging attributes, " + ex);
+    }
+    return newAttrs;
+  }
 
   /**
    * Modifies the attributes associated with specified community entity.
@@ -352,20 +393,20 @@ public class CommunityServiceImpl extends ComponentPlugin
     try {
       DirContext community =
         (DirContext)communitiesContext.lookup(communityName);
+      Attributes oldAttrs = getEntityAttributes(communityName, entityName);
+      Attributes mergedAttributes = mergeAttributes(oldAttrs, attributes);
       community.modifyAttributes(entityName,
-        DirContext.REPLACE_ATTRIBUTE, attributes);
-      StringBuffer sb = new StringBuffer();
-      for (NamingEnumeration enum = attributes.getAll(); enum.hasMore();) {
-        Attribute attr = (Attribute)enum.next();
-        sb.append(attr.getID() + "=");
-        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
-          sb.append((String)enum1.next());
-          if (enum1.hasMore()) sb.append(",");
-        }
-        if (enum.hasMore()) sb.append(" ");
+        DirContext.REPLACE_ATTRIBUTE, mergedAttributes);
+      String attrStr = attrsToString(mergedAttributes);
+      if (log.isDebugEnabled()) {
+        log.debug("setEntityAttributes: entity=" + entityName +
+          " community=" + communityName +
+          " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
+          " newAttrs=(" + attrsToString(attributes) + ")" +
+          " mergedAttributes=(" + attrStr + ")");
       }
       notifyListeners(communityName, "Set entity attributes for " + entityName +
-        " (" + sb.toString() + ")");
+        " (" + attrStr + ")");
       return true;
     } catch (Exception ex) {
       log.error("Exception setting attributes for entity '" +
@@ -409,6 +450,8 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              Collection of entities
    */
   public Collection search(String communityName, String filter) {
+    if (log.isDebugEnabled())
+      log.debug("search: community=" + communityName + " filter=" + filter);
     Collection entities = new Vector();
     try {
       DirContext community =
@@ -418,9 +461,11 @@ public class CommunityServiceImpl extends ComponentPlugin
       sc.setReturningObjFlag(true);
       NamingEnumeration enum = community.search("",
                                    filter, sc);
+      log.debug ("search result: matched=" + enum.hasMoreElements());
       while (enum.hasMore()) {
         SearchResult sr = (SearchResult)enum.next();
         entities.add(sr.getObject());
+        log.debug ("search result: class=" + sr.getObject().getClass().getName() + " value=" + sr.getObject().toString());
       }
     } catch (Exception ex) {
       log.error("Exception searching community '" + communityName +
@@ -482,7 +527,6 @@ public class CommunityServiceImpl extends ComponentPlugin
     return roster;
   }
 
-
   /**
    * Requests a collection of community names identifying the communities that
    * contain the specified member.
@@ -511,8 +555,6 @@ public class CommunityServiceImpl extends ComponentPlugin
     }
     return communitiesWithMember;
   }
-
-
 
   /**
    * Requests a collection of community names identifying the communities that
@@ -576,6 +618,9 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              True if operation was successful
    */
   public boolean addListener(MessageAddress addr, String communityName) {
+    if (log.isDebugEnabled())
+      log.debug("addListener: listener=" + addr.toString() +
+        " community=" + communityName);
     if (addr != null && communityName != null) {
       try {
         DirContext community =
@@ -741,6 +786,9 @@ public class CommunityServiceImpl extends ComponentPlugin
    */
   public boolean addRole(String communityName, String entityName,
                          String roleName) {
+    if (log.isDebugEnabled())
+      log.debug("addRole: entity=" + entityName +
+        " community=" + communityName + " role=" + roleName);
     try {
       DirContext community =
       (DirContext)communitiesContext.lookup(communityName);
@@ -750,8 +798,9 @@ public class CommunityServiceImpl extends ComponentPlugin
         roleAttr = new BasicAttribute("Role", roleName);
         attrs.put(roleAttr);
       } else {
-        if (!roleAttr.contains(roleName))
+        if (!roleAttr.contains(roleName)) {
           roleAttr.add(roleName);
+        }
       }
       community.modifyAttributes(entityName,
         DirContext.REPLACE_ATTRIBUTE, attrs);
@@ -908,6 +957,27 @@ public class CommunityServiceImpl extends ComponentPlugin
     }
   }
 
+  /**
+   * Creates a string representation of an Attribute set.
+   */
+  private String attrsToString(Attributes attrs) {
+    StringBuffer sb = new StringBuffer();
+    try {
+      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
+        Attribute attr = (Attribute)enum.next();
+        sb.append(attr.getID() + "=[");
+        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
+          sb.append((String)enum1.next());
+          if (enum1.hasMore())
+            sb.append(",");
+          else
+            sb.append("]");
+        }
+        if (enum.hasMore()) sb.append(" ");
+      }
+    } catch (NamingException ne) {}
+    return sb.toString();
+  }
 
   class MyBlackboardClient implements BlackboardClient {
 
