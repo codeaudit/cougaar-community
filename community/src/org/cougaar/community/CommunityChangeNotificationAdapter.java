@@ -17,7 +17,10 @@
  */
 package org.cougaar.community;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.w3c.dom.Element;
@@ -38,7 +41,7 @@ import org.cougaar.core.util.XMLizable;
 abstract public class CommunityChangeNotificationAdapter
   implements CommunityChangeNotification, XMLizable {
 
-  private transient Set myTargets = new HashSet();
+  private transient Set myTargetSet = null;
 
   private UID myUID = null;
   private MessageAddress mySource = null;
@@ -48,7 +51,30 @@ abstract public class CommunityChangeNotificationAdapter
    * @param target the address of the target agent.
    **/
   public void addTarget(MessageAddress target) {
-    myTargets.add(target);
+    if (myTargetSet == null) {
+      myTargetSet = new HashSet();
+    }
+    myTargetSet.add(target);
+  }
+
+  /**
+   * Add a collection of target message addresses.
+   * @param targets Collection of target agent addresses.
+   **/
+  public void addAllTargets(Collection targets) {
+    if (myTargetSet == null) {
+      myTargetSet = new HashSet();
+    }
+
+    for (Iterator iterator = targets.iterator(); iterator.hasNext();) {
+      Object target = iterator.next();
+      if (target instanceof MessageAddress) {
+        addTarget((MessageAddress) target);
+      } else {
+        throw new IllegalArgumentException("Invalid target class: " + target.getClass() +
+                                           " all targets must extend MessageAddress.");
+      }
+    }
   }
 
   /**
@@ -56,10 +82,16 @@ abstract public class CommunityChangeNotificationAdapter
    * @param target the address of the target agent to be removed.
    **/
   public void removeTarget(MessageAddress target) {
-    myTargets.remove(target);
+    if (myTargetSet != null) {
+      myTargetSet.remove(target);
+    }
   }
 
-  // UniqueObject intergace
+  public void clearTargets() {
+    myTargetSet = null;
+  }
+
+  // UniqueObject interface
   /** @return the UID of a UniqueObject.  If the object was created
    * correctly (e.g. via a Factory), will be non-null.
    **/
@@ -107,7 +139,11 @@ abstract public class CommunityChangeNotificationAdapter
    * should be sent.
    **/
   public Set getTargets() {
-    return myTargets;
+    if (myTargetSet == null) {
+      return Collections.EMPTY_SET;
+    } else {
+      return Collections.unmodifiableSet(myTargetSet);
+    }
   }
 
   /**
@@ -123,11 +159,39 @@ abstract public class CommunityChangeNotificationAdapter
     return false;
   }
 
+  private static final class SimpleRelayFactory
+  implements TargetFactory, java.io.Serializable {
+
+    public static final SimpleRelayFactory INSTANCE =
+      new SimpleRelayFactory();
+
+    private SimpleRelayFactory() {}
+
+    /**
+    * Convert the given content and related information into a Target
+    * that will be published on the target's blackboard.
+    **/
+    public Relay.Target create(
+        UID uid,
+        MessageAddress source,
+        Object content,
+        Token token) {
+      CommunityChangeNotification ccn = (CommunityChangeNotification)content;
+      return new CommunityChangeNotificationImpl(ccn.getCommunityName(), source);
+      //(
+      //    uid, source, null, content, null);
+    }
+
+    private Object readResolve() {
+      return INSTANCE;
+    }
+  };
+
   /**
-   * @return a factory to convert the content to a Relay Target.
-   **/
-  public Relay.TargetFactory getTargetFactory() {
-    return null;
+  * Get a factory for creating the target.
+  */
+  public TargetFactory getTargetFactory() {
+    return SimpleRelayFactory.INSTANCE;
   }
 
   /**
