@@ -340,6 +340,8 @@ public class CommunityManager {
           serviceBroker.getService(this, WhitePagesService.class, null);
       try {
         ret = findManager(communityName, wps);
+      } catch (WhitePagesService.TimeoutException toe) {
+        logger.debug("WPS Timeout on findManager community=" + communityName);
       } catch (Exception ex) {
         ex.printStackTrace();
       } finally {
@@ -355,8 +357,7 @@ public class CommunityManager {
     MessageAddress ret = null;
     if (communityName != null) {
       AddressEntry entry = wps.get(
-          communityName+".comm",
-          "community");
+          communityName+".comm", "community", WPS_TIMEOUT);
       if (entry != null) {
         URI uri = entry.getURI();
         String agentName = uri.getPath().substring(1);
