@@ -1,4 +1,9 @@
 <!-- Autobuild-generated ANT v1.5 script for building the Cougaar module "community". -->
+
+<!--                                                 -->
+<!-- THIS IS A MACHINE GENERATED FILE - DO NOT EDIT! -->
+<!--                                                 -->
+
 <!-- The source for this file is in build/data/moduleTemplate.xml -->
 
 <!-- autobuild might execute this with something like:
@@ -63,9 +68,17 @@
     <!-- Set properties to values specific to this module, if any -->
     <property file="${MODSOURCE}/module.properties" />  <!-- per-module properties file! -->
 
+    <!-- if the module source has a file named "custom-build.xml",
+    then we will give it a chance to contribute to the build process.
+    Sortof clunky but it does work.  The main point is that the
+    custom-build.xml file must contain all pre- and post-targets
+    referenced in this file, even if they are empty.  E.g. for now,
+    {pre,post}.{install,clean,junit,rmic,codegen,compile,examples,javadocs}
+    -->
+    <property name="custom.xml" value="${MODSOURCE}/custom-build.xml"/>
+
     <!-- TARGETBASE is where we will install files -->
-    <!-- In a developer environment, this is usually
-    COUGAAR_INSTALL_PATH -->
+    <!-- In a developer environment, this is usually COUGAAR_INSTALL_PATH -->
     <property name="TARGETBASE" value=".." />
     <!-- Set any not-yet-set properties to values specific to this
     installation -->
@@ -193,6 +206,26 @@
     </path>
     <property name="genpath" refid="codegen.path"/>
 
+    <!-- patterns -->
+    <patternset id="ps.jar.extras">
+      <include name="**/*.def"/>
+      <include name="**/*.gif"/>
+      <include name="**/*.html"/>
+      <include name="**/*.htm"/>
+      <include name="**/*.jpg"/>
+      <include name="**/*.bmp"/>
+      <include name="**/*.png"/>
+    </patternset>
+
+    <patternset id="ps.notsources">
+      <exclude name="**/CVS"/>
+      <exclude name="**/*#"/>
+      <exclude name="**/*~"/>
+      <exclude name="**/*.class"/>
+      <exclude name="**/*.flc"/>
+      <exclude name="**/.cvsignore"/>
+    </patternset>
+
     <!-- ================ Targets ================ -->
 
     <!-- ========================================================== -->
@@ -217,7 +250,7 @@
     <!-- Test for presence of JUnit. Skip JUnit targets if not found. -->
     <!-- Also skip if there is no regress directory -->	
     <!-- ========================================================== -->
-    <target name="junit" depends="prepare" if="has.Regress">
+    <target name="junit" depends="prepare" if="has.regress">
       <available property="junit.present" classname="junit.framework.TestCase" classpathref="junit.classpath"/>
     </target>
 
@@ -289,7 +322,7 @@
       <!-- Copy any gifs and HTML help files over as well -->
       <copy todir="${module.examples}" >
 	<fileset dir="${examples}">
-	  <patternset id="images.and.html.and.def"/>
+	  <patternset refid="ps.jar.extras"/>
 	</fileset>
       </copy>
     </target>
@@ -305,6 +338,7 @@
     <!-- Prepares all the build directories		               	   -->
     <!-- ============================================================= -->
     <target name="prepare">
+      <available property="has.custom.xml" file="${custom.xml}"/>
       <available property="has.examples" file="${examples}"/>
       <available property="has.build" file="${module.classes}"/>
       <available property="has.src" file="${src}"/>
@@ -313,7 +347,7 @@
       <available property="has.configs" file="${configs}"/>
       <available property="has.dev" file="${dev}"/>
       <available property="has.doc" file="${doc}"/>
-      <available property="has.Regress" file="${regress}"/>
+      <available property="has.regress" file="${regress}"/>
       <available property="has.lib" file="${local.lib}"/>
       
       <!-- Create the timestamp -->
@@ -385,15 +419,7 @@
       <!-- Copy any gifs and HTML help files over as well -->
       <copy todir="${module.classes}" >
 	<fileset dir="${src}">
-	  <patternset id="images.and.html.and.def">
-	    <include name="**/*.def"/>
-	    <include name="**/*.gif"/>
-	    <include name="**/*.html"/>
-	    <include name="**/*.htm"/>
-	    <include name="**/*.jpg"/>
-	    <include name="**/*.bmp"/>
-	    <include name="**/*.png"/>
-	  </patternset>
+	  <patternset refid="ps.jar.extras"/>
 	</fileset>
       </copy>
     </target>
@@ -408,7 +434,15 @@
       
 
     <!-- Do the basic installation - called by base product Ant script -->
-    <target name="install" depends="install.jar, install.lib">
+    <target name="install" depends="pre.install, really.install, post.install">
+    </target>
+    <target name="really.install" depends="install.jar, install.lib">
+    </target>
+    <target name="pre.install" if="has.custom.xml">
+      <ant antfile="${custom.xml}" dir="${MODSOURCE}" target="pre.install" inheritAll="true"/>
+    </target>
+    <target name="post.install" if="has.custom.xml">
+      <ant antfile="${custom.xml}" dir="${MODSOURCE}" target="post.install" inheritAll="true"/>
     </target>
 
     <!-- Install the Jar file in the target lib directory -->
@@ -573,14 +607,7 @@
       <copy todir="${zipdir.src}">
 	<!-- skip CVS, #, ~, .class -->
 	<fileset dir="${src}">
-	  <patternset id="real.sources">
-	    <exclude name="**/CVS"/>
-	    <exclude name="**/*#"/>
-	    <exclude name="**/*~"/>
-	    <exclude name="**/*.class"/>
-	    <exclude name="**/*.flc"/>
-	    <exclude name="**/.cvsignore"/>
-	  </patternset>
+	  <patternset refid="ps.notsources"/>
 	</fileset>
       </copy>
     </target>
@@ -589,15 +616,15 @@
       <mkdir dir="${zipdir.examples}"/>
       <copy todir="${zipdir.examples}">
 	<fileset dir="${examples}">
-	  <patternset id="real.sources"/>
+	  <patternset refid="ps.notsources"/>
 	</fileset>
       </copy>
     </target>
-    <target name="zip-copy-test" depends="set-zip-dirs, junit" if="has.Regress">
+    <target name="zip-copy-test" depends="set-zip-dirs, junit" if="has.regress">
       <mkdir dir="${zipdir.regress}"/>
       <copy todir="${zipdir.regress}">
 	<fileset dir="${regress}">
-	  <patternset id="real.sources"/>
+	  <patternset refid="ps.notsources"/>
 	</fileset>
       </copy>
     </target>
@@ -605,7 +632,7 @@
       <mkdir dir="${zipdir.dev}"/>
       <copy todir="${zipdir.dev}">
 	<fileset dir="${dev}">
-	  <patternset id="real.sources"/>
+	  <patternset refid="ps.notsources"/>
 	</fileset>
       </copy>
     </target>
