@@ -280,9 +280,7 @@ public class YellowPagesServlet extends BaseServletComponent
           NameClassPair ncPair = (NameClassPair)enum.next();
           String name = ncPair.getName();
           MTImpl o = (MTImpl)dc.lookup(name);
-          try{
-          table.put(name, o.getClientHost());
-          }catch(java.rmi.server.ServerNotActiveException e){e.printStackTrace();}
+          table.put(name, "FIXME");
         }
       }catch(NamingException e){e.printStackTrace();}
       return table;
