@@ -35,7 +35,7 @@ import java.util.Iterator;
  */
 
 public class RelayAdapter implements Relay.Source {
-  //protected transient Set myTargetSet = new HashSet();
+  protected Set interestedAgents = Collections.synchronizedSet(new HashSet());
   protected Set myTargetSet = new HashSet();
   MessageAddress source;
   Object content;
@@ -89,6 +89,10 @@ public class RelayAdapter implements Relay.Source {
     if (myTargetSet != null) {
       myTargetSet.add(target);
     }
+  }
+
+  public Set getInterestedAgents() {
+    return interestedAgents;
   }
 
  public UID getUID() {

@@ -73,7 +73,6 @@ public class CommunityDistributer extends BlackboardClientComponent {
   class DescriptorEntry {
     RelayAdapter ra;
     CommunityDescriptor cd;
-    Set agentTargets = Collections.synchronizedSet(new HashSet());
     Set nodeTargets = Collections.synchronizedSet(new HashSet());
     Set unresolvedAgents = Collections.synchronizedSet(new HashSet());
     long lastSent = 0;
@@ -156,10 +155,9 @@ public class CommunityDistributer extends BlackboardClientComponent {
                    " ra=" + de.ra +
                    " doRemove=" + de.doRemove +
                    " didChange=" + de.didChange);
-      if (de.ra == null) { // publish new descriptor
+      if (de.lastSent == 0) {
         if (!de.nodeTargets.isEmpty()) {
-          de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
-          updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.agentTargets);
+          updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
           de.didChange = false;
           de.lastSent = now;
           blackboard.publishAdd(de.ra);
@@ -173,7 +171,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
         if ( (de.didChange && (now > (de.lastSent + updateInterval))) ||
             (now > de.lastSent + cacheExpiration)) {
           // publish changed descriptor
-          updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.agentTargets);
+          updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
           ((CommunityDescriptorImpl) de.cd).setChangeType(de.didChange ? de.changeType : -1);
           ((CommunityDescriptorImpl) de.cd).setWhatChanged(de.didChange ? de.whatChanged : null);
           de.didChange = false;
@@ -206,6 +204,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
     if (de == null) {
       de = new DescriptorEntry();
       de.cd = new CommunityDescriptorImpl(agentId, community, uidService.nextUID());
+      de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
       descriptors.put(communityName, de);
       addTargets(communityName, agents);
     }
@@ -228,7 +227,8 @@ public class CommunityDistributer extends BlackboardClientComponent {
       de.cd = cd;
       de.ra = ra;
       descriptors.put(communityName, de);
-      addTargets(communityName, ra.getTargets());
+      de.ra = new RelayAdapter(de.cd.getSource(), de.cd, de.cd.getUID());
+      addTargets(communityName, ra.getInterestedAgents());
     }
     if (wakeAlarm == null) {
       wakeAlarm = new WakeAlarm(now() + updateInterval);
@@ -257,7 +257,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
   protected void addTargets(String communityName, Set targets) {
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
-      de.agentTargets.addAll(targets);
+      de.ra.getInterestedAgents().addAll(targets);
       Set agentsToAdd = new HashSet(targets);
       for (Iterator it = agentsToAdd.iterator(); it.hasNext(); ) {
         findNodeTargets((MessageAddress)it.next(), communityName);
@@ -276,7 +276,7 @@ public class CommunityDistributer extends BlackboardClientComponent {
                  " agents=" + agentNames);
     DescriptorEntry de = (DescriptorEntry)descriptors.get(communityName);
     if (de != null) {
-      de.agentTargets.removeAll(agentNames);
+      de.ra.getInterestedAgents().removeAll(agentNames);
     }
   }
 
