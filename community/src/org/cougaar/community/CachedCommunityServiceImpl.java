@@ -22,9 +22,6 @@ import org.cougaar.util.UnaryPredicate;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
 
-import org.cougaar.util.log.Logger;
-import org.cougaar.util.log.Logging;
-
 /**
  * Extends CommunityServiceImpl to provide local caching of frequently accessed
  * community information in NameServer.
@@ -32,21 +29,16 @@ import org.cougaar.util.log.Logging;
 
 public class CachedCommunityServiceImpl extends CommunityServiceImpl {
 
-  // Caching mode
-  static private boolean LAZY  = true;
-
   // Class defining Community entry in cache
   class Community {
     String name;
     Attributes attrs;
     Map entities;
-    boolean valid;  // are contents of cache valid
 
     private Community(String name, Attributes attrs) {
       this.name = name;
       this.attrs = attrs;
       this.entities = new HashMap();
-      this.valid = false;
     }
   }
 
@@ -66,10 +58,6 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
 
   protected CachedCommunityServiceImpl(ServiceBroker sb, MessageAddress addr) {
     super(sb, addr);
-    String cacheMode = System.getProperty("org.cougaar.community.caching.mode");
-    LAZY = (cacheMode == null || !cacheMode.equalsIgnoreCase("EAGER"));
-    if (log.isDebugEnabled())
-      log.debug("CacheMode is " + ((LAZY) ? "LAZY" : "EAGER"));
     initBlackboardSubscriber();
   }
     /**
@@ -85,8 +73,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
                !serviceBroker.hasService(SchedulerService.class) ||
                !serviceBroker.hasService(AlarmService.class)) {
           try { Thread.sleep(500); } catch(Exception ex) {}
-          if (log.isDebugEnabled())
-            log.debug("initBlackboardSubscriber: waiting for services ...");
+          log.debug("initBlackboardSubscriber: waiting for services ...");
         }
         SchedulerService ss = (SchedulerService)serviceBroker.getService(this,
           SchedulerService.class, new ServiceRevokedListener() {
@@ -130,13 +117,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         log.debug("Received added CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
       synchronized (this) {
-        if (LAZY) {
-          setIsValid(communityName, false);
-        } else { // EAGER
-          if (contains(communityName)) {
-            update(communityName);
-          }
-        }
+        if (contains(communityName)) update(communityName);
       }
     }
 
@@ -149,25 +130,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         log.debug("Received changed CommunityChangeNotification: community=" +
           communityName + " source=" + ccn.getSource());
       synchronized (this) {
-        if (LAZY) {
-          setIsValid(communityName, false);
-        } else { // EAGER
-          if (contains(communityName)) {
-            update(communityName);
-          }
-        }
+        if (contains(communityName)) update(communityName);
       }
     }
-  }
-
-  private synchronized void setIsValid(String communityName, boolean isValid) {
-    Community community = (Community)cache.get(communityName);
-    if (community != null) community.valid = isValid;
-  }
-
-  private synchronized boolean isValid(String communityName) {
-    Community community = (Community)cache.get(communityName);
-    return (community != null && community.valid);
   }
 
   /**
@@ -258,9 +223,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @return               Collection of entity names
    */
   public synchronized Collection search(String communityName, String filter) {
-    if (LAZY && !isValid(communityName)) {
-      update(communityName);
-    }
+    if (!contains(communityName)) update(communityName);
     Collection entities = new Vector();
     Community ce = (Community)cache.get(communityName);
     try {
@@ -308,16 +271,13 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         for (Iterator it = entities.iterator(); it.hasNext();) {
           String entityName = (String)it.next();
           attrs = super.getEntityAttributes(communityName, entityName);
-          if (log.isDebugEnabled())
-            log.debug("update: entity="+ entityName +
-                      " attributes=" + attrsToString(attrs));
+          log.debug("update: entity="+ entityName + " attributes=" + attrsToString(attrs));
           Object obj = super.lookup(communityName, entityName);
           addEntity(communityName, entityName, obj, attrs);
         }
         fireListeners(new CommunityChangeEvent(communityName,
                                                CommunityChangeEvent.ADD_COMMUNITY,
                                                communityName));
-        setIsValid(communityName, true);
       } else {
         log.error("Community '" + communityName + "' not found in Name Server");
       }
@@ -334,9 +294,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
   public synchronized Attributes getCommunityAttributes(String communityName) {
     if (log.isDebugEnabled())
       log.debug("getCommunityAttributes: community=" + communityName);
-    if (LAZY && !isValid(communityName)) {
-      update(communityName);
-    }
+    if (!contains(communityName)) update(communityName);
     Community ce = (Community)cache.get(communityName);
     return ce.attrs;
   }
@@ -352,28 +310,19 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
     if (log.isDebugEnabled())
       log.debug("getEntityAttributes: entity=" + entityName +
         " community=" + communityName);
-    if (LAZY && !isValid(communityName)) {
-      update(communityName);
-    }
+    if (!contains(communityName)) update(communityName);
     Community ce = (Community)cache.get(communityName);
     if (ce.entities.containsKey(entityName)) {
       return ((Entity)ce.entities.get(entityName)).attrs;
     } else {
-      if (log.isDebugEnabled())
-        log.debug("Community " + communityName + " does not contain entity " + entityName);
+      log.debug("Community " + communityName + " does not contain entity " + entityName);
       return new BasicAttributes();
     }
   }
 
   protected void notifyListeners(final String communityName, final String message) {
     Collection listeners = getListeners(communityName);
-    if (listeners.contains(agentId)) {
-      if (LAZY) {
-        setIsValid(communityName, false);
-      } else { // EAGER cache mode, update cache now
-        update(communityName);
-      }
-    }
+    if (listeners.contains(agentId)) update(communityName);
     super.notifyListeners(communityName, message);
   }
 

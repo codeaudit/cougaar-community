@@ -9,6 +9,8 @@
   <!-- set global properties for this build -->
   <property environment="env"/>
   <property name="cougaar" value="${env.COUGAAR_INSTALL_PATH}"/>
+  <property name="host" value="${env.HOST}"/>
+  <property name="workspace" value="${env.COUGAAR_INSTALL_PATH}/workspace"/>
   <property name="packageName" value="org.cougaar.community"/>
   <property name="packageDir" value="org/cougaar/community"/>
   <property name="classes" value="classes"/>
@@ -16,10 +18,16 @@
   <property name="src" value="src"/>
   <property name="lib" value="lib"/>
   <property name="examples" value="examples"/>
-  <property name="hostname" value="localhost"/>
   <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
   <property name="file" value="communities.xml" />
   <property name="assembly" value="COMM-DEFAULT_CONFIG" />
+  <property name="cache" value="on" />
+  <property name="cachemode" value="LAZY" />
+  <property name="port" value="8800"/>
+  <property name="node" value="MiniTestConfigNode"/>
+  <property name="nshost" value="${host}" />
+  <property name="nsport" value="8888:5555" />
+  <property name="nameserver" value="${nshost}:${nsport}" />
 
   <target name="init" >
     <mkdir dir="${classes}"/>
@@ -309,7 +317,7 @@
           <include name="**/*.jar" />
         </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common;$$CWD/examples/configs/common"/>
+      <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <arg line="org.cougaar.core.node.Node MiniNode"/>
     </java>
@@ -324,21 +332,24 @@
       <jvmarg value="-Xms100m" />
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
+        </fileset>
         <fileset dir="${cougaar}/lib">
           <include name="**/*.jar" />
         </fileset>
         <fileset dir="${cougaar}/sys">
           <include name="**/*.jar" />
         </fileset>
-        <fileset dir="${lib}">
-          <include name="**/*.jar" />
-        </fileset>
       </classpath>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/{examples}/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.node.name" value="${node}"/>
+      <sysproperty key="org.cougaar.name.server" value="${nameserver}"/>
+      <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.system.path" value="./lib"/>
-      <arg line="org.cougaar.core.node.Node MiniTestConfigNode"/>
+      <sysproperty key="org.cougaar.community.caching" value="${cache}"/>
+      <sysproperty key="org.cougaar.community.caching.mode" value="${cachemode}"/>
+      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
+      <arg line="org.cougaar.core.node.Node"/>
     </java>
   </target>
 

@@ -95,6 +95,10 @@
   <Community Name="MiniTestConfig-COMM" >
     <Attribute ID="CommunityType"    Value="Domain" />
     <Attribute ID="CommunityManager" Value="" />
+    <Entity Name="MiniTestConfigNode" >
+      <Attribute ID="EntityType"   Value="Agent"  />
+      <Attribute ID="Role"         Value="NodeAgent" />
+    </Entity>
     <Entity Name="1BDE" >
       <Attribute ID="EntityType"   Value="Agent"  />
       <Attribute ID="Role"         Value="Member" />
