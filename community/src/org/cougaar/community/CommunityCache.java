@@ -33,6 +33,7 @@ import org.cougaar.util.log.*;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,11 +67,29 @@ public class CommunityCache
                    " community=" + community.getName() +
                    " entities=" + entityNames(community.getEntities()));
     }
-    communities.put(community.getName(), community);
+    communities.put(community.getName(), new CacheEntry(new Date(), community));
   }
 
   protected Community get(String name) {
-    return (Community)communities.get(name);
+    CacheEntry ce = (CacheEntry)communities.get(name);
+    return (ce != null ? ce.community : null);
+  }
+
+  protected Date getTimeStamp(String name) {
+    CacheEntry ce = (CacheEntry)communities.get(name);
+    return ce.timeStamp;
+  }
+
+  protected Collection getExpired(long expirationPeriod) {
+    long now = (new Date()).getTime();
+    Collection expiredEntries = new Vector();
+    for (Iterator it = communities.values().iterator(); it.hasNext();) {
+      CacheEntry ce = (CacheEntry)it.next();
+      if ((ce.timeStamp.getTime() + expirationPeriod) < now) {
+        expiredEntries.add(ce.community.getName());
+      }
+    }
+    return expiredEntries;
   }
 
   protected Community remove(String communityName) {
@@ -78,7 +97,8 @@ public class CommunityCache
       logger.debug(cacheId+": remove:" +
                    " community=" + communityName);
     }
-    return (Community)communities.remove(communityName);
+    CacheEntry ce = (CacheEntry)communities.remove(communityName);
+    return ce.community;
   }
 
   protected boolean contains(String name) {
@@ -106,7 +126,8 @@ public class CommunityCache
   private void findAncestors(String entityName, Set ancestors, boolean recursive) {
     Collection allCommunities = communities.values();
     for (Iterator it = allCommunities.iterator(); it.hasNext();) {
-      Community community = (Community)it.next();
+      CacheEntry ce = (CacheEntry)it.next();
+      Community community = ce.community;
       if (community.hasEntity(entityName)) {
         String parent = community.getName();
         ancestors.add(parent);
@@ -158,7 +179,8 @@ public class CommunityCache
     try {
       Filter f = new SearchStringParser().parse(filter);
       for (Iterator it = communities.values().iterator(); it.hasNext(); ) {
-        Community community = (Community) it.next();
+        CacheEntry ce = (CacheEntry)it.next();
+        Community community = ce.community;
         if (f.match(community.getAttributes()))
           matches.add(community);
       }
@@ -294,7 +316,8 @@ public class CommunityCache
         // send an initial event
         if (cname.equals("ALL_COMMUNITIES")) {
           for (Iterator it = communities.values().iterator(); it.hasNext();) {
-            Community community = (Community)it.next();
+            CacheEntry ce = (CacheEntry)it.next();
+            Community community = ce.community;
             l.communityChanged(new CommunityChangeEvent(community,
                                                         CommunityChangeEvent.ADD_COMMUNITY,
                                                         community.getName()));
@@ -353,9 +376,24 @@ public class CommunityCache
       case CommunityChangeEvent.REMOVE_COMMUNITY:
         remove(affectedCommunity.getName());
         break;
+      case CommunityChangeEvent.ADD_ENTITY:
+      case CommunityChangeEvent.REMOVE_ENTITY:
+      case CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED:
+      case CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED:
+        CacheEntry ce = (CacheEntry)communities.get(affectedCommunity.getName());
+        ce.timeStamp = new Date();
+        break;
     }
     notifyListeners(cce);
   }
 
+  class CacheEntry {
+    private Date timeStamp;
+    private Community community;
+    CacheEntry(Date timeStamp, Community community) {
+      this.timeStamp = timeStamp;
+      this.community = community;
+    }
+  }
 
 }

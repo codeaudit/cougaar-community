@@ -84,10 +84,14 @@ public class CommunityPlugin extends ComponentPlugin {
 
   // Default timeout for a CommunityManagerRequest sent to a remote community
   // manager
-  public static final long RELAY_TIMEOUT = 30000;
+  public static final long RELAY_TIMEOUT = 1 * 60 * 1000;
 
   // Defines how often the CommunityRequestQueue is checked for pending requests
-  private long CMR_TIMER_INTERVAL = 2000;
+  private static final long CMR_TIMER_INTERVAL = 10 * 1000;
+
+  // Defines duration between updates from community manager before a cache
+  // refresh is requested.
+  public static final long CACHE_EXPIRATION = 10 * 60 * 1000;
 
   // Services used
   protected LoggingService logger;
@@ -103,7 +107,7 @@ public class CommunityPlugin extends ComponentPlugin {
   private CommunityMemberships myCommunities;
 
   // Local cache of Community objects
-  private CommunityCache communities;
+  private CommunityCache cache;
 
   // CommunityManagerRequests that have been sent to manager but haven't been
   // responded to yet
@@ -142,23 +146,14 @@ public class CommunityPlugin extends ComponentPlugin {
       (IncrementalSubscription)blackboard.subscribe(communityRequestPredicate);
 
     // Initialize cache
-    communities = new CommunityCache(agentId.toString() + ".pi");
+    cache = new CommunityCache(agentId.toString() + ".pi");
 
-    logger.debug("didRehydrate=" + blackboard.didRehydrate());
+    communityManager = new CommunityManager(agentId, blackboard,
+                                            getBindingSite().getServiceBroker());
+
+    logger.debug("didRehydrate=" + blackboard.didRehydrate() +
+                 " cacheExpirationTimeout=" + CACHE_EXPIRATION);
     if (blackboard.didRehydrate()) {
-      // Get persisted CommunityManager
-      Collection mgrs = blackboard.query(new UnaryPredicate() {
-        public boolean execute (Object o) {
-          return (o instanceof CommunityManager);
-        }
-      });
-      if (mgrs.isEmpty()) {
-        communityManager = new CommunityManager(agentId, blackboard,
-                                                getBindingSite().getServiceBroker());
-        //blackboard.publishAdd(communityManager);
-      } else {
-        communityManager = (CommunityManager)mgrs.iterator().next();
-      }
       Collection cms = blackboard.query(new UnaryPredicate() {
         public boolean execute (Object o) {
           return (o instanceof CommunityMemberships);
@@ -170,19 +165,19 @@ public class CommunityPlugin extends ComponentPlugin {
       } else {
         myCommunities = (CommunityMemberships)cms.iterator().next();
       }
-      // Rebuild cache from persisted CommunityDescriptors
-      Collection cds = blackboard.query(communityDescriptorPredicate);
-      for (Iterator it = cds.iterator(); it.hasNext();) {
-        CommunityDescriptor cd = (CommunityDescriptor)it.next();
-        Community community = cd.getCommunity();
-        communities.communityChanged(new CommunityChangeEvent(community,
-                                                              CommunityChangeEvent.ADD_COMMUNITY,
-                                                              community.getName()));
+      // Rebuild cache from persisted Community objects
+      Collection communities = blackboard.query(new UnaryPredicate() {
+        public boolean execute(Object o) {
+          return (o instanceof Community);
+        }
+      });
+      for (Iterator it = communities.iterator(); it.hasNext();) {
+        Community community = (Community)it.next();
+        cache.communityChanged(new CommunityChangeEvent(community,
+                                                        CommunityChangeEvent.ADD_COMMUNITY,
+                                                        community.getName()));
       }
     } else {
-      communityManager = new CommunityManager(agentId, blackboard,
-                                              getBindingSite().getServiceBroker());
-      //blackboard.publishAdd(communityManager);
       myCommunities = new CommunityMemberships();
       blackboard.publishAdd(myCommunities);
       Collection startupCommunities = findMyStartupCommunities();
@@ -307,7 +302,7 @@ public class CommunityPlugin extends ComponentPlugin {
       if (cr instanceof GetCommunity) {
         GetCommunity gcd = (GetCommunity)cr;
         // Check BB for local copy of CommunityDescriptor
-        Community community = communities.get(gcd.getCommunityName());
+        Community community = cache.get(gcd.getCommunityName());
         if (community != null) {  // found it locally, notify requestor
           CommunityResponse gcdResp =
             new CommunityResponseImpl(CommunityResponse.SUCCESS, community);
@@ -333,7 +328,7 @@ public class CommunityPlugin extends ComponentPlugin {
       } else if (cr instanceof CreateCommunity) {
           final CreateCommunity cc = (CreateCommunity)cr;
           // Check BB for local copy of CommunityDescriptor
-          Community community = communities.get(cc.getCommunityName());
+          Community community = cache.get(cc.getCommunityName());
           if (community != null) {  // found it locally, notify requestor
             CommunityResponse ccResp =
               new CommunityResponseImpl(CommunityResponse.SUCCESS, community);
@@ -423,18 +418,18 @@ public class CommunityPlugin extends ComponentPlugin {
       } else if (cr instanceof SearchCommunity) {
         final SearchCommunity sr = (SearchCommunity)cr;
         if (sr.getCommunityName() == null) { // search for a community
-          Set matchingCommunities = communities.search(sr.getFilter());
+          Set matchingCommunities = cache.search(sr.getFilter());
           CommunityResponse srResp =
               new CommunityResponseImpl(CommunityResponse.SUCCESS, matchingCommunities);
           sr.setResponse(srResp);
           blackboard.publishChange(sr);
         } else { // search for entities in named community
-          final Community community = (Community)communities.get(sr.getCommunityName());
+          final Community community = (Community)cache.get(sr.getCommunityName());
           if (community != null) { // community to search found in cache
-            Set entities = communities.search(sr.getCommunityName(),
-                                              sr.getFilter(),
-                                              sr.getQualifier(),
-                                              sr.isRecursiveSearch());
+            Set entities = cache.search(sr.getCommunityName(),
+                                        sr.getFilter(),
+                                        sr.getQualifier(),
+                                        sr.isRecursiveSearch());
             CommunityResponse srResp =
                 new CommunityResponseImpl(CommunityResponse.SUCCESS, entities);
             sr.setResponse(srResp);
@@ -444,7 +439,7 @@ public class CommunityPlugin extends ComponentPlugin {
             CommunityResponseListener crl = new CommunityResponseListener() {
               public void getResponse(CommunityResponse resp) {
                 final Community comm = (Community) resp.getContent();
-                final Set entities = communities.search(sr.getCommunityName(),
+                final Set entities = cache.search(sr.getCommunityName(),
                     sr.getFilter(),
                     sr.getQualifier(),
                     sr.isRecursiveSearch());
@@ -471,10 +466,10 @@ public class CommunityPlugin extends ComponentPlugin {
         // subscribe to changes in the associated Community object.
       } else if (cr instanceof AddChangeListener) {
         AddChangeListener acl = (AddChangeListener)cr;
-        communities.addListener(acl.getChangeListener());
+        cache.addListener(acl.getChangeListener());
         CommunityResponse aclResp =
           new CommunityResponseImpl(CommunityResponse.SUCCESS,
-                                    communities.get(acl.getCommunityName()));
+                                    cache.get(acl.getCommunityName()));
         acl.setResponse(aclResp);
         blackboard.publishChange(acl);
         ////////////////////////////////////////////////////
@@ -482,10 +477,10 @@ public class CommunityPlugin extends ComponentPlugin {
         ////////////////////////////////////////////////////
       } else if (cr instanceof RemoveChangeListener) {
         RemoveChangeListener rcl = (RemoveChangeListener)cr;
-        communities.removeListener(rcl.getChangeListener());
+        cache.removeListener(rcl.getChangeListener());
         CommunityResponse rclResp =
           new CommunityResponseImpl(CommunityResponse.SUCCESS,
-                                    communities.get(rcl.getCommunityName()));
+                                    cache.get(rcl.getCommunityName()));
         rcl.setResponse(rclResp);
         blackboard.publishChange(rcl);
       } else {
@@ -524,26 +519,12 @@ public class CommunityPlugin extends ComponentPlugin {
       updateMemberships(cmr);
       // Notify requester and remove Source Relay
       CmrQueueEntry cqe = (CmrQueueEntry) pendingRequests.remove(cmr.getUID());
-      if (cqe != null) {
-        RelayAdapter sourceRelay = (RelayAdapter) cqe.request;
-        if (sourceRelay != null) {
-          logger.debug("Removing CommunityManagerRequest relay: uid=" +
-                       sourceRelay.getUID());
-          blackboard.publishRemove(sourceRelay);
-          if (cqe.cr != null) {
-            cqe.cr.setResponse( (CommunityResponse) cmr.getResponse());
-            blackboard.publishChange(cqe.cr);
-          }
-        }
-        else {
-          logger.warn("Source relay not found for response, uid=" + cmr.getUID());
-        }
+      if (cqe != null && cqe.cr != null) {
+        cqe.cr.setResponse( (CommunityResponse) cmr.getResponse());
+        blackboard.publishChange(cqe.cr);
       }
-      else {
-        logger.warn("CmrQueueEntry not found for response, uid=" + cmr.getUID());
-      }
-    }
-    else {
+      deleteSourceRelay(cmr.getUID());
+    } else {
       logger.warn("Invalid CommunityResponse: response:" +
                    " source=" + cmr.getSource() +
                    " request=" + cmr.getRequestTypeAsString() +
@@ -551,6 +532,19 @@ public class CommunityPlugin extends ComponentPlugin {
                    " response=" + resp +
                    " id=" + cmr.getUID());
     }
+  }
+
+  private void deleteSourceRelay(UID uid) {
+    Collection relays = blackboard.query(communityManagerRequestRelayPredicate);
+    for (Iterator it = relays.iterator(); it.hasNext();) {
+      RelayAdapter ra = (RelayAdapter)it.next();
+      if (ra.getUID().equals(uid)) {
+        blackboard.publishRemove(ra);
+        //logger.debug("Removing source relay: uid=" + uid);
+        return;
+      }
+    }
+    logger.info("Unable to remove source relay, UID not found: uid=" + uid);
   }
 
   protected void processNewCommunityDescriptor(CommunityDescriptor cd) {
@@ -564,9 +558,9 @@ public class CommunityPlugin extends ComponentPlugin {
     }
     blackboard.publishAdd(community);
     getCommunityDescriptorsForDescendents(community);
-    communities.communityChanged(new CommunityChangeEvent(community,
-                                                          CommunityChangeEvent.ADD_COMMUNITY,
-                                                          community.getName()));
+    cache.communityChanged(new CommunityChangeEvent(community,
+                                                    CommunityChangeEvent.ADD_COMMUNITY,
+                                                    community.getName()));
     if (communityDescriptorRequests.containsKey(community.getName())) {
       List gcListeners = (List)communityDescriptorRequests.remove(community.getName());
       for (Iterator it1 = gcListeners.iterator(); it1.hasNext();) {
@@ -575,6 +569,7 @@ public class CommunityPlugin extends ComponentPlugin {
         blackboard.publishRemove(gce.cr);
       }
     }
+    validateCommunityDescriptor(cd);
   }
 
   protected void processChangedCommunityDescriptor(CommunityDescriptor cd) {
@@ -590,14 +585,14 @@ public class CommunityPlugin extends ComponentPlugin {
     }
     blackboard.publishChange(community);
     getCommunityDescriptorsForDescendents(community);
-    if (communities.contains(community.getName())) {
-      communities.communityChanged(new CommunityChangeEvent(community,
-                                                            cd.getChangeType(),
-                                                            cd.getWhatChanged()));
+    if (cache.contains(community.getName())) {
+      cache.communityChanged(new CommunityChangeEvent(community,
+                                                      cd.getChangeType(),
+                                                      cd.getWhatChanged()));
     } else {
-      communities.communityChanged(new CommunityChangeEvent(community,
-                                                            CommunityChangeEvent.ADD_COMMUNITY,
-                                                            community.getName()));
+      cache.communityChanged(new CommunityChangeEvent(community,
+                                                      CommunityChangeEvent.ADD_COMMUNITY,
+                                                      community.getName()));
     }
     if (communityDescriptorRequests.containsKey(community.getName())) {
       List gcListeners = (List)communityDescriptorRequests.remove(community.getName());
@@ -607,6 +602,7 @@ public class CommunityPlugin extends ComponentPlugin {
         blackboard.publishRemove(gce.cr);
       }
     }
+    validateCommunityDescriptor(cd);
   }
 
   protected void processRemovedCommunityDescriptor(CommunityDescriptor cd) {
@@ -614,29 +610,30 @@ public class CommunityPlugin extends ComponentPlugin {
     if (logger.isDebugEnabled()) {
       logger.debug("Received removed CommunityDescriptor" +
                    " target=" + agentId +
-                   " community=" + community.getName() +
-                   " entities=" + entityNames(community.getEntities()));
+                   " community=" + community.getName());
     }
     blackboard.publishRemove(community);
-    // Member of removed community?  If so, resubmit a join request for new
-    // manager
-    if (isMember(community, agentId.toString())) {
-      Attributes myAttrs = community.getEntity(agentId.toString()).
-          getAttributes();
-      CommunityManagerRequest cmr =
-          new CommunityManagerRequestImpl(agentId,
-                                          community.getName(),
-                                          CommunityManagerRequest.JOIN,
-                                          new AgentImpl(agentId.toString(),
-                                          myAttrs),
-                                          null,
-                                          uidService.nextUID());
-      queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
-    }
     // Remove community from cache
-    communities.communityChanged(new CommunityChangeEvent(community,
-        CommunityChangeEvent.REMOVE_COMMUNITY,
-        community.getName()));
+    cache.communityChanged(new CommunityChangeEvent(community,
+                                                    CommunityChangeEvent.REMOVE_COMMUNITY,
+                                                    community.getName()));
+    // Re-submit join requests for entities we added
+    Collection entitiesWeAdded = myCommunities.getEntities(cd.getName());
+    for (Iterator it = entitiesWeAdded.iterator(); it.hasNext(); ) {
+      Entity entityWeAdded = (Entity) it.next();
+      // Check for pending join request
+      if (!isCmrQueued(community.getName(), entityWeAdded.getName(),
+                       CommunityManagerRequest.JOIN)) {
+        CommunityManagerRequest cmr =
+            new CommunityManagerRequestImpl(agentId,
+                                            community.getName(),
+                                            CommunityManagerRequest.JOIN,
+                                            entityWeAdded,
+                                            null,
+                                            uidService.nextUID());
+        queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
+      }
+    }
   }
 
   /**
@@ -668,7 +665,7 @@ public class CommunityPlugin extends ComponentPlugin {
    * @return Collection of CommunityConfig objects defining parent communities
    */
   private Collection findMyStartupCommunities() {
-    Collection myCommunities = new Vector();
+    Collection startupCommunities = new Vector();
     Collection communityConfigs = null;
     ServiceBroker sb = getBindingSite().getServiceBroker();
     CommunityInitializerService cis = (CommunityInitializerService)
@@ -687,10 +684,10 @@ public class CommunityPlugin extends ComponentPlugin {
       Attributes attrs = ec.getAttributes();
       Attribute roles = attrs.get("Role");
       if (roles != null && roles.contains("Member")) {
-        myCommunities.add(cc);
+        startupCommunities.add(cc);
       }
     }
-    return myCommunities;
+    return startupCommunities;
   }
 
   /**
@@ -702,28 +699,56 @@ public class CommunityPlugin extends ComponentPlugin {
    */
   private void validateCommunityDescriptor(CommunityDescriptor cd) {
     Community community = cd.getCommunity();
-    if (myCommunities.containsKey(cd.getName())) {
-      Attributes myAttrs = (Attributes)myCommunities.get(cd.getName());
-      if (!cd.getCommunity().hasEntity(agentId.toString())) {
-        CommunityManagerRequest cmr =
-          new CommunityManagerRequestImpl(agentId,
-                                          community.getName(),
-                                          CommunityManagerRequest.JOIN,
-                                          new AgentImpl(agentId.toString(), myAttrs),
-                                          null,
-                                          uidService.nextUID());
-        queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
+    // Verify that community contains all the Entities that we've added
+    Collection entitiesWeAdded = myCommunities.getEntities(cd.getName());
+    for (Iterator it = entitiesWeAdded.iterator(); it.hasNext(); ) {
+      Entity entityWeAdded = (Entity) it.next();
+      Entity entityFromCommunity = community.getEntity(entityWeAdded.getName());
+      if (entityFromCommunity == null ||
+          !entityWeAdded.getAttributes().equals(entityFromCommunity.
+                                                getAttributes())) {
+        // Check for pending leave request, if no leave request has been issued
+        // submit a join request
+        if (!isCmrQueued(community.getName(), entityWeAdded.getName(), CommunityManagerRequest.LEAVE)) {
+          CommunityManagerRequest cmr =
+              new CommunityManagerRequestImpl(agentId,
+                                              community.getName(),
+                                              CommunityManagerRequest.JOIN,
+                                              entityWeAdded,
+                                              null,
+                                              uidService.nextUID());
+          queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
+          if (logger.isInfoEnabled()) {
+            logger.info(
+                "Detected inconsistent community, submitting join request to rectify:" +
+                " source=" + cmr.getSource() +
+                " community=" + cmr.getCommunityName() +
+                " entity=" + entityWeAdded.getName());
+          }
+        }
       }
-    } else {
+    }
+    // Verify that community doesn't contain this agent if we're not a member
+    if (!myCommunities.contains(community.getName(), agentId.toString())) {
       if (cd.getCommunity().hasEntity(agentId.toString())) {
-        CommunityManagerRequest cmr =
+        if (!isCmrQueued(community.getName(), agentId.toString(),
+                         CommunityManagerRequest.JOIN)) {
+          CommunityManagerRequest cmr =
               new CommunityManagerRequestImpl(agentId,
                                               community.getName(),
                                               CommunityManagerRequest.LEAVE,
                                               new EntityImpl(agentId.toString()),
                                               null,
                                               uidService.nextUID());
-        queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
+          queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
+          if (logger.isInfoEnabled()) {
+            logger.info(
+                "Detected inconsistent community, submitting leave request to rectify:" +
+                " source=" + cmr.getSource() +
+                " community=" + cmr.getCommunityName() +
+                " entity=" + agentId.toString());
+          }
+        }
       }
     }
   }
@@ -734,19 +759,19 @@ public class CommunityPlugin extends ComponentPlugin {
    * @param CommunityManagerRequestescrip
    */
   private void updateMemberships(CommunityManagerRequest cmr) {
-    if (cmr.getEntity() != null &&
-        cmr.getEntity().getName().equals(agentId.toString()) &&
+    Entity entity = cmr.getEntity();
+    if (entity != null &&
         cmr.getResponse() != null &&
         ((CommunityResponse)cmr.getResponse()).getStatus() == CommunityResponse.SUCCESS) {
       String communityName = cmr.getCommunityName();
       switch(cmr.getRequestType()) {
         case CommunityManagerRequest.JOIN:
-          if (!myCommunities.containsKey(communityName))
-            myCommunities.put(communityName, cmr.getEntity().getAttributes());
+          if (!myCommunities.contains(communityName, entity.getName()))
+            myCommunities.add(communityName, entity);
           break;
         case CommunityManagerRequest.LEAVE:
-          if (myCommunities.containsKey(communityName))
-            myCommunities.remove(communityName);
+          if (myCommunities.contains(communityName, entity.getName()))
+            myCommunities.remove(communityName, entity.getName());
           break;
       }
     }
@@ -792,11 +817,11 @@ public class CommunityPlugin extends ComponentPlugin {
    * a request is queued for manager
    */
   private void getCommunityDescriptorsForDescendents(Community community) {
-    Collection nestedCommunities = communities.getNestedCommunityNames(community);
+    Collection nestedCommunities = cache.getNestedCommunityNames(community);
     for (Iterator it = nestedCommunities.iterator(); it.hasNext(); ) {
       String nestedCommunityName = (String) it.next();
-      boolean inCache = communities.contains(nestedCommunityName);
-      boolean cmrPending = isCmrQueued(nestedCommunityName,
+      boolean inCache = cache.contains(nestedCommunityName);
+      boolean cmrPending = isCmrQueued(nestedCommunityName, null,
                                        CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR);
       if (!inCache && !cmrPending) {
         if (logger.isDebugEnabled())
@@ -816,14 +841,16 @@ public class CommunityPlugin extends ComponentPlugin {
   }
 
   // Check CMR queue and pending request queue for a CMR curently being processed
-  private boolean isCmrQueued(String communityName, int type) {
+  private boolean isCmrQueued(String communityName, String entityName, int type) {
     boolean cmrQueued = false;
     // Check for CMRs that have been queued but not yet sent to community manager
     for (Iterator it = communityManagerRequestQueue.iterator(); it.hasNext();) {
       CmrQueueEntry cqe = (CmrQueueEntry)it.next();
       CommunityManagerRequest cmr = (CommunityManagerRequest)cqe.request;
+      Entity entity = cmr.getEntity();
       if (cmr.getCommunityName().equals(communityName) &&
-          cmr.getRequestType() == type) {
+          cmr.getRequestType() == type &&
+          (entityName == null || (entity != null && entityName.equals(entity.getName())))) {
         cmrQueued = true;
         break;
       }
@@ -835,8 +862,10 @@ public class CommunityPlugin extends ComponentPlugin {
       CmrQueueEntry cqe = (CmrQueueEntry)it1.next();
       RelayAdapter ra = (RelayAdapter)cqe.request;
       CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
+      Entity entity = cmr.getEntity();
       if (cmr.getCommunityName().equals(communityName) &&
-          cmr.getRequestType() == type) {
+          cmr.getRequestType() == type &&
+          (entityName == null || (entity != null && entityName.equals(entity.getName())))) {
         cmrQueued = true;
         break;
       }
@@ -920,14 +949,16 @@ public class CommunityPlugin extends ComponentPlugin {
       EntityConfig ec = cc.getEntity(agentId.toString());
       MessageAddress cmAddr = communityManager.findManager(communityName);
       Set designatedManagers = getDesignatedManagers(cc);
+      logger.debug("joinStartupCommunity:" +
+                   " agent=" + agentId.toString() +
+                   " community=" + communityName +
+                   " designatedManagers=" + designatedManagers +
+                   " canBeManager=" + canBeManager(ec));
       if (designatedManagers.contains(ec.getName()) ||
           (cmAddr == null && designatedManagers.isEmpty() && canBeManager(ec))) {
-        // Create community and add self
-        CommunityImpl community = new CommunityImpl(communityName);
-        community.setAttributes(cc.getAttributes());
-        AgentImpl entity = new AgentImpl(agentId.toString());
-        entity.setAttributes(ec.getAttributes());
-        community.addEntity(entity);
+        // Create community
+        communityManager.addCommunity(new CommunityImpl(communityName,
+                                                        cc.getAttributes()));
         // Add any nested communities
         for (Iterator it1 = cc.getEntities().iterator(); it1.hasNext();) {
           EntityConfig ec1 = (EntityConfig)it1.next();
@@ -936,26 +967,31 @@ public class CommunityPlugin extends ComponentPlugin {
             Attribute attr = attrs.get("EntityType");
             if (attr != null) {
               if (attr.contains("Community")) {
-                org.cougaar.core.service.community.Community nestedCommunity =
-                  new CommunityImpl(ec1.getName(), attrs);
-                community.addEntity(nestedCommunity);
+                Community nestedCommunity = new CommunityImpl(ec1.getName(), attrs);
+                CommunityManagerRequest cmr =
+                    new CommunityManagerRequestImpl(agentId,
+                                                    communityName,
+                                                    CommunityManagerRequest.JOIN,
+                                                    nestedCommunity,
+                                                    null,
+                                                    uidService.nextUID());
+                queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
               }
             }
           }
+
         }
-        communityManager.addCommunity(community);
-        //myCommunities.put(community.getName(), entity.getAttributes());
-        //blackboard.publishAdd(community);
-      } else { // queue join request
-        CommunityManagerRequest cmr =
+      }
+      // Submit join request to add self to community
+      CommunityManagerRequest cmr =
           new CommunityManagerRequestImpl(agentId,
                                           communityName,
                                           CommunityManagerRequest.JOIN,
-                                          new AgentImpl(ec.getName(), ec.getAttributes()),
+                                          new AgentImpl(ec.getName(),
+          ec.getAttributes()),
                                           null,
                                           uidService.nextUID());
-        queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
-      }
+      queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
     }
   }
 
@@ -969,7 +1005,7 @@ public class CommunityPlugin extends ComponentPlugin {
     try {
       Attributes attrs = cc.getAttributes();  // get community attributes
       if (attrs != null) {
-        Attribute attr = attrs.get("Manager");
+        Attribute attr = attrs.get("CommunityManager");
         if (attr != null && attr.size() > 0) { // is a manager specified?
           for (NamingEnumeration ne = attr.getAll(); ne.hasMoreElements();) {
             managers.add(ne.next());
@@ -1081,12 +1117,6 @@ public class CommunityPlugin extends ComponentPlugin {
                                                                    TIMEOUT, null);
                 cqe.cr.setResponse(resp);
                 responsesToPublish.add(cqe.cr);
-                /*
-                CommunityResponseListener crl = cqe.cr.getCommunityResponseListener();
-                if (crl != null) {
-                  crl.get(resp);
-                }
-                */
               }
             }
           }
@@ -1114,7 +1144,7 @@ public class CommunityPlugin extends ComponentPlugin {
                                  " request=" + cmr.getRequestTypeAsString() +
                                  " community=" + cmr.getCommunityName() +
                                  " cmrUid=" + cmr.getUID() +
-                                 " crUid=" + cqe.cr.getUID() +
+                                 " crUid=" + (cqe.cr != null ? cqe.cr.getUID().toString() : "nullCR") +
                                  " timeout=" +
                                  (cqe.ttl < 0 ? cqe.ttl :
                                   cqe.ttl - cqe.createTime) +
@@ -1134,14 +1164,32 @@ public class CommunityPlugin extends ComponentPlugin {
                                                                        TIMEOUT, null);
                     cqe.cr.setResponse(resp);
                     responsesToPublish.add(cqe.cr);
-                    /*
-                    CommunityResponseListener crl = cqe.cr.getCommunityResponseListener();
-                    if (crl != null) {
-                      crl.get(resp);
-                    }
-                    */
                   }
                 }
+              }
+            }
+          }
+          // Request an update for cache entries that haven't been modified within
+          // expiration period
+          Collection expiredCacheEntries = cache.getExpired(CACHE_EXPIRATION);
+          if (!expiredCacheEntries.isEmpty()) {
+            for (Iterator it = expiredCacheEntries.iterator(); it.hasNext(); ) {
+              String communityName = (String) it.next();
+              if (!isCmrQueued(communityName, null,
+                               CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR)) {
+                if (logger.isDebugEnabled()) {
+                  logger.debug("Expired cache entry:" +
+                               " community=" + communityName +
+                               " updateRequested=true");
+                }
+                CommunityManagerRequest cmr =
+                    new CommunityManagerRequestImpl(agentId,
+                    communityName,
+                    CommunityManagerRequest.GET_COMMUNITY_DESCRIPTOR,
+                    null,
+                    null,
+                    uidService.nextUID());
+                queueCommunityManagerRequest(new CmrQueueEntry(cmr, null));
               }
             }
           }

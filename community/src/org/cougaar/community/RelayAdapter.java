@@ -35,7 +35,8 @@ import java.util.Iterator;
  */
 
 public class RelayAdapter implements Relay.Source {
-  protected transient Set myTargetSet = new HashSet();
+  //protected transient Set myTargetSet = new HashSet();
+  protected Set myTargetSet = new HashSet();
   MessageAddress source;
   Object content;
   UID myUID;
