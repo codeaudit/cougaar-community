@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.relay.Relay;
+import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.util.UID;
 
 /**
@@ -47,6 +48,7 @@ public class RelayAdapter implements Relay.Source {
   Object content;
   UID myUID;
   Object resp;
+  CommunityResponseListener crl;
 
   public RelayAdapter(MessageAddress source,
                Object content,
@@ -121,6 +123,14 @@ public class RelayAdapter implements Relay.Source {
     myUID = uid;
   }
 
+  public void setCommunityResponseListener(CommunityResponseListener crl) {
+    this.crl = crl;
+  }
+  
+  public CommunityResponseListener getCommunityResponseListener() {
+    return crl;
+  }
+  
   public static String targetsToString(Relay.Source rs) {
     StringBuffer sb = new StringBuffer("[");
     if (rs != null) {

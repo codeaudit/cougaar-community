@@ -13,23 +13,19 @@ import org.cougaar.core.util.UniqueObject;
 
 public class ListAgentParentCommunities implements Relay.Target, java.io.Serializable, UniqueObject {
   private String member;
-    private String filter;
-    private UID uid;
-    private MessageAddress source;
-    private CommunityResponse resp;
+  private UID uid;
+  private MessageAddress source;
+  private CommunityResponse resp;
 
-    public ListAgentParentCommunities(MessageAddress source,
-                                   UID uid,
-                                   String member,
-                                   String filter) {
+  public ListAgentParentCommunities(MessageAddress source,
+                                    UID uid,
+                                    String member) {
       this.member = member;
-      this.filter = filter;
       this.uid = uid;
       this.source = source;
     }
 
     public String getMember() {return member;}
-    public String getFilter() {return filter;}
     public UID getUID() { return uid;}
     public void setUID(UID uid) {
         throw new UnsupportedOperationException();
@@ -52,7 +48,7 @@ public class ListAgentParentCommunities implements Relay.Target, java.io.Seriali
     public int hashCode() { return uid.hashCode();}
 
     public String toString() {
-      return "ListAgentParentCommunities: member=" + member + ", filter=" + filter;
+      return "ListAgentParentCommunities: member=" + member;
     }
 
 

@@ -29,17 +29,25 @@ package org.cougaar.community;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
 import javax.naming.directory.ModificationItem;
 
 import org.cougaar.community.manager.CommunityManager;
 import org.cougaar.community.manager.DefaultCommunityManagerImpl;
 import org.cougaar.community.manager.Request;
 import org.cougaar.community.manager.RequestImpl;
-
+import org.cougaar.community.requests.ListAgentParentCommunities;
+import org.cougaar.core.agent.service.alarm.Alarm;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceAvailableEvent;
@@ -48,25 +56,18 @@ import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.UIDService;
 import org.cougaar.core.service.ThreadService;
-import org.cougaar.core.agent.service.alarm.Alarm;
-
+import org.cougaar.core.service.UIDService;
+import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.CommunityService;
-import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.FindCommunityCallback;
-
-import org.cougaar.community.CommunityResponseImpl;
-import org.cougaar.community.requests.ListAgentParentCommunities;
-
 import org.cougaar.core.service.wp.AddressEntry;
 import org.cougaar.core.service.wp.Callback;
 import org.cougaar.core.service.wp.Response;
 import org.cougaar.core.service.wp.WhitePagesService;
-
 import org.cougaar.core.util.UID;
 import org.cougaar.util.UnaryPredicate;
 
@@ -379,13 +380,13 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
           }
         }
         long wpRespTime = System.currentTimeMillis() - start;
-        if (log.isInfoEnabled() && wpRespTime > 10000) {
-          log.info(agentName + ": findManager.execute:" +
+        if (log.isDebugEnabled() && wpRespTime > 10000) {
+          log.debug(agentName + ": findManager.execute:" +
                      " community=" + communityName +
                      " manager=" + name +
                      " wpRespTime=" + wpRespTime);
-        } else if (log.isDebugEnabled()) {
-          log.debug(agentName + ": findManager.execute:" +
+        } else if (log.isDetailEnabled()) {
+          log.detail(agentName + ": findManager.execute:" +
                      " community=" + communityName +
                      " manager=" + name +
                      " wpRespTime=" + wpRespTime);
@@ -443,6 +444,56 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
 
   }
 
+  Map parentsForRemoteAgent = Collections.synchronizedMap(new HashMap());
+  
+  public Collection listParentCommunities(String                    member,
+                                          CommunityResponseListener crl) {
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunities:" +
+                " member=" + member +
+                " hasCRL=" + (crl != null));
+    }
+    String child = (member == null) ? getAgentName() : member;
+    if (child.equals(getAgentName()) || cache.contains(child)) {
+      // Entity is this agent or a community found in local cache
+      return listParentCommunitiesForLocalEntity(child);
+    } else {
+      return listParentCommunitiesForRemoteEntity(child, crl);
+    }
+  }
+  
+  protected Collection listParentCommunitiesForLocalEntity(String member) {
+    String child = (member == null) ? getAgentName() : member;
+    Set parents = new HashSet();
+    if (child.equals(getAgentName())) {
+      // List parents of this agent
+      parents = cache.getAncestorNames(child, false);
+    } else if (cache.contains(child)) {  // it's a community
+      // List parents of community found in local cache
+      Attributes attrs = cache.get(child).getAttributes();
+      if (attrs != null) {
+        Attribute parentAttr = attrs.get("Parent");
+        if (parentAttr != null) {
+          try {
+            for (NamingEnumeration en = parentAttr.getAll(); en.hasMore(); ) {
+              parents.add((String)en.next());
+            }
+          } catch (NamingException ne) {
+            if (log.isErrorEnabled()) {
+              log.error(agentName + ": Error parsing attributes for " + child, ne);
+            }
+          }
+        }
+      }
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunitiesForLocalEntity:" +
+                " member=" + child + 
+                " parents=" + parents);
+    }
+    return parents;
+  }
+  
   /**
    * Create list of parent communities.  For local agent this can easily be
    * obtained from cache.  For any other agent/community a request must be sent
@@ -452,64 +503,70 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
    * @param crl CommunityResponseListener
    * @return Collection
    */
-  public Collection listParentCommunities(final String                    member,
-                                          String                    filter,
-                                          CommunityResponseListener crl) {
-    if(member.equals(agentName)) {
-      Collection results = listParentCommunities(member, filter);
-      if(crl != null)
-        crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, results));
-      return results;
+  public Collection listParentCommunitiesForRemoteEntity(final String member,
+                                          final CommunityResponseListener crl) {
+    Collection allCommunities = listAllCommunities();
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunitiesForRemoteEntity:" +
+                " requester=" + getAgentName() +
+                " member=" + member +
+                " hasCRL=" + (crl != null) +
+                " boundCommunities=" + allCommunities +
+                //" cache=" + parentsForRemoteAgent.keySet() +
+                " memberIsCommunity=" + allCommunities.contains(member));
     }
-
-    Collection comms = listAllCommunities();
-    final List temp = new ArrayList();
-    String target = member;
-    // the member is a community, get the community manager to send the relay.
-    if(comms.contains(member)) {
+    if (parentsForRemoteAgent.containsKey(member)) {
+      return (Collection)parentsForRemoteAgent.remove(member);
+    }
+    if (allCommunities.contains(member)) {
+      // Member is a community, send relay to community manager
       findManager(member, new FindCommunityCallback() {
         public void execute(String manager) {
-          temp.add(manager);
-          if(log.isDebugEnabled())
-            log.debug("get manager of community " + member + ": " + manager);
+          if (manager != null) {
+            UID uid = uidService.nextUID();
+            ListAgentParentCommunities tr = 
+              new ListAgentParentCommunities(agentId, uid, member);
+            RelayAdapter relay = new RelayAdapter(agentId, tr, uid);
+            relay.setCommunityResponseListener(crl);
+            relay.addTarget(MessageAddress.getMessageAddress(manager));
+            if (log.isDebugEnabled()) {
+              log.debug("listParentCommunitiesForRemoteCommunity: " +
+                        " member=" + member +
+                        " communityManager=" + manager +
+                        " hasCRL=" + (crl != null) +
+                        " uid=" + uid);
+            }
+            myBlackboardClient.publish(relay, BlackboardClient.ADD);
+          } else {
+            if (log.isDebugEnabled()) {
+              log.debug("listParentCommunites: TIMEOUT member=" + member);
+            }
+            if (crl != null) {
+              crl.getResponse(new CommunityResponseImpl(CommunityResponse.TIMEOUT, 
+                                                        Collections.EMPTY_SET));
+            }
+          }
         }
       }, 5000);
-      while(temp.size() == 0) {
-        try { Thread.sleep(1000);} catch (Exception ex) {}
+    } else {
+      // Member is a regular agent, send relay to agent
+      UID uid = uidService.nextUID();
+      ListAgentParentCommunities tr = 
+        new ListAgentParentCommunities(agentId, uid, member);
+      RelayAdapter relay = new RelayAdapter(agentId, tr, uid);
+      relay.setCommunityResponseListener(crl);
+      relay.addTarget(MessageAddress.getMessageAddress(member));
+      if (log.isDebugEnabled()) {
+        log.debug("listParentCommunitiesForRemoteAgent: " +
+                  " member=" + member +
+                  " hasCRL=" + (crl != null) +
+                  " uid=" + uid);
       }
-      target = (String)temp.get(0);
-      if(target.equals(agentName)) {
-        Collection results = listParentCommunities(member, filter);
-        if(crl != null)
-          crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, results));
-        return results;
-      }
+      myBlackboardClient.publish(relay, BlackboardClient.ADD);
     }
-
-    UID uid = uidService.nextUID();
-    ListAgentParentCommunities tr = new ListAgentParentCommunities(agentId, uid, member, filter);
-    RelayAdapter relay = new RelayAdapter(agentId,
-                                          tr,
-                                          uid);
-    relay.addTarget(MessageAddress.getMessageAddress(target));
-    if(log.isDebugEnabled())
-      log.debug("try to publish relay: " + relay);
-    myBlackboardClient.publish(relay, BlackboardClient.ADD);
-
-    while(relay.getResponse() == null) {
-      try { Thread.sleep(1000);} catch (Exception ex) {}
-    }
-
-    CommunityResponse cr = (CommunityResponse)relay.getResponse();
-    Collection results = (Collection)cr.getContent();
-    if(log.isDetailEnabled())
-      log.detail(agentName + ": get listParentCommunities of " + member + ": " + results);
-    if(crl != null)
-      crl.getResponse(cr);
-    return results;
-
+    return null;
   }
-
+  
   class MyBlackboardClient extends BlackboardClient {
 
     List findManagerRequests = Collections.synchronizedList(new ArrayList());
@@ -596,8 +653,12 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
           (IncrementalSubscription)blackboard.subscribe(
           communityDescriptorPredicate);
 
-      // Subscribe to ListParentCommunities request
-      mylpcSub = (IncrementalSubscription)blackboard.subscribe(mylpcPredicate);
+      // Subscribe to ListParentCommunities request and response
+      listParentCommunitiesSub = 
+        (IncrementalSubscription)blackboard.subscribe(listParentCommunitiesPredicate);
+      listParentCommunitiesResponseSub = 
+        (IncrementalSubscription)blackboard.subscribe(listParentCommunitiesResponsePredicate);
+      
     }
 
     public void execute() {
@@ -675,21 +736,42 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
         communityUpdateListener.removeCommunity(cd.getCommunity());
       }
 
-      //Fetch ListParentCommunities requests.
-      Collection list = mylpcSub.getAddedCollection();
-      for(Iterator it = list.iterator(); it.hasNext();) {
+      // ListParentCommunities requests
+      for (Iterator it = listParentCommunitiesSub.getAddedCollection().iterator(); it.hasNext();) {
         ListAgentParentCommunities tr = (ListAgentParentCommunities)it.next();
-        if(tr.getResponse() == null) {
-          if(logger.isDetailEnabled())
-            logger.detail("received TestRelay: source=" + tr.getSource() + ", content=" + tr);
-          Collection parents = Collections.synchronizedCollection(listParentCommunities(tr.getMember(), tr.getFilter()));
-          tr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, parents));
-          if(logger.isDetailEnabled())
-            logger.detail("publish change: " + tr);
-          blackboard.publishChange(tr);
+        String member = tr.getMember();
+        Collection parents = listParentCommunities(member);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Received ListAgentParentCommunities request:" +
+                       " source=" + tr.getSource() + 
+                       " member=" + tr.getMember() +
+                       " parents=" + parents +
+                       " uid=" + tr.getUID());
         }
+        tr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS, parents));
+        blackboard.publishChange(tr);
       }
 
+      // ListParentCommunities responses
+      for (Iterator it = listParentCommunitiesResponseSub.getChangedCollection().iterator(); it.hasNext();) {
+        RelayAdapter ra = (RelayAdapter)it.next();
+        ListAgentParentCommunities tr = (ListAgentParentCommunities)ra.getContent();
+        String member = tr.getMember();
+        Collection parents = (Collection)((CommunityResponse)ra.getResponse()).getContent();
+        parentsForRemoteAgent.put(member, parents);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Received ListAgentParentCommunities response:" +
+                       " member=" + member +
+                       " parents=" +  parents +
+                       " hasCallback=" + (ra.getCommunityResponseListener() != null) +
+                       " uid=" + tr.getUID());
+        }
+        CommunityResponseListener crl = ra.getCommunityResponseListener();
+        if (crl != null) {
+          crl.getResponse((CommunityResponse)ra.getResponse());
+        }
+        blackboard.publishRemove(ra);
+      }
     }
 
     private void sendCommunityResponses() {
@@ -742,9 +824,11 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
     /**
      * Predicate used to list parent communities.
      */
-    private IncrementalSubscription mylpcSub;
-    private UnaryPredicate mylpcPredicate = new UnaryPredicate() {
-      public boolean execute(Object o) {return (o instanceof ListAgentParentCommunities);}
+    private IncrementalSubscription listParentCommunitiesSub;
+    private UnaryPredicate listParentCommunitiesPredicate = new UnaryPredicate() {
+      public boolean execute(Object o) {
+        return (o instanceof ListAgentParentCommunities);
+      }
     };
 
     /**
@@ -765,6 +849,20 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
     private UnaryPredicate communityDescriptorPredicate = new UnaryPredicate() {
       public boolean execute(Object o) {
         return (o instanceof CommunityDescriptor);
+      }
+    };
+
+    /**
+     * Selects RelayAdapters containing ListParentCommunities request
+     */
+    private IncrementalSubscription listParentCommunitiesResponseSub;
+    private UnaryPredicate listParentCommunitiesResponsePredicate = new UnaryPredicate() {
+      public boolean execute(Object o) {
+        if (o instanceof RelayAdapter) {
+          RelayAdapter ra = (RelayAdapter)o;
+          return (ra.getContent() instanceof ListAgentParentCommunities);
+        }
+        return false;
       }
     };
 

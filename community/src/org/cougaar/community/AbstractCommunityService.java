@@ -33,8 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
@@ -660,38 +658,17 @@ public abstract class AbstractCommunityService
    *         data from local cache, otherwise null
    */
   public Collection listParentCommunities(String                    member,
+                                          String                    filter,
                                           CommunityResponseListener crl) {
-    String child = member == null ? getAgentName() : member;
-    Collection parents = cache.getAncestorNames(child, false);
-    if (cache.contains(member)) { // member is a community
-      Attributes attrs = cache.get(member).getAttributes();
-      if (attrs != null) {
-        Attribute parentAttr = attrs.get("Parent");
-        if (parentAttr != null) {
-          try {
-            for (NamingEnumeration en = parentAttr.getAll(); en.hasMore(); ) {
-              parents.add((String)en.next());
-            }
-          } catch (NamingException ne) {
-            if (log.isErrorEnabled()) {
-              log.error(agentName + ": Error parsing attributes for " +
-                        member, ne);
-            }
-          }
-        }
-      }
-    }
     if (log.isDebugEnabled()) {
-      log.debug(agentName+": listParentCommunities:" +
-                " entity=" + member +
-                " inCache=" + (parents != null) +
-                " results=" + (parents != null
-                                 ? Integer.toString(parents.size())
-                                 : null));
+      log.debug("listParentCommunities:" +
+                " member=" + member +
+                " filter=" + filter +
+                " hasCRL=" + (crl != null));
     }
-    return parents;
+    return listParentCommunities(member, crl);
   }
-
+  
   /**
    * Add listener for CommunityChangeEvents.
    * @param l  Listener
@@ -789,6 +766,10 @@ public abstract class AbstractCommunityService
    * @return A collection of community names
    */
   public Collection listParentCommunities(String member) {
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunities:" +
+                " member=" + member);
+    }
     return cache.getAncestorNames(member, false);
   }
 
@@ -800,6 +781,11 @@ public abstract class AbstractCommunityService
    * @return A collection of community names
    */
   public Collection listParentCommunities(String member, String filter) {
+    if (log.isDebugEnabled()) {
+      log.debug("listParentCommunities:" +
+                " member=" + member +
+                " filter=" + filter);
+    }
     List matches = new ArrayList();
     Collection parentNames = listParentCommunities(member);
     Set communitiesMatchingFilter = cache.search(filter);
@@ -813,10 +799,6 @@ public abstract class AbstractCommunityService
     }
     return matches;
   }
-
-  abstract public Collection listParentCommunities(String                    member,
-                                                   String                    filter,
-                                                   CommunityResponseListener crl);
 
   /**
    * Handle response to community request returned by manager.
