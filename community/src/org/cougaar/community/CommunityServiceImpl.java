@@ -128,9 +128,9 @@ public class CommunityServiceImpl extends ComponentPlugin
         context = root.createSubcontext(contextName, null);
       } catch (NameAlreadyBoundException nabe) {
         log.debug("Context " + contextName + " already bound!");
+	return getContext(contextName);
       } catch (Exception ex) {
         log.error("Exception creating Context " + contextName + ", " + ex);
-	return getContext(contextName);
       }
     }
     return context;
