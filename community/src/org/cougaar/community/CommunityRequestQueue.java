@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -69,6 +69,7 @@ public class CommunityRequestQueue {
                                int requestType,
                                Entity entity,
                                ModificationItem[] attrMods,
+                               long timeout,
                                CommunityResponseListener crl) {
     if (logger.isDebugEnabled()) {
       logger.debug(agentName+": add:" +
@@ -82,6 +83,7 @@ public class CommunityRequestQueue {
                                           requestType,
                                           entity,
                                           attrMods,
+                                          timeout,
                                           crl);
     queue.add(req);
     execute();
@@ -118,6 +120,7 @@ public class CommunityRequestQueue {
                                      req.type,
                                      req.entity,
                                      req.mods,
+                                     req.timeout,
                                      req.crl);
       } else {  // not yet
         if (fireAt == 0 || req.processAt < fireAt) {
@@ -150,6 +153,7 @@ public class CommunityRequestQueue {
     long processAt;
     String communityName;
     int type;
+    long timeout;
     Entity entity;
     ModificationItem[] mods;
     CommunityResponseListener crl;
@@ -158,12 +162,14 @@ public class CommunityRequestQueue {
                   int t,
                   Entity e,
                   ModificationItem[] m,
+                  long to,
                   CommunityResponseListener l) {
       processAt = time;
       communityName = cname;
       type = t;
       entity = e;
       mods = m;
+      this.timeout = to;
       crl = l;
     }
   }

@@ -89,6 +89,7 @@ public class CommunityServiceTestImpl extends AbstractCommunityService
                                        Entity                    entity,
                                        ModificationItem[]        attrMods,
                                        CommunityResponseListener crl,
+                                       long                      timeout,
                                        long                      delay) {
     log.debug(agentName+": queueCommunityRequest: " +
               " community=" + communityName +
@@ -98,6 +99,12 @@ public class CommunityServiceTestImpl extends AbstractCommunityService
     CommunityResponse resp =
         communityManager.processRequest(agentName, communityName, requestType, entity, attrMods);
     handleResponse(communityName, resp, Collections.singleton(crl));
+  }
+
+  public Collection listParentCommunities(String                    member,
+                                          String                    filter,
+                                          CommunityResponseListener crl) {
+    return listParentCommunities(member, filter);
   }
 
   protected void sendResponse(CommunityResponse resp, Set listeners) {
