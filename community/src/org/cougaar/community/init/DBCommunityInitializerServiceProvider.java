@@ -81,9 +81,9 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
   private class CommunityInitializerServiceImpl implements CommunityInitializerService {
 
     public Collection getCommunityDescriptions(
-        String entityName,
-        String empty) // bogus param?
+					       String entityName)
     {
+ // param is xml file name for File Initializer. Unused here.
       Collection ret = new Vector();
       Map substitutions = null;
       String query1 = null;
@@ -247,7 +247,7 @@ class DBCommunityInitializerServiceProvider implements ServiceProvider {
       sb.getService(requestor, CommunityInitializerService.class, null);
 
     // print the communities
-    Collection configs = cis.getCommunityDescriptions(entityName, "");
+    Collection configs = cis.getCommunityDescriptions(entityName);
     System.out.println("<Communities>");
     for (Iterator it = configs.iterator(); it.hasNext();) {
       System.out.println(((CommunityConfig)it.next()).toString());

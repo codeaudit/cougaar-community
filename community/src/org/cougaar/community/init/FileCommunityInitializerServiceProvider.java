@@ -57,10 +57,9 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
 
   private class CommunityInitializerServiceImpl implements CommunityInitializerService {
     public Collection getCommunityDescriptions(
-        String entityName,
-        String initXmlFile)
+        String entityName)
     {
-      String file = ((initXmlFile == null) ? DEFAULT_FILE : initXmlFile);
+      String file = System.getProperty("org.cougaar.community.configfile", DEFAULT_FILE);
       Collection ret;
       try {
         ret = getCommunityConfigsFromFile(file, entityName);
@@ -124,16 +123,14 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
    */
   public static void main(String args[]) throws Exception {
     String entityName = "OSC";
-    String fileName = null;
     System.out.print(
-        "<!-- load entity=\""+entityName+
-        "\" file=\""+fileName+"\" -->");
+        "<!-- load entity=\""+entityName+" -->");
     //
     FileCommunityInitializerServiceProvider me = 
       new FileCommunityInitializerServiceProvider();
     CommunityInitializerService cis = (CommunityInitializerService)
       me.getService(null, null, CommunityInitializerService.class);
-    Collection configs = cis.getCommunityDescriptions(entityName, fileName);
+    Collection configs = cis.getCommunityDescriptions(entityName);
     //
     System.out.println("<Communities>");
     for (Iterator it = configs.iterator(); it.hasNext();) {

@@ -28,5 +28,5 @@ import org.cougaar.core.component.Service;
  * Community initializer.
  */
 public interface CommunityInitializerService extends Service {
-  Collection getCommunityDescriptions(String entityName, String initFileName);
+  Collection getCommunityDescriptions(String entityName);
 }

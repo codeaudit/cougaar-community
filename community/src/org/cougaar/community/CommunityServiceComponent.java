@@ -47,7 +47,6 @@ import org.cougaar.core.service.LoggingService;
 
 public class CommunityServiceComponent extends ComponentSupport {
 
-  private String initXmlFile = null;
   private LoggingService log = null;
   private boolean useCache = true;
 
@@ -67,9 +66,11 @@ public class CommunityServiceComponent extends ComponentSupport {
     MessageAddress agentId = ais.getMessageAddress();
     sb.releaseService(this, AgentIdentificationService.class, ais);
     log = (LoggingService)sb.getService(this, LoggingService.class, null);
+    if (log == null)
+      log = LoggingService.NULL;
     if (log.isDebugEnabled())
       log.debug ("Loading CommunityServiceComponent");
-    initXmlFile = System.getProperty("org.cougaar.community.configfile");
+    String initXmlFile = System.getProperty("org.cougaar.community.configfile");
     if (initXmlFile != null )
       if (log.isDebugEnabled())
         log.debug("initXmlFile is:" +initXmlFile);
@@ -84,19 +85,23 @@ public class CommunityServiceComponent extends ComponentSupport {
     CommunityService cs = loadCommunityService(agentId);
     CommunityInitializerService cis = (CommunityInitializerService)
       sb.getService(this, CommunityInitializerService.class, null);
-
-    try {
-      //initXmlFile only used by file-based community config
-      communityConfigs = cis.getCommunityDescriptions(agentId.toString(), initXmlFile);
+    
+    if (cis != null) {
+      try {
+	//initXmlFile only used by file-based community config
+	communityConfigs = cis.getCommunityDescriptions(agentId.toString());
+      }
+      catch (Exception e) {
+	log.error("Unable to obtain community information for agent "+agentId.toString(), e);
+      } finally {
+	sb.releaseService(this, CommunityInitializerService.class, cis);
+      }
+      // FIXME we just released the community-init-service!
+      initializeCommunityRelationships(cs, cis, agentId, communityConfigs); //recursive
+    } else {
+      if (log.isWarnEnabled())
+	log.warn("Could not get a CommunityInitializerService. No communities initalized!");
     }
-    catch (Exception e) {
-      System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
-      e.printStackTrace();
-    } finally {
-      sb.releaseService(this, CommunityInitializerService.class, cis);
-    }
-    // FIXME we just released the community-init-service!
-    initializeCommunityRelationships(cs, cis, agentId, communityConfigs); //recursive
 
     super.load();
   }
@@ -151,7 +156,7 @@ public class CommunityServiceComponent extends ComponentSupport {
           cs.createCommunity(communityName, cc.getAttributes());
           //this agent just created this community so now have responsibility to check if this
           // community is a member of any other communities
-          Collection communityWithCommMember = cis.getCommunityDescriptions(communityName, initXmlFile);
+          Collection communityWithCommMember = cis.getCommunityDescriptions(communityName);
           if (!communityWithCommMember.isEmpty()) {
             initializeCommunityRelationships(cs, cis, communityName, communityWithCommMember);
           }
