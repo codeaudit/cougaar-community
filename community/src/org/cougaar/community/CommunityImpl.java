@@ -202,7 +202,7 @@ public class CommunityImpl extends EntityImpl
   }
 
   private void writeObject(ObjectOutputStream stream) throws IOException {
-    stream.defaultWriteObject();
+    //stream.defaultWriteObject();
     stream.writeObject(this.getName());
     stream.writeObject(this.getAttributes());
     synchronized (this) {
@@ -211,7 +211,7 @@ public class CommunityImpl extends EntityImpl
   }
 
   private void readObject(ObjectInputStream stream) throws ClassNotFoundException, IOException {
-    stream.defaultReadObject();
+    //stream.defaultReadObject();
     setName((String)stream.readObject());
     setAttributes((Attributes)stream.readObject());
     entities = (HashMap)stream.readObject();

@@ -155,7 +155,7 @@ public class CommunityPlugin extends ComponentPlugin {
       if (mgrs.isEmpty()) {
         communityManager = new CommunityManager(agentId, blackboard,
                                                 getBindingSite().getServiceBroker());
-        blackboard.publishAdd(communityManager);
+        //blackboard.publishAdd(communityManager);
       } else {
         communityManager = (CommunityManager)mgrs.iterator().next();
       }
@@ -182,7 +182,7 @@ public class CommunityPlugin extends ComponentPlugin {
     } else {
       communityManager = new CommunityManager(agentId, blackboard,
                                               getBindingSite().getServiceBroker());
-      blackboard.publishAdd(communityManager);
+      //blackboard.publishAdd(communityManager);
       myCommunities = new CommunityMemberships();
       blackboard.publishAdd(myCommunities);
       Collection startupCommunities = findMyStartupCommunities();
@@ -1240,16 +1240,5 @@ public class CommunityPlugin extends ComponentPlugin {
       this.cr = cr;
       this.crl = crl;
     }
-  }
-
-  /**
-   * Identifies communities that this agent is a member of.  This map is
-   * compared to Community objects received from the various community
-   * managers sending Community data to this agent.  If a mis-match is detected
-   * the agent will attempt to rectify by sending an join or leave request
-   * to manager.  A mis-match is likely the result of a community manager
-   * termination/restart.
-   */
-  class CommunityMemberships extends HashMap implements java.io.Serializable {
   }
 }
