@@ -21,11 +21,10 @@
 
 package org.cougaar.community.requests;
 
-import org.cougaar.core.service.community.CommunityService;
-import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.util.UID;
-
 import javax.naming.directory.Attributes;
+
+import org.cougaar.core.service.community.CommunityService;
+import org.cougaar.core.util.UID;
 
 /**
  * Request to join (and optionally create) a community.

@@ -21,12 +21,9 @@
 
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.Community;
-
 import org.cougaar.core.relay.Relay;
+import org.cougaar.core.service.community.Community;
 import org.cougaar.core.util.UniqueObject;
-
-import java.util.Set;
 
 /**
  * Wrapper for org.cougaar.core.service.community.Community objects that are

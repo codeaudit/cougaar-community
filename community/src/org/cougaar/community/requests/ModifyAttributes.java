@@ -21,9 +21,9 @@
 
 package org.cougaar.community.requests;
 
-import org.cougaar.core.util.UID;
-
 import javax.naming.directory.ModificationItem;
+
+import org.cougaar.core.util.UID;
 
 /**
  * Request to modify the attributes of a Community or Entity.

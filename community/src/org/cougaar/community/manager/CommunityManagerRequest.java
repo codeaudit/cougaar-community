@@ -23,12 +23,11 @@ package org.cougaar.community.manager;
 
 import javax.naming.directory.ModificationItem;
 
-import org.cougaar.core.service.community.Entity;
-
-import org.cougaar.core.service.community.CommunityResponse;
-import org.cougaar.core.relay.Relay;
-import org.cougaar.core.util.UniqueObject;
 import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.relay.Relay;
+import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.util.UniqueObject;
 
 /**
  * Requests action to be performed by Community Manger.

@@ -20,13 +20,24 @@
  */
 package org.cougaar.community;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Vector;
 
-import org.cougaar.core.service.community.*;
-import org.cougaar.core.mts.MessageAddress;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 
-import javax.naming.*;
-import javax.naming.directory.*;
+import org.cougaar.core.service.community.Agent;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.CommunityMember;
+import org.cougaar.core.service.community.CommunityRoster;
+import org.cougaar.core.service.community.Entity;
 
 /**
  * Implementation of a CommunityRoster.

@@ -20,65 +20,48 @@
  */
 package org.cougaar.community.manager;
 
-import org.cougaar.core.relay.Relay;
-
-import org.cougaar.community.*;
-
-import org.cougaar.core.service.community.CommunityChangeEvent;
-import org.cougaar.core.service.community.CommunityResponse;
-
-import org.cougaar.core.service.community.*;
-
-import org.cougaar.core.component.ServiceBroker;
-
-import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.mts.SimpleMessageAddress;
-
-import org.cougaar.core.service.AgentIdentificationService;
-import org.cougaar.core.service.BlackboardService;
-import org.cougaar.core.service.AlarmService;
-import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.SchedulerService;
-import org.cougaar.core.service.UIDService;
-
-import org.cougaar.core.service.wp.AddressEntry;
-import org.cougaar.core.service.wp.WhitePagesService;
-import org.cougaar.core.service.wp.Callback;
-import org.cougaar.core.service.wp.Response;
-
-import org.cougaar.core.blackboard.BlackboardClient;
-import org.cougaar.core.blackboard.BlackboardClientComponent;
-import org.cougaar.core.blackboard.IncrementalSubscription;
-import org.cougaar.core.component.BindingSite;
-
-import org.cougaar.core.component.ServiceAvailableListener;
-import org.cougaar.core.component.ServiceAvailableEvent;
-
-import org.cougaar.core.agent.service.alarm.Alarm;
-
-import org.cougaar.util.UnaryPredicate;
-
 import java.net.URI;
-import java.net.URISyntaxException;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
-import javax.naming.NamingException;
-import javax.naming.NamingEnumeration;
+
+import org.cougaar.community.CommunityDescriptor;
+import org.cougaar.community.CommunityPlugin;
+import org.cougaar.community.CommunityResponseImpl;
+import org.cougaar.community.RelayAdapter;
+import org.cougaar.core.agent.service.alarm.Alarm;
+import org.cougaar.core.blackboard.BlackboardClientComponent;
+import org.cougaar.core.blackboard.IncrementalSubscription;
+import org.cougaar.core.component.BindingSite;
+import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.service.AgentIdentificationService;
+import org.cougaar.core.service.AlarmService;
+import org.cougaar.core.service.BlackboardService;
+import org.cougaar.core.service.LoggingService;
+import org.cougaar.core.service.SchedulerService;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.CommunityChangeEvent;
+import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.service.wp.AddressEntry;
+import org.cougaar.core.service.wp.Callback;
+import org.cougaar.core.service.wp.Response;
+import org.cougaar.core.service.wp.WhitePagesService;
+import org.cougaar.util.UnaryPredicate;
 
 /**
  * Manager for one or more communities.  Handles requests to join and leave a

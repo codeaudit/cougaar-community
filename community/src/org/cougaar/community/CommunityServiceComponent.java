@@ -20,25 +20,14 @@
  */
 package org.cougaar.community;
 
-import java.util.*;
-import javax.naming.directory.*;
-
-import org.cougaar.community.CommunityServiceProvider;
-
-import org.cougaar.core.service.community.CommunityService;
-
 import org.cougaar.core.component.ComponentSupport;
 import org.cougaar.core.component.ServiceBroker;
-import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
-
+import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.mts.MessageAddress;
-
-import org.cougaar.community.init.CommunityInitializerService;
-import org.cougaar.community.init.CommunityConfig;
-
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.LoggingService;
+import org.cougaar.core.service.community.CommunityService;
 
 /**
  * Agent-level component that loads the CommunityService provider and adds

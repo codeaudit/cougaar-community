@@ -22,6 +22,7 @@
 package org.cougaar.community.init;
 
 import java.util.Collection;
+
 import org.cougaar.core.component.Service;
 
 /**

@@ -21,16 +21,13 @@
 
 package org.cougaar.community.manager;
 
-import org.cougaar.core.service.community.Entity;
-
-import org.cougaar.core.service.community.CommunityResponse;
+import javax.naming.directory.ModificationItem;
 
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.util.UID;
 import org.cougaar.core.relay.Relay;
-
-import java.util.*;
-import javax.naming.directory.ModificationItem;
+import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.util.UID;
 
 /**
  * Implementation of CommunityManagerRequest interface.

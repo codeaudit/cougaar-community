@@ -21,9 +21,9 @@
 
 package org.cougaar.community.requests;
 
-import org.cougaar.core.util.UID;
-
 import javax.naming.directory.Attributes;
+
+import org.cougaar.core.util.UID;
 
 /**
  * Request to create a community.

@@ -20,19 +20,18 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.Entity;
-
-import java.io.ObjectOutputStream;
-import java.io.ObjectInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Collection;
-import java.util.Map;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+
+import org.cougaar.core.service.community.Entity;
 
 /**
  * Identifies the entities that an agent has added (via a join request) to

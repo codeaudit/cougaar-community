@@ -22,8 +22,8 @@
 package org.cougaar.community.requests;
 
 import org.cougaar.core.service.community.CommunityResponse;
-import org.cougaar.core.util.UniqueObject;
 import org.cougaar.core.util.UID;
+import org.cougaar.core.util.UniqueObject;
 
 /**
  * Base class for community requests (i.e., Join, Leave, GetDescriptor, etc.).

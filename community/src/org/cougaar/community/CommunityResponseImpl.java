@@ -21,9 +21,6 @@
 
 package org.cougaar.community;
 
-import java.util.Set;
-
-import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityResponse;
 
 /**

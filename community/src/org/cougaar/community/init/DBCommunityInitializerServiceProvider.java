@@ -21,35 +21,32 @@
 
 package org.cougaar.community.init;
 
-import java.io.IOException;
-import java.io.FileWriter;
-import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.ResultSet;
-import java.sql.Connection;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Vector;
-import java.util.Collection;
-import java.util.Collections;
+
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
-import org.cougaar.util.DBProperties;
-import org.cougaar.util.DBConnectionPool;
-import org.cougaar.util.Parameters;
+
+import org.cougaar.core.component.BindingSite;
+import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.component.ServiceBrokerSupport;
+import org.cougaar.core.component.ServiceProvider;
+import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.node.DBInitializerService;
+import org.cougaar.core.node.DBInitializerServiceImpl;
+import org.cougaar.core.node.NodeIdentificationService;
+import org.cougaar.core.node.NodeIdentificationServiceProvider;
 import org.cougaar.util.log.Logger;
 import org.cougaar.util.log.Logging;
-import org.cougaar.core.component.*;
-import org.cougaar.core.node.*;
-import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.planning.plugin.asset.AssetDataReader;
-import org.cougaar.planning.plugin.asset.AssetDataDBReader;
 
 
 /**

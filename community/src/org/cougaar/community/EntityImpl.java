@@ -20,13 +20,13 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.Entity;
-
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttributes;
+
+import org.cougaar.core.service.community.Entity;
 
 /**
  * Defines entities that are associated with a community.

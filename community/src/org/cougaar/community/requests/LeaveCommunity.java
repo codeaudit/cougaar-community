@@ -21,7 +21,6 @@
 
 package org.cougaar.community.requests;
 
-import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.util.UID;
 
 /**

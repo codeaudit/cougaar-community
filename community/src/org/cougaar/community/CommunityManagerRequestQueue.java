@@ -1,9 +1,14 @@
 package org.cougaar.community;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
 import org.cougaar.community.manager.CommunityManagerRequest;
-import org.cougaar.community.requests.*;
+import org.cougaar.community.requests.CommunityRequest;
 import org.cougaar.core.util.UID;
-import java.util.*;
 
 /**
  * Manages local CommunityManagerRequests waiting to be sent or dispositioned by

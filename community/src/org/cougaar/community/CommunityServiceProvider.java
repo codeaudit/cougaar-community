@@ -20,14 +20,11 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.*;
-
 import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
-import org.cougaar.core.component.Service;
-
 import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.service.community.CommunityService;
 
 /**
  * Returns a reference to a CommunityService.

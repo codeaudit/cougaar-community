@@ -1,30 +1,32 @@
 package org.cougaar.community.util;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
-import java.util.*;
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.util.Date;
+import java.util.Hashtable;
 
-import org.cougaar.core.servlet.BaseServletComponent;
-import org.cougaar.core.service.ServletService;
-import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.BlackboardService;
-import org.cougaar.core.service.AgentIdentificationService;
-import org.cougaar.core.servlet.ServletUtil;
-import org.cougaar.core.blackboard.IncrementalSubscription;
+import javax.servlet.Servlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+
 import org.cougaar.core.blackboard.BlackboardClient;
-import org.cougaar.util.ConfigFinder;
-import org.cougaar.util.UnaryPredicate;
-
-import org.cougaar.community.CommunityImpl;
-import org.cougaar.core.service.community.CommunityResponseListener;
-import org.cougaar.core.service.community.CommunityResponse;
-import org.cougaar.core.service.community.CommunityService;
+import org.cougaar.core.service.AgentIdentificationService;
+import org.cougaar.core.service.BlackboardService;
+import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.Entity;
-
-import javax.xml.transform.*;
-import javax.xml.transform.stream.*;
+import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.CommunityResponseListener;
+import org.cougaar.core.service.community.CommunityService;
+import org.cougaar.core.servlet.BaseServletComponent;
+import org.cougaar.core.servlet.ServletUtil;
+import org.cougaar.util.UnaryPredicate;
 
 import EDU.oswego.cs.dl.util.concurrent.Semaphore;
 

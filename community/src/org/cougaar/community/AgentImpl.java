@@ -20,9 +20,9 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.Agent;
-
 import javax.naming.directory.Attributes;
+
+import org.cougaar.core.service.community.Agent;
 
 /**
  * An agent entity.

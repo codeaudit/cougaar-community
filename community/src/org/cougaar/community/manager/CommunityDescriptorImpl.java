@@ -21,18 +21,16 @@
 
 package org.cougaar.community.manager;
 
-import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.CommunityChangeEvent;
-import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.util.UID;
-import org.cougaar.core.relay.Relay;
-
-import org.cougaar.core.persist.NotPersistable;
+import java.util.ArrayList;
 
 import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.CommunityImpl;
-
-import java.util.*;
+import org.cougaar.core.mts.MessageAddress;
+import org.cougaar.core.persist.NotPersistable;
+import org.cougaar.core.relay.Relay;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.CommunityChangeEvent;
+import org.cougaar.core.util.UID;
 
 /**
  * Implementation of CommunityDescriptor interface.

@@ -21,20 +21,6 @@
 
 package org.cougaar.community;
 
-import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.service.community.CommunityChangeEvent;
-import org.cougaar.core.service.community.CommunityChangeListener;
-
-import org.cougaar.core.component.ServiceBroker;
-import org.cougaar.core.component.ServiceRevokedListener;
-import org.cougaar.core.component.ServiceRevokedEvent;
-
-import org.cougaar.core.service.ThreadService;
-import org.cougaar.core.thread.Schedulable;
-
-import org.cougaar.util.log.*;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,6 +32,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+
+import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.service.ThreadService;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.CommunityChangeEvent;
+import org.cougaar.core.service.community.CommunityChangeListener;
+import org.cougaar.core.thread.Schedulable;
+import org.cougaar.util.log.Logger;
+import org.cougaar.util.log.LoggerFactory;
 
 /**
  * Maintains a local cache of Community objects.

@@ -20,21 +20,9 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.community.requests.CommunityRequest;
-import org.cougaar.community.requests.CreateCommunity;
-import org.cougaar.community.requests.AddChangeListener;
-import org.cougaar.community.requests.GetCommunity;
-import org.cougaar.community.requests.JoinCommunity;
-import org.cougaar.community.requests.LeaveCommunity;
-import org.cougaar.community.requests.ModifyAttributes;
-import org.cougaar.community.requests.ReleaseCommunity;
-import org.cougaar.community.requests.SearchCommunity;
-import org.cougaar.community.requests.ListParentCommunities;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,51 +31,49 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-import javax.naming.directory.Attributes;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.BasicAttributes;
-import javax.naming.directory.BasicAttribute;
-import javax.naming.directory.ModificationItem;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
+import javax.naming.directory.ModificationItem;
 
-import org.cougaar.util.log.Logger;
-import org.cougaar.core.util.UID;
-
-import org.cougaar.core.service.community.CommunityService;
-import org.cougaar.core.service.community.Agent;
-import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.service.community.CommunityChangeEvent;
-import org.cougaar.core.service.community.CommunityChangeListener;
-import org.cougaar.core.service.community.CommunityResponseListener;
-import org.cougaar.core.service.community.CommunityResponse;
-import org.cougaar.core.service.community.CommunityRoster;
-
+import org.cougaar.community.requests.CommunityRequest;
+import org.cougaar.community.requests.CreateCommunity;
+import org.cougaar.community.requests.GetCommunity;
+import org.cougaar.community.requests.JoinCommunity;
+import org.cougaar.community.requests.LeaveCommunity;
+import org.cougaar.community.requests.ListParentCommunities;
+import org.cougaar.community.requests.ModifyAttributes;
+import org.cougaar.community.requests.ReleaseCommunity;
+import org.cougaar.community.requests.SearchCommunity;
 import org.cougaar.core.agent.service.alarm.Alarm;
-
-import org.cougaar.core.service.BlackboardService;
-import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.blackboard.BlackboardClientComponent;
-
+import org.cougaar.core.blackboard.IncrementalSubscription;
+import org.cougaar.core.component.BindingSite;
+import org.cougaar.core.component.ServiceAvailableEvent;
+import org.cougaar.core.component.ServiceAvailableListener;
+import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.mts.SimpleMessageAddress;
-
-import org.cougaar.core.component.BindingSite;
-import org.cougaar.core.component.ServiceBroker;
-
 import org.cougaar.core.service.AgentIdentificationService;
+import org.cougaar.core.service.AlarmService;
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.UIDService;
-import org.cougaar.core.service.wp.WhitePagesService;
 import org.cougaar.core.service.SchedulerService;
-import org.cougaar.core.service.AlarmService;
-
-import org.cougaar.core.component.ServiceAvailableListener;
-import org.cougaar.core.component.ServiceAvailableEvent;
-
+import org.cougaar.core.service.UIDService;
+import org.cougaar.core.service.community.Agent;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.CommunityChangeListener;
+import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.CommunityResponseListener;
+import org.cougaar.core.service.community.CommunityRoster;
+import org.cougaar.core.service.community.CommunityService;
+import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.service.wp.WhitePagesService;
+import org.cougaar.core.util.UID;
 import org.cougaar.util.UnaryPredicate;
 
 import EDU.oswego.cs.dl.util.concurrent.Semaphore;

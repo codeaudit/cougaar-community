@@ -22,7 +22,6 @@
 package org.cougaar.community.requests;
 
 import org.cougaar.core.util.UID;
-import java.util.Set;
 
 /**
  * Request to search a community for Entities satisfying specified

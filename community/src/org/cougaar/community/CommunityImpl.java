@@ -20,31 +20,23 @@
  */
 package org.cougaar.community;
 
-import org.cougaar.core.relay.Relay;
-import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.util.UniqueObject;
-import org.cougaar.core.util.UID;
-
-import org.cougaar.core.service.community.Agent;
-import org.cougaar.core.service.community.Entity;
-import org.cougaar.core.service.community.Community;
-
-import java.io.ObjectOutputStream;
-import java.io.ObjectInputStream;
 import java.io.IOException;
-
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Set;
 
 import javax.naming.directory.Attributes;
+
+import org.cougaar.core.service.community.Agent;
+import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.Entity;
 
 /**
  * A community entity.
