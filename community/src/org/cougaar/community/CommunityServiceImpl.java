@@ -126,8 +126,11 @@ public class CommunityServiceImpl extends ComponentPlugin
       try {
         InitialDirContext root = getNamingService().getRootContext();
         context = root.createSubcontext(contextName, null);
+      } catch (NameAlreadyBoundException nabe) {
+        log.debug("Context " + contextName + " already bound!");
       } catch (Exception ex) {
         log.error("Exception creating Context " + contextName + ", " + ex);
+	return getContext(contextName);
       }
     }
     return context;
