@@ -570,11 +570,10 @@ public class CommunityPlugin extends ComponentPlugin {
       RelayAdapter ra = (RelayAdapter)it.next();
       if (ra.getUID().equals(uid)) {
         blackboard.publishRemove(ra);
-        //logger.debug("Removing source relay: uid=" + uid);
         return;
       }
     }
-    logger.info("Unable to remove source relay, UID not found: uid=" + uid);
+    //logger.debug("Unable to remove source relay, UID not found: uid=" + uid);
   }
 
   protected void processNewCommunityDescriptor(CommunityDescriptor cd) {
@@ -948,14 +947,8 @@ public class CommunityPlugin extends ComponentPlugin {
   private IncrementalSubscription communityManagerRequestRelaySub;
   private UnaryPredicate communityManagerRequestRelayPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
-      if (o instanceof RelayAdapter &&
-          ((RelayAdapter)o).getContent() instanceof CommunityManagerRequest) {
-        RelayAdapter ra = (RelayAdapter)o;
-        CommunityManagerRequest cmr = (CommunityManagerRequest)ra.getContent();
-        return true;
-      } else {
-        return false;
-      }
+      return (o instanceof RelayAdapter &&
+          ((RelayAdapter)o).getContent() instanceof CommunityManagerRequest);
   }};
 
   /**
