@@ -26,14 +26,12 @@
 
 package org.cougaar.community;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.text.DateFormat;
@@ -64,6 +62,7 @@ public class CommunityCache implements CommunityServiceConstants {
 
   public CommunityCache(ThreadService ts) {
     this.threadService = ts;
+    getSystemProperties();
   }
 
   public CommunityCache(ThreadService ts, long expiration) {
@@ -194,7 +193,9 @@ public class CommunityCache implements CommunityServiceConstants {
                        " community=" + community.getName() +
                        " prior=" + (ce.community == null ? -1 : ce.community.getEntities().size()) +
                        " updated=" + ce.community.getEntities().size() +
-                       " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
+                       " expires=" + (expirationPeriod == NEVER
+                                      ? "NEVER"
+                                      : df.format(new Date(ce.timeStamp + expirationPeriod))));
         }
         if (logger.isDetailEnabled()) {
           logger.detail(this.toString());
@@ -209,7 +210,9 @@ public class CommunityCache implements CommunityServiceConstants {
                      " community=" + community.getName() +
                      " prior=null" +
                      " updated=" + ce.community.getEntities().size() +
-                     " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
+                     " expires=" + (expirationPeriod == NEVER
+                                    ? "NEVER"
+                                    : df.format(new Date(ce.timeStamp + expirationPeriod))));
       }
       if (logger.isDetailEnabled()) {
         logger.detail(this.toString());
@@ -219,6 +222,14 @@ public class CommunityCache implements CommunityServiceConstants {
   }
 
   public String toString() {
+    Set communityNames = Collections.EMPTY_SET;
+    synchronized (communities) {
+      communityNames = communities.keySet();
+    }
+    return "CommunityCache contents=" + communityNames;
+  }
+
+  public synchronized String toXML() {
     //TODO: Add authorization check
     StringBuffer sb = new StringBuffer();
     for (Iterator it = communities.values().iterator(); it.hasNext();) {
@@ -310,7 +321,7 @@ public class CommunityCache implements CommunityServiceConstants {
 
   private void fireChangeNotifications(Community current, Community updated) {
     if (logger.isDetailEnabled()) {
-      logger.detail("fireChangeNotifications: community=" + updated.getName());
+      logger.detail("fireChangeNotifications: community=" + updated == null ? "null" : updated.getName());
     }
     //Community community = get(updated.getName()); // a copy for Change Event
     if (updated == null) {  // new community
@@ -392,7 +403,7 @@ public class CommunityCache implements CommunityServiceConstants {
   }
 
   private boolean isExpired(CacheEntry ce) {
-    return (ce.timeStamp + expirationPeriod) < now();
+    return (expirationPeriod != NEVER && (ce.timeStamp + expirationPeriod) < now());
   }
 
   private void flushCacheEntry(CacheEntry ce) {
