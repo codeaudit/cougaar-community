@@ -1,4 +1,4 @@
-<!-- Autobuild-generated ANT v1.5 script for building the Cougaar module "community". -->
+<!-- Autobuild-generated ANT v1.6 script for building the Cougaar module "community". -->
 
 <!--                                                 -->
 <!-- THIS IS A MACHINE GENERATED FILE - DO NOT EDIT! -->
@@ -244,6 +244,14 @@
     </patternset>
 
     <!-- ================ Targets ================ -->
+
+    <!-- ==================================================== -->
+    <!-- Rebuild the Ant DTD, for use with XML editors. But note the warnings -->
+    <!-- at http://ant.apache.org/manual/CoreTasks/antstructure.html -->
+    <!-- ==================================================== -->
+    <target name="build-ant-dtd" description="Rebuild the Ant DTD in CIP/build/data">
+       <antstructure output="${TARGETBASE}/build/data/ant-1.6.dtd"/>
+    </target>
 
     <!-- ========================================================== -->
     <!-- Define dirs for copying files into for zipping -->
@@ -588,18 +596,30 @@
     <!-- FIXME: Handle unified javadoc -->
     <target name="javadocs" depends="prepare, defrunner, clean-docs" description="Create javadocs for this module" if="has.src">
       <mkdir dir="${javadoc.target}"/>
+      <!-- Note that we should go to breakiterator="true" when we
+      assume Ant1.6 -->
       <javadoc packagenames="${javadoc.packages}"
 	       sourcepath="${src}"
 	       destdir="${javadoc.target}"
 	       author="true"
 	       version="true"
+	       use="true"
 	       doclet="org.cougaar.tools.javadoc.CougaarDoclet"
 	       docletpath="${target.clib}/build.jar"
-	       additionalparam="-breakiterator -source 1.4 -tagletpath ${target.clib}/build.jar -taglet org.cougaar.tools.javadoc.PropertyTaglet -taglet org.cougaar.tools.javadoc.NoteTaglet -taglet org.cougaar.tools.javadoc.ToDoTaglet -taglet org.cougaar.tools.javadoc.GeneratedTaglet"
+	       source="1.4"
+	       additionalparam="-breakiterator"
 	       windowtitle="${moduleUp} API"
 	       doctitle="${moduleUp} API"
 	       bottom="Copyright &#169; 2004 by BBNT Solutions LLC, all rights reserved.">
 	<classpath refid="javadoc.path" />
+	<taglet name="org.cougaar.tools.javadoc.PropertyTaglet"
+	       path="${target.clib}/build.jar" />
+	<taglet name="org.cougaar.tools.javadoc.NoteTaglet"
+	       path="${target.clib}/build.jar" />
+	<taglet name="org.cougaar.tools.javadoc.ToDoTaglet"
+	       path="${target.clib}/build.jar" />
+	<taglet name="org.cougaar.tools.javadoc.GeneratedTaglet"
+	       path="${target.clib}/build.jar" />
       </javadoc>
     </target>
 
