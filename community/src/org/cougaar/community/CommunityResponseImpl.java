@@ -36,10 +36,16 @@ public class CommunityResponseImpl implements CommunityResponse, java.io.Seriali
     this.content = content;
   }
 
+  public void setStatus(int status) {
+    statusCode = status;
+  }
   public int getStatus() {
     return statusCode;
   }
 
+  public void setContent(Object cont) {
+    content = cont;
+  }
   public Object getContent() {
     return content;
   }

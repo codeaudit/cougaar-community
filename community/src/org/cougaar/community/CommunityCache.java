@@ -24,7 +24,6 @@ package org.cougaar.community;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -33,157 +32,60 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.service.ThreadService;
 import org.cougaar.core.service.community.Community;
+import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.service.community.CommunityChangeListener;
-import org.cougaar.core.thread.Schedulable;
 import org.cougaar.util.log.Logger;
 import org.cougaar.util.log.LoggerFactory;
+
+import javax.naming.directory.Attributes;
 
 /**
  * Maintains a local cache of Community objects.
  */
-public class CommunityCache
-  implements CommunityChangeListener {
+public class CommunityCache {
 
-  private static CommunityCache cache;
+  public static final long CACHE_EXPIRATION = 10 * 60 * 1000;
 
-  private Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
-  private ServiceBroker serviceBroker;
-  private Map communities = new HashMap();
-  private Map listenerMap = new HashMap();
-  private String cacheId;
+  protected Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
+  protected Map communities = new HashMap();
+  protected Map listenerMap = new HashMap();
+  protected ThreadService threadService;
+  protected long expirationPeriod = CACHE_EXPIRATION;
 
-  public static CommunityCache getCache(ServiceBroker serviceBroker) {
-    if (cache == null) {
-      cache = new CommunityCache(serviceBroker);
-    }
-    return cache;
+  public CommunityCache(ThreadService ts) {
+    this.threadService = ts;
   }
 
-  private CommunityCache(ServiceBroker serviceBroker, String cacheId) {
-    this.serviceBroker = serviceBroker;
-    this.cacheId = cacheId;
+  public CommunityCache(ThreadService ts, long expiration) {
+    this(ts);
+    this.expirationPeriod = expiration;
   }
 
-  private CommunityCache(ServiceBroker serviceBroker) {
-    this(serviceBroker, "");
-  }
-
-  protected synchronized void add(Community community) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(cacheId+": add:" +
-                   " community=" + community.getName() +
-                   " entities=" + entityNames(community.getEntities()));
-    }
-    communities.put(community.getName(), new CacheEntry(new Date(), community));
-  }
-
-  protected synchronized Community get(String name) {
+  public synchronized Community get(String name) {
+    //TODO: Add authorization check
+    Community community = null;
     CacheEntry ce = (CacheEntry)communities.get(name);
-    return (ce != null ? ce.community : null);
-  }
-
-  protected synchronized Date getTimeStamp(String name) {
-    CacheEntry ce = (CacheEntry)communities.get(name);
-    return ce.timeStamp;
-  }
-
-  protected synchronized Collection getExpired(long expirationPeriod) {
-    long now = (new Date()).getTime();
-    Collection expiredEntries = new Vector();
-    for (Iterator it = communities.values().iterator(); it.hasNext();) {
-      CacheEntry ce = (CacheEntry)it.next();
-      if ((ce.timeStamp.getTime() + expirationPeriod) < now) {
-        expiredEntries.add(ce.community.getName());
+    if (ce != null) {
+      if (isExpired(ce)) {
+        // Flush cache entry if expired
+        flushCacheEntry(ce);
+      } else {
+        community = (CommunityImpl)ce.community.clone();
       }
     }
-    return expiredEntries;
-  }
-
-  protected synchronized Community remove(String communityName) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(cacheId+": remove:" +
-                   " community=" + communityName);
-    }
-    CacheEntry ce = (CacheEntry)communities.remove(communityName);
-    return (ce == null ? null : ce.community);
-  }
-
-  protected boolean contains(String name) {
-    return communities.containsKey(name);
-  }
-
-  public synchronized Set listAll() {
-    return new HashSet(communities.keySet());
-  }
-
-   /**
-   * Searches community map for all ancestors of specified entity.
-   * @param entityName
-   * @param recursive If true all ancestors are retrieved, if false only immediate
-   *                  parents
-   * @return List of communities having specified community as a descendent
-   */
-  public List getAncestorNames(String entityName, boolean recursive) {
-    List ancestors = new ArrayList();
-    findAncestors(entityName, ancestors, recursive);
-    return ancestors;
-  }
-
-  /**
-   * Recursive search of community map for all ancestors of a specified entity.
-   * @param communityName
-   * @param ancestors
-   */
-  private synchronized void findAncestors(String entityName, List ancestors, boolean recursive) {
-    Collection allCommunities = communities.values();
-    for (Iterator it = allCommunities.iterator(); it.hasNext();) {
-      CacheEntry ce = (CacheEntry)it.next();
-      Community community = ce.community;
-      if (community.hasEntity(entityName)) {
-        String parent = community.getName();
-        ancestors.add(parent);
-        if (recursive) findAncestors(parent, ancestors, recursive);
-      }
-    }
-  }
-
-  /**
-   * Determines if a local copy exists for all nested communities from a
-   * specified root community.
-   */
-  private boolean allDescendentsFound(Community community) {
-    Collection nestedCommunities =
-        community.search("(Role=Member)", Community.COMMUNITIES_ONLY);
-    for (Iterator it = nestedCommunities.iterator(); it.hasNext();) {
-      Community nestedCommunity = (Community)it.next();
-      if (!communities.containsKey(nestedCommunity.getName()) ||
-          !allDescendentsFound(nestedCommunity)) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Get names of nested communities that are members of specfied community.
-   */
-  protected Collection getNestedCommunityNames(Community community) {
-    Collection nestedCommunityNames = new Vector();
-    Collection nestedCommunities =
-        community.search("(Role=Member)", Community.COMMUNITIES_ONLY);
-    for (Iterator it = nestedCommunities.iterator(); it.hasNext();) {
-      Community nestedCommunity = (Community)it.next();
-      nestedCommunityNames.add(nestedCommunity.getName());
-    }
-    return nestedCommunityNames;
+    return community;
   }
 
   /**
    * Searches all communities in cache for a community matching search filter
+   * @param filter JNDI-compliant search filter
+   * @return Set of Community object matching search criteria
    */
-  protected synchronized Set search(String filter) {
+  public synchronized Set search(String filter) {
+    //TODO: Add authorization check
     if (communities.isEmpty())
       return null;
     Set matches = new HashSet();
@@ -191,9 +93,9 @@ public class CommunityCache
       Filter f = new SearchStringParser().parse(filter);
       for (Iterator it = communities.values().iterator(); it.hasNext(); ) {
         CacheEntry ce = (CacheEntry)it.next();
-        Community community = ce.community;
+        CommunityImpl community = ce.community;
         if (f.match(community.getAttributes()))
-          matches.add(community);
+          matches.add(community.clone());
       }
     }
     catch (Exception ex) {
@@ -201,20 +103,27 @@ public class CommunityCache
       ex.printStackTrace();
     }
     if (logger.isDebugEnabled())
-      logger.debug(cacheId+": search: matches=" + entityNames(matches));
+      logger.debug("search: matches=" + CommunityUtils.entityNames(matches));
     return matches;
   }
 
   /**
    * Searches community for all entities matching search filter
+   * @param communityName  Name of community to search
+   * @param filter JNDI-compliant search filter
+   * @param qualifier Restict returned Entities to AGENTS_ONLY, COMMUNITIES_ONLY,
+   *     or ALL_ENTITIES (refer to org.cougaar.core.service.community.Community
+   *     for values)
+   * @param recursive Controls whether search includes nested communities if any
+   * @return Set of Entity objects matching search criteria
    */
-  protected Set search(String  communityName,
+  public Set search(String  communityName,
                        String  filter,
                        int     qualifier,
                        boolean recursive) {
     Community community = get(communityName);
     if (logger.isDebugEnabled()) {
-      logger.debug(cacheId+": search:" +
+      logger.debug("search:" +
                    " community=" + communityName +
                    " filter=" + filter +
                    " qualifier=" + community.qualifierToString(qualifier) +
@@ -230,54 +139,283 @@ public class CommunityCache
     }
   }
 
-  private void recursiveSearch(Community community,
-                               String    filter,
-                               int       qualifier,
-                               Set       matches) {
-    if (community != null) {
-      Collection entities = community.search(filter, qualifier);
-      /*
-      logger.debug(cacheId+": recursiveSearch:" +
-                   " community=" + community.getName() +
-                   " filter=" + filter +
-                   " qualifier=" + qualifier +
-                   " matches=" + entityNames(entities));
-      */
-      matches.addAll(entities);
-      Collection nestedCommunities = community.search("(Role=Member)",
-                                                      Community.COMMUNITIES_ONLY);
-      /*
-      logger.debug(cacheId+": recursiveSearch:" +
-                   " community=" + community.getName() +
-                   " nestedCommunities=" + entityNames(nestedCommunities));
-      */
-      for (Iterator it = nestedCommunities.iterator(); it.hasNext();) {
-        String nestedCommunityName = ((Community)it.next()).getName();
-        Community nestedCommunity = get(nestedCommunityName);
-        if (nestedCommunity != null) {
-          recursiveSearch(nestedCommunity, filter, qualifier, matches);
+  /*
+   * Recursive search of community map for all ancestors of a specified entity.
+   */
+  private synchronized void findAncestors(String entityName, List ancestors, boolean recursive) {
+    Collection allCommunities = communities.values();
+    if (logger.isDetailEnabled()) {
+      logger.detail("findAncestors:" +
+                    " entity=" + entityName +
+                    " ancestors=" + ancestors +
+                    " communities=" + allCommunities.size());
+    }
+    for (Iterator it = allCommunities.iterator(); it.hasNext();) {
+      CacheEntry ce = (CacheEntry)it.next();
+      Community community = ce.community;
+      if (community.hasEntity(entityName)) {
+        String parent = community.getName();
+        ancestors.add(parent);
+        if (recursive) findAncestors(parent, ancestors, recursive);
+      }
+    }
+  }
+
+  public synchronized void update(Community community) {
+    //TODO: Add authorization check
+    CommunityImpl ci = (CommunityImpl)community;
+    CacheEntry ce = (CacheEntry)communities.get(community.getName());
+    if (ce != null) {
+      if (ci.getLastUpdate() >= ce.community.getLastUpdate()) {
+        ce.timeStamp = now();
+        CommunityImpl prior = ce.community;
+        ce.community = (CommunityImpl)ci.clone();
+        if (logger.isDebugEnabled()) {
+          logger.debug("update:" +
+                       " community=" + community.getName() +
+                       " prior=" + (prior == null ? -1 : prior.getEntities().size()) +
+                       " updated=" + ce.community.getEntities().size());
+        }
+        fireChangeNotifications(prior, ce.community);
+      }
+    } else {
+      ce = new CacheEntry(now(), (CommunityImpl)ci.clone());
+      communities.put(community.getName(), ce);
+      if (logger.isDebugEnabled()) {
+        logger.debug("update:" +
+                     " community=" + community.getName() +
+                     " prior=null" +
+                     " updated=" + ce.community.getEntities().size());
+      }
+      fireChangeNotifications(null, ce.community);
+    }
+  }
+
+  public String toString() {
+    //TODO: Add authorization check
+    StringBuffer sb = new StringBuffer();
+    for (Iterator it = communities.values().iterator(); it.hasNext();) {
+      CacheEntry ce = (CacheEntry)it.next();
+      sb.append(ce.community.toXml());
+    }
+    return sb.toString();
+  }
+
+  public synchronized Set listAll() {
+    //TODO: Add authorization check
+    return new HashSet(communities.keySet());
+  }
+
+   /**
+   * Searches cache for all ancestors of specified entity.
+   * @param entityName Entity name
+   * @param recursive If true all ancestors are retrieved, if false only immediate
+   *                  parents
+   * @return List of communities having specified community as a descendent
+   */
+  public List getAncestorNames(String entityName, boolean recursive) {
+    //TODO: Add authorization check
+   List ancestors = new ArrayList();
+    if (logger.isDetailEnabled()) {
+      logger.detail("getAncestorNames:" +
+                    " entity=" + entityName +
+                    " recursive=" + recursive +
+                    " ancestors=" + ancestors);
+    }
+    findAncestors(entityName, ancestors, recursive);
+    return ancestors;
+  }
+
+  /**
+   * Add listener to be notified when a change occurs to community.
+   * @param l  Listener to be notified
+   */
+  public void addListener(CommunityChangeListener l) {
+    if (l != null) addListener(l.getCommunityName(), l);
+  }
+
+  /**
+   * Removes listener from change notification list.
+   * @param l  Listener to be removed
+   */
+  public void removeListener(CommunityChangeListener l) {
+    if (l != null) {
+      String communityName = l.getCommunityName();
+      if (l == null) {
+        communityName = "ALL_COMMUNITIES";
+      }
+      if (logger.isDebugEnabled()) {
+        logger.debug("removeListener: community=" + communityName);
+      }
+      synchronized (listenerMap) {
+        Set listeners = (Set)listenerMap.get(communityName);
+        if (listeners != null) {
+          listeners.remove(l);
         }
       }
     }
   }
 
-  // Converts a collection of entities to a compact string representation of names
-  private String entityNames(Collection members) {
-    StringBuffer sb = new StringBuffer("[");
-    for (Iterator it = members.iterator(); it.hasNext();) {
-      sb.append(it.next().toString() + (it.hasNext() ? "," : ""));
+  public boolean contains(String name) {
+    boolean containsCurrentEntry = false;
+    CacheEntry ce = (CacheEntry)communities.get(name);
+    if (ce != null) {
+      if (isExpired(ce)) {
+        // Flush cache entry if expired
+        flushCacheEntry(ce);
+      } else {
+        containsCurrentEntry = true;
+      }
     }
-    return(sb.append("]").toString());
+    return containsCurrentEntry;
   }
 
+  public synchronized Community remove(String communityName) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("remove:" +
+                   " community=" + communityName);
+    }
+    CacheEntry ce = (CacheEntry)communities.remove(communityName);
+    return (ce == null ? null : ce.community);
+  }
+
+  private void fireChangeNotifications(Community prior, Community updated) {
+    if (logger.isDetailEnabled()) {
+      logger.detail("fireChangeNotifications: community=" + updated.getName());
+    }
+    Community community = get(updated.getName()); // a copy for Change Event
+    if (prior == null) {  // new community
+      notifyListeners(new CommunityChangeEvent(community,
+                                               CommunityChangeEvent.ADD_COMMUNITY,
+                                               community.getName()));
+      for (Iterator it = updated.getEntities().iterator(); it.hasNext();) {
+        Entity entity = (Entity)it.next();
+        notifyListeners(new CommunityChangeEvent(community,
+                                                 CommunityChangeEvent.ADD_ENTITY,
+                                                 entity.getName()));
+      }
+    } else {
+
+      // Updated community attributes
+      if (!attributesEqual(prior.getAttributes(), updated.getAttributes())) {
+        notifyListeners(new CommunityChangeEvent(community,
+                                                 CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED,
+                                                 community.getName()));
+      }
+
+      // Added Entities
+      Collection addedEntities =
+          listAddedEntities(prior.getEntities(), updated.getEntities());
+      for (Iterator it = addedEntities.iterator(); it.hasNext();) {
+        notifyListeners(new CommunityChangeEvent(community,
+                                                 CommunityChangeEvent.ADD_ENTITY,
+                                                 (String)it.next()));
+      }
+
+      // Removed Entities
+      Collection removedEntities =
+          listRemovedEntities(prior.getEntities(), updated.getEntities());
+      for (Iterator it = removedEntities.iterator(); it.hasNext();) {
+        notifyListeners(new CommunityChangeEvent(community,
+                                                 CommunityChangeEvent.REMOVE_ENTITY,
+                                                 (String)it.next()));
+      }
+
+      // Entities with changed attributes
+      for (Iterator it = updated.getEntities().iterator(); it.hasNext();) {
+        Entity curEntity = (Entity)it.next();
+        Entity priorEntity = prior.getEntity(curEntity.getName());
+        if (priorEntity != null &&
+            !attributesEqual(curEntity.getAttributes(), priorEntity.getAttributes())) {
+          notifyListeners(new CommunityChangeEvent(community,
+                                                   CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED,
+                                                   curEntity.getName()));
+        }
+      }
+    }
+  }
+
+  private boolean attributesEqual(Attributes attrs1, Attributes attrs2) {
+    return (attrs1 == null && attrs2 == null) ||
+           attrs1 != null && attrs1.equals(attrs2);
+  }
+
+  private Collection listAddedEntities(Collection prior, Collection current) {
+    Collection added = CommunityUtils.getEntityNames(current);
+    added.removeAll(CommunityUtils.getEntityNames(prior));
+    return added;
+  }
+
+  private Collection listRemovedEntities(Collection prior, Collection current) {
+    Collection removed = CommunityUtils.getEntityNames(prior);
+    removed.removeAll(CommunityUtils.getEntityNames(current));
+    return removed;
+  }
+
+  private long now() {
+    return System.currentTimeMillis();
+  }
+
+  private boolean isExpired(CacheEntry ce) {
+    return (ce.timeStamp + expirationPeriod) < now();
+  }
+
+  private void flushCacheEntry(CacheEntry ce) {
+    if (logger.isInfoEnabled()) {
+      logger.info("flushEntry: community=" + ce.community.getName());
+    }
+    remove(ce.community.getName());
+  }
+
+  /*
+   * Determines if a local copy exists for all nested communities from a
+   * specified root community.
+   */
+  private boolean allDescendentsFound(Community community) {
+    Collection nestedCommunities =
+        community.search("(Role=Member)", Community.COMMUNITIES_ONLY);
+    for (Iterator it = nestedCommunities.iterator(); it.hasNext();) {
+      Community nestedCommunity = (Community)it.next();
+      if (!communities.containsKey(nestedCommunity.getName()) ||
+          !allDescendentsFound(nestedCommunity)) return false;
+    }
+    return true;
+  }
+
+  private void recursiveSearch(Community community,
+                               String filter,
+                               int qualifier,
+                               Set matches) {
+    if (community != null) {
+      Collection entities = community.search(filter, qualifier);
+      if (logger.isDetailEnabled()) {
+        logger.detail("recursiveSearch:" +
+                      " community=" + community.getName() +
+                      " filter=" + filter +
+                      " qualifier=" + qualifier +
+                      " matches=" + CommunityUtils.entityNames(entities));
+      }
+      matches.addAll(entities);
+      for (Iterator it = community.getEntities().iterator(); it.hasNext(); ) {
+        Entity entity = (Entity)it.next();
+        if (entity instanceof Community) {
+          String nestedCommunityName = entity.getName();
+          Community nestedCommunity = get(nestedCommunityName);
+          if (nestedCommunity != null) {
+            recursiveSearch(nestedCommunity, filter, qualifier, matches);
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Invoke callback on each CommunityListener associated with named
    * community and its ancestors.  Provide community reference in callback
    * argument.
-   * @param community Changed community
+   * @param cce CommunityChangeEvent to fire
    */
-  protected void notifyListeners(CommunityChangeEvent cce) {
+  private void notifyListeners(CommunityChangeEvent cce) {
     Set listenerSet = new HashSet();
     Set affectedCommunities = new HashSet();
     affectedCommunities.add(cce.getCommunityName());
@@ -292,49 +430,49 @@ public class CommunityCache
     for (Iterator it = listeners.iterator(); it.hasNext();) {
       listenerSet.add((CommunityChangeListener)it.next());
     }
-    if (logger.isDebugEnabled()) {
-      logger.debug(cacheId+": notifyListeners:" +
+    if (logger.isDetailEnabled()) {
+      logger.detail("notifyListeners:" +
                    " community=" + cce.getCommunityName() +
+                   " changeType=" + cce.getChangeTypeAsString(cce.getType()) +
+                   " whatChanged=" + cce.getWhatChanged() +
                    " numListeners=" + listenerSet.size());
     }
     fireCommunityChangeEvent(listenerSet,  cce);
   }
 
-  protected void fireCommunityChangeEvent(CommunityChangeListener l,
+  private void fireCommunityChangeEvent(CommunityChangeListener l,
                                           CommunityChangeEvent cce) {
     Set listeners = new HashSet();
     listeners.add(l);
     fireCommunityChangeEvent(listeners, cce);
   }
 
-  protected void fireCommunityChangeEvent(final Set listeners,
+  private void fireCommunityChangeEvent(final Set listeners,
                                           final CommunityChangeEvent cce) {
-    ThreadService ts =
-      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
-    Schedulable notifierThread = ts.getThread(this, new  Runnable() {
-      public void run() {
-        for (Iterator it = listeners.iterator(); it.hasNext(); ) {
-          ( (CommunityChangeListener) it.next()).communityChanged(cce);
+    if (threadService != null) { // use Cougaar threads
+      threadService.getThread(this, new Runnable() {
+        public void run() {
+          for (Iterator it = listeners.iterator(); it.hasNext(); ) {
+            ((CommunityChangeListener)it.next()).communityChanged(cce);
+          }
         }
-      }
-    }, "CommunityNotificationThread");
-    serviceBroker.releaseService(this, ThreadService.class, ts);
-    notifierThread.start();
+      } , "CommunityNotificationThread").start();
+    } else {  // Use regular Java threads
+      new Thread("CommunityNotificationThread") {
+        public void run() {
+          for (Iterator it = listeners.iterator(); it.hasNext(); ) {
+            ((CommunityChangeListener)it.next()).communityChanged(cce);
+          }
+        }
+      }.start();
+    }
   }
 
-  /**
-   * Add listener to be notified when a change occurs to community.
-   * @param l  Listener to be notified
-   */
-  protected void addListener(CommunityChangeListener l) {
-    if (l != null) addListener(l.getCommunityName(), l);
-  }
-
-  protected synchronized void addListener(String communityName, CommunityChangeListener l) {
+  private synchronized void addListener(String communityName, CommunityChangeListener l) {
     if (l != null) {
       String cname = (communityName != null ? communityName : "ALL_COMMUNITIES");
       if (logger.isDebugEnabled()) {
-        logger.debug(cacheId+": addListeners:" +
+        logger.debug("addListeners:" +
                      " community=" + cname);
       }
       synchronized (listenerMap) {
@@ -353,34 +491,34 @@ public class CommunityCache
             fireCommunityChangeEvent(l, new CommunityChangeEvent(community,
                                                                  CommunityChangeEvent.ADD_COMMUNITY,
                                                                  community.getName()));
+            for (Iterator it1 = community.getEntities().iterator(); it1.hasNext();) {
+              Entity entity = (Entity)it1.next();
+              fireCommunityChangeEvent(l, new CommunityChangeEvent(community,
+                                                                   CommunityChangeEvent.ADD_ENTITY,
+                                                                   entity.getName()));
+            }
           }
-        } else if (contains(cname)) {
-          fireCommunityChangeEvent(l, new CommunityChangeEvent(get(cname),
-                                                               CommunityChangeEvent.ADD_COMMUNITY,
-                                                               cname));
+        } else {
+          Community community = get(cname);
+          if (community != null) {
+            fireCommunityChangeEvent(l, new CommunityChangeEvent(community,
+                                                                 CommunityChangeEvent.ADD_COMMUNITY,
+                                                                 community.getName()));
+            for (Iterator it = community.getEntities().iterator(); it.hasNext(); ) {
+              Entity entity = (Entity)it.next();
+              fireCommunityChangeEvent(l, new CommunityChangeEvent(community,
+                                                                   CommunityChangeEvent.ADD_ENTITY,
+                                                                   entity.getName()));
+            }
+          }
         }
       }
     }
   }
 
   /**
-   * Removes listener from change notification list.
-   * @param l  Listener to be removed
-   */
-  protected void removeListener(CommunityChangeListener l) {
-    logger.debug("removeListener: community=" + l.getCommunityName());
-    synchronized (listenerMap) {
-      Set listeners = (Set)listenerMap.get(l.getCommunityName());
-      if (listeners == null) {
-        listeners = new HashSet();
-        listenerMap.put(l.getCommunityName(), listeners);
-      }
-      listeners.remove(l);
-    }
-  }
-
-  /**
    * Gets listeners.
+   * @param communityName Name of communtiy
    * @return Set of CommunityListeners.
    */
   protected Set getListeners(String communityName) {
@@ -394,42 +532,10 @@ public class CommunityCache
     }
   }
 
-  // CommunityChangeListener methods
-  public String getCommunityName() { return "ALL_COMMUNITIES"; }
-
-  public synchronized void communityChanged(CommunityChangeEvent cce) {
-    Community affectedCommunity = cce.getCommunity();
-    switch(cce.getType()) {
-      case CommunityChangeEvent.ADD_COMMUNITY:
-        add(affectedCommunity);
-        break;
-      case CommunityChangeEvent.REMOVE_COMMUNITY:
-        remove(affectedCommunity.getName());
-        break;
-      default:
-        CacheEntry ce = (CacheEntry)communities.get(affectedCommunity.getName());
-        if (ce != null) {
-          ce.timeStamp = new Date();
-          ((CommunityImpl)ce.community).setAttributes(affectedCommunity.getAttributes());
-          ((CommunityImpl)ce.community).setEntities(affectedCommunity.getEntities());
-        } else {
-          logger.warn("Update requested on non-existent community: community=" +
-                      affectedCommunity.getName());
-        }
-        break;
-    }
-    if (cce.getType() >= 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(cacheId+": " + cce.toString());
-      }
-      notifyListeners(cce);
-    }
-  }
-
   class CacheEntry {
-    private Date timeStamp;
-    private Community community;
-    CacheEntry(Date timeStamp, Community community) {
+    private long timeStamp;
+    private CommunityImpl community;
+    CacheEntry(long timeStamp, CommunityImpl community) {
       this.timeStamp = timeStamp;
       this.community = community;
     }

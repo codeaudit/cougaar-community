@@ -28,6 +28,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,62 +40,134 @@ import org.cougaar.core.service.community.Entity;
  * Identifies the entities that an agent has added (via a join request) to
  * all its parent communities.  This map is
  * compared to Community objects received from the various community
- * managers sending Community data to this agent.  If a mis-match is detected
+ * managers sending Community data to this agent.  If a mismatch is detected
  * the agent will attempt to rectify by sending an join or leave request
- * to manager.  A mis-match is likely the result of a community manager
+ * to manager.  A mismatch is likely the result of a community manager
  * termination/restart.
  */
-class CommunityMemberships implements Serializable {
+public class CommunityMemberships implements Serializable {
 
   private Map parentCommunities = new HashMap();
+  private transient Set listeners = Collections.synchronizedSet(new HashSet());
 
   /**
    * Add an entity to community.
+   * @param communityName Name of parent community
+   * @param entity Entity added by monitoring agent
    */
-  protected synchronized void add(String communityName, Entity entity) {
+  public synchronized void add(String communityName, Entity entity) {
     Map entities = (Map)parentCommunities.get(communityName);
     if (entities == null) {
       entities = new HashMap();
       parentCommunities.put(communityName, entities);
     }
     entities.put(entity.getName(), entity);
+    fireListeners();
   }
 
   /**
    * Get names of all parent communities.
    * @return Set of community names.
    */
-  protected synchronized Set listCommunities() {
+  public synchronized Set listCommunities() {
     return parentCommunities.keySet();
   }
 
   /**
-   * Check for existence of entity in community.
+   * Check for existence of community.
+   * @param communityName Name of community
+   * @return true if community exists
    */
-  protected synchronized boolean contains(String communityName, String entityName) {
+  public synchronized boolean contains(String communityName) {
+    return parentCommunities.containsKey(communityName);
+  }
+
+  /**
+   * Check for existence of entity in community.
+   * @param communityName Name of community
+   * @param entityName Name of entity
+   * @return true if community exists and has entry for specified entity
+   */
+  public synchronized boolean contains(String communityName, String entityName) {
     Map entities = (Map)parentCommunities.get(communityName);
     return (entities != null && entities.containsKey(entityName));
   }
 
   /**
-   * Remove entity from community.
+   * Remove community.
+   * @param communityName Name of community to remove
    */
-  protected synchronized void remove(String communityName, String entityName) {
+  public synchronized void remove(String communityName) {
+    if (parentCommunities.containsKey(communityName)) {
+      parentCommunities.remove(communityName);
+      fireListeners();
+    }
+  }
+
+  /**
+   * Remove entity from community.  If community entry is empty after removal
+   * of entity, the community is also removed.
+   * @param communityName Name of parent community
+   * @param entityName Name of entity to remove
+   */
+  public synchronized void remove(String communityName, String entityName) {
     Map entities = (Map)parentCommunities.get(communityName);
     if (entities != null && entities.containsKey(entityName)) {
       entities.remove(entityName);
+      if (entities.isEmpty()) parentCommunities.remove(communityName);
+      fireListeners();
     }
   }
 
   /**
    * Returns a Collection of Entity objects associated with named Community.
+   * @param communityName Name of community
+   * @return Collection of Entity objects associated with named community
    */
-  protected synchronized Collection getEntities(String communityName) {
+  public synchronized Collection getEntities(String communityName) {
     Map entities = (Map)parentCommunities.get(communityName);
     if (entities != null) {
       return new ArrayList(entities.values());
     } else {
       return Collections.EMPTY_SET;
+    }
+  }
+
+  public String toString() {
+    StringBuffer sb = new StringBuffer();
+    for (Iterator it = parentCommunities.entrySet().iterator(); it.hasNext();) {
+      Map.Entry me = (Map.Entry)it.next();
+      String communityName = (String)me.getKey();
+      Map entities = (Map)me.getValue();
+      String entityNames = CommunityUtils.entityNames(entities.keySet());
+      sb.append(communityName + "=" + entityNames);
+      if (it.hasNext()) {
+        sb.append(", ");
+      }
+    }
+    return sb.toString();
+  }
+
+  public void addListener(CommunityMembershipsListener cml) {
+    if (listeners == null) {
+      listeners = Collections.synchronizedSet(new HashSet());
+    }
+    listeners.add(cml);
+  }
+
+  public void removeListener(CommunityMembershipsListener cml) {
+    if (listeners != null) {
+      listeners.remove(cml);
+    }
+  }
+
+  protected void fireListeners() {
+    if (listeners != null) {
+      List l = new ArrayList(listeners);
+      for (Iterator it = l.iterator(); it.hasNext(); ) {
+        CommunityMembershipsListener cml = (CommunityMembershipsListener)it.next();
+        cml.membershipsChanged();
+      }
     }
   }
 
