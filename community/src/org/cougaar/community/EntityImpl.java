@@ -167,8 +167,8 @@ public class EntityImpl implements Entity, Serializable, Cloneable {
   public static String attrsToString(Attributes attrs, String indent) {
     StringBuffer sb = new StringBuffer(indent + "<Attributes>\n");
     try {
-      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
-        Attribute attr = (Attribute)enum.next();
+      for (NamingEnumeration en = attrs.getAll(); en.hasMore();) {
+        Attribute attr = (Attribute)en.next();
         sb.append(indent + "  <Attribute id=\"" + attr.getID() + "\" >\n");
         for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
           sb.append(indent + "    <Value>" + enum1.next() + "</Value>\n");
@@ -187,8 +187,8 @@ public class EntityImpl implements Entity, Serializable, Cloneable {
   public String attrsToString() {
     StringBuffer sb = new StringBuffer();
     try {
-      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
-        Attribute attr = (Attribute)enum.next();
+      for (NamingEnumeration en = attrs.getAll(); en.hasMore();) {
+        Attribute attr = (Attribute)en.next();
         sb.append(attr.getID() + "=[");
         for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
           sb.append((String)enum1.next());
@@ -197,7 +197,7 @@ public class EntityImpl implements Entity, Serializable, Cloneable {
           else
             sb.append("]");
         }
-        if (enum.hasMore()) sb.append(" ");
+        if (en.hasMore()) sb.append(" ");
       }
     } catch (NamingException ne) {}
     return sb.toString();

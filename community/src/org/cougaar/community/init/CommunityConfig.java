@@ -98,10 +98,10 @@ public class CommunityConfig {
       sb.append("<Community Name=\"" + getName() + "\" >\n");
       Attributes attributes = getAttributes();
       if (attributes != null && attributes.size() > 0) {
-        NamingEnumeration enum = attributes.getAll();
-        while (enum.hasMore()) {
+        NamingEnumeration en = attributes.getAll();
+        while (en.hasMore()) {
           Attribute attr =
-            (Attribute)enum.next();
+            (Attribute)en.next();
           String id = attr.getID();
           NamingEnumeration valuesEnum = attr.getAll();
           while (valuesEnum.hasMore()) {
@@ -121,10 +121,10 @@ public class CommunityConfig {
         } else {
           sb.append(" >\n");
         }
-        NamingEnumeration enum = attributes.getAll();
-        while (enum.hasMore()) {
+        NamingEnumeration en = attributes.getAll();
+        while (en.hasMore()) {
           Attribute attr =
-            (Attribute)enum.next();
+            (Attribute)en.next();
           String id = attr.getID();
           NamingEnumeration valuesEnum = attr.getAll();
           while (valuesEnum.hasMore()) {

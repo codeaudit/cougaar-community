@@ -669,8 +669,8 @@ public abstract class AbstractCommunityService
         Attribute parentAttr = attrs.get("Parent");
         if (parentAttr != null) {
           try {
-            for (NamingEnumeration enum = parentAttr.getAll(); enum.hasMore(); ) {
-              parents.add((String)enum.next());
+            for (NamingEnumeration en = parentAttr.getAll(); en.hasMore(); ) {
+              parents.add((String)en.next());
             }
           } catch (NamingException ne) {
             if (log.isErrorEnabled()) {

@@ -300,8 +300,8 @@ public abstract class AbstractCommunityManager
   protected String attrsToString(Attributes attrs) {
     StringBuffer sb = new StringBuffer("[");
     try {
-      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore(); ) {
-        Attribute attr = (Attribute) enum.next();
+      for (NamingEnumeration en = attrs.getAll(); en.hasMore(); ) {
+        Attribute attr = (Attribute) en.next();
         sb.append(attr.getID() + "=(");
         for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore(); ) {
           sb.append( (String) enum1.next());
@@ -310,7 +310,7 @@ public abstract class AbstractCommunityManager
           else
             sb.append(")");
         }
-        if (enum.hasMore())
+        if (en.hasMore())
           sb.append(",");
       }
       sb.append("]");
