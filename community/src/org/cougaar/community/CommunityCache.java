@@ -26,6 +26,9 @@ import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityChangeEvent;
 import org.cougaar.core.service.community.CommunityChangeListener;
 
+import org.cougaar.core.naming.Filter;
+import org.cougaar.core.naming.SearchStringParser;
+
 import org.cougaar.util.log.*;
 
 import java.util.Collection;
@@ -141,6 +144,35 @@ public class CommunityCache
     return nestedCommunityNames;
   }
 
+  /**
+   * Searches all communities in cache for a community matching search filter
+   */
+  protected Set search(String filter) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(cacheId + ": search:" +
+                   " filter=" + filter);
+    }
+    if (communities.isEmpty())
+      return Collections.EMPTY_SET;
+    Set matches = new HashSet();
+    try {
+      Filter f = new SearchStringParser().parse(filter);
+      for (Iterator it = communities.values().iterator(); it.hasNext(); ) {
+        Community community = (Community) it.next();
+        if (f.match(community.getAttributes()))
+          matches.add(community);
+      }
+    }
+    catch (Exception ex) {
+      System.out.println("Exception in search, filter=" + filter);
+      ex.printStackTrace();
+    }
+    return matches;
+  }
+
+  /**
+   * Searches community for all entities matching search filter
+   */
   protected Set search(String  communityName,
                        String  filter,
                        int     qualifier,
