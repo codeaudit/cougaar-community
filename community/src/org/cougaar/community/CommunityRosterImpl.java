@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 1997-2003 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -25,22 +25,23 @@ import java.util.*;
 import org.cougaar.core.service.community.*;
 import org.cougaar.core.mts.MessageAddress;
 
+import javax.naming.*;
+import javax.naming.directory.*;
+
 /**
  * Implementation of a CommunityRoster.
  */
 public class CommunityRosterImpl
   implements CommunityRoster, java.io.Serializable {
 
-  private String name;
-  private Collection members = new Vector();
-  private boolean exists = false;
+  private Community community = null;
+  private boolean exists = true;
 
   /**
    * Constructor that creates an empty roster.
    */
   public CommunityRosterImpl(String communityName) {
-    this.name = communityName;
-    this.exists = false;
+    this.community = new CommunityImpl(communityName);
   }
 
   /**
@@ -49,9 +50,16 @@ public class CommunityRosterImpl
    */
   public CommunityRosterImpl(String communityName, Collection members,
       boolean exists) {
-    this.name = communityName;
-    this.members = members;
+    this.community = new CommunityImpl(communityName);
+    for (Iterator it = members.iterator(); it.hasNext();) {
+      CommunityMember cm = (CommunityMember)it.next();
+      addMember(cm);
+    }
     this.exists = exists;
+  }
+
+  public CommunityRosterImpl(Community community) {
+    this.community = community;
   }
 
   /**
@@ -60,7 +68,7 @@ public class CommunityRosterImpl
    * @return Returns the community name
    **/
   public String getCommunityName() {
-    return this.name;
+    return this.community.getName();
   }
 
 
@@ -70,7 +78,7 @@ public class CommunityRosterImpl
    * @return True if the community exists
    **/
   public boolean communityExists() {
-    return this.exists;
+    return exists;
   }
 
 
@@ -90,15 +98,45 @@ public class CommunityRosterImpl
    * @return Array of CommunityMember objects
    */
   public Collection getMembers() {
+    Collection members = new ArrayList();
+    for (Iterator it = community.getEntities().iterator(); it.hasNext();) {
+      members.add(entityToCommunityMember((Entity)it.next()));
+    }
     return members;
   }
 
+  private CommunityMember entityToCommunityMember(Entity entity) {
+    int memberType = CommunityMember.AGENT;
+    if (entity instanceof Community) memberType = CommunityMember.COMMUNITY;
+    CommunityMember cm = new CommunityMember(entity.getName(), memberType);
+    Attribute roles = entity.getAttributes().get("Role");
+    try {
+      NamingEnumeration enum = roles.getAll();
+      while (enum.hasMore()) {
+        cm.addRoleName( (String) enum.next());
+      }
+    } catch (NamingException ne) {}
+    return cm;
+  }
 
   /**
    * Adds a member to community roster.
    */
   public void addMember(CommunityMember member) {
-    members.add(member);
+    Entity entity = null;
+    if (member.isAgent()) {
+      entity = new AgentImpl(member.getName());
+    } else {
+      entity = new CommunityImpl(member.getName());
+    }
+    Attribute roles = new BasicAttribute("Role");
+    for (Iterator it = member.getRoles().iterator(); it.hasNext();) {
+      roles.add(it.next());
+    }
+    Attributes attrs = new BasicAttributes();
+    attrs.put(roles);
+    entity.setAttributes(attrs);
+    community.addEntity(entity);
   }
 
   /**
@@ -107,13 +145,17 @@ public class CommunityRosterImpl
    * @return Collection of Agent MessageAddresss
    */
   public Collection getMemberAgents() {
-    Collection agents = new Vector();
-    for (Iterator it = members.iterator(); it.hasNext();) {
-      CommunityMember member = (CommunityMember)it.next();
-      if (member.isAgent())
-        agents.add(member.getAgentId());
+    if(community != null) {
+      Collection agents = new Vector();
+      for (Iterator it = community.getEntities().iterator(); it.hasNext();) {
+        Entity entity = (Entity)it.next();
+        if(!(entity instanceof Community))
+          agents.add(entity.getName());
+      }
+      return agents;
     }
-    return agents;
+    else
+     return new ArrayList();
   }
 
 
@@ -123,27 +165,32 @@ public class CommunityRosterImpl
    * @return Collection of community names
    */
   public Collection getMemberCommunities() {
-    Vector communityNames = new Vector();
-    for (Iterator it = members.iterator(); it.hasNext();) {
-      CommunityMember member = (CommunityMember)it.next();
-      if (!member.isAgent())
-        communityNames.add(member.getName());
+    if(community != null) {
+      Collection communitys = new Vector();
+      for (Iterator it = community.getEntities().iterator(); it.hasNext();) {
+        Map.Entry entry = (Map.Entry)it.next();
+        Entity entity = (Entity)entry.getValue();
+        if(entity instanceof Community)
+          communitys.add(entity.getName());
+      }
+      return communitys;
     }
-    return communityNames;
+    else
+     return new ArrayList();
   }
 
   public String toString() {
     StringBuffer sb = new StringBuffer();
     if (exists) {
-      sb.append("Roster for community '" + name + "':\n");
-      for (Iterator it = members.iterator(); it.hasNext();) {
-        CommunityMember member = (CommunityMember)it.next();
-        sb.append("  name=" + member.getName() + ", type=" +
-          (member.isAgent() ? "agent" : "community") +
+      sb.append("Roster for community '" + community.getName() + "':\n");
+      for (Iterator it = community.getEntities().iterator(); it.hasNext();) {
+        Entity entity = (Entity)it.next();
+        sb.append("  name=" + entity.getName() + ", type=" +
+          (entity instanceof Agent ? "agent" : "community") +
           "\n");
       }
     } else {
-      sb.append("Community '" + name + "' does not exist");
+      sb.append("Community '" + community.getName() + "' does not exist");
     }
     return sb.toString();
   }

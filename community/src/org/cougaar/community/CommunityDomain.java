@@ -2,11 +2,11 @@
  * <copyright>
  *  Copyright 2001-2003 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects Agency (DARPA).
- * 
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the Cougaar Open Source License as published by
  *  DARPA on the Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THE COUGAAR SOFTWARE AND ANY DERIVATIVE SUPPLIED BY LICENSOR IS
  *  PROVIDED 'AS IS' WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR
  *  IMPLIED, INCLUDING (BUT NOT LIMITED TO) ALL IMPLIED WARRANTIES OF
@@ -85,10 +85,10 @@ public class CommunityDomain extends DomainAdapter {
   }
 
   protected void loadFactory() {
-    LDMServesPlugin ldm = ldmService.getLDM();
-    UIDServer myUIDServer = ldm.getUIDServer();
-    Factory f = new CommunityChangeNotificationFactory(myUIDServer);
-    setFactory(f);
+    //LDMServesPlugin ldm = ldmService.getLDM();
+    //UIDServer myUIDServer = ldm.getUIDServer();
+    //Factory f = new CommunityFactory(myUIDServer);
+    //setFactory(f);
   }
 
   protected void loadXPlan() {
