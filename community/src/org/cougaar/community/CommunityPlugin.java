@@ -504,6 +504,30 @@ public class CommunityPlugin extends ComponentPlugin {
     communityManager.processRequest(cmr);
   }
 
+  protected void updateSearchRequests(String communityName) {
+    for (Iterator it = blackboard.query(communityRequestPredicate).iterator(); it.hasNext();) {
+      CommunityRequest cr = (CommunityRequest)it.next();
+      if (cr instanceof SearchCommunity) {
+        SearchCommunity sc = (SearchCommunity)cr;
+        if (cr.getCommunityName() == null) {
+          sc.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
+                                                   cache.search(sc.getFilter())));
+          blackboard.publishChange(sc);
+      } else if (cr.getCommunityName().equals(communityName)) {
+        Community community = (Community)cache.get(communityName);
+        Set entities = cache.search(sc.getCommunityName(),
+                                    sc.getFilter(),
+                                    sc.getQualifier(),
+                                    sc.isRecursiveSearch());
+          CommunityResponse scResp =
+              new CommunityResponseImpl(CommunityResponse.SUCCESS, entities);
+          sc.setResponse(scResp);
+          blackboard.publishChange(sc);
+        }
+      }
+    }
+  }
+
   protected void processCommunityManagerResponse(CommunityManagerRequest cmr) {
     CommunityResponse resp = (CommunityResponse) cmr.getResponse();
     if (resp != null && resp.getStatus() != CommunityResponse.UNDEFINED) {
@@ -575,6 +599,7 @@ public class CommunityPlugin extends ComponentPlugin {
         blackboard.publishRemove(gce.cr);
       }
     }
+    updateSearchRequests(community.getName());
     validateCommunityDescriptor(cd);
   }
 
@@ -608,6 +633,7 @@ public class CommunityPlugin extends ComponentPlugin {
         blackboard.publishRemove(gce.cr);
       }
     }
+    updateSearchRequests(community.getName());
     validateCommunityDescriptor(cd);
   }
 
