@@ -32,8 +32,8 @@ import org.cougaar.core.component.ServiceRevokedEvent;
 import org.cougaar.core.agent.AgentChildBinder;
 import org.cougaar.core.mts.MessageAddress;
 
-import org.cougaar.core.node.InitializerService;
-import org.cougaar.core.node.CommunityConfig;
+import org.cougaar.community.init.CommunityInitializerService;
+import org.cougaar.community.init.CommunityConfig;
 
 import org.cougaar.core.service.LoggingService;
 
@@ -77,19 +77,21 @@ public class CommunityServiceComponent extends ComponentSupport {
       }
     }
     CommunityService cs = loadCommunityService(agentId);
-    InitializerService is = (InitializerService) sb.getService(this, InitializerService.class, null);
+    CommunityInitializerService cis = (CommunityInitializerService)
+      sb.getService(this, CommunityInitializerService.class, null);
 
     try {
-      //initXmlFile only used by FileInitializerServiceProvider
-      communityConfigs = is.getCommunityDescriptions(agentId.toString(), initXmlFile);
+      //initXmlFile only used by file-based community config
+      communityConfigs = cis.getCommunityDescriptions(agentId.toString(), initXmlFile);
     }
     catch (Exception e) {
       System.err.println("\nUnable to obtain community information for agent "+agentId.toString());
       e.printStackTrace();
     } finally {
-      sb.releaseService(this, InitializerService.class, is);
+      sb.releaseService(this, CommunityInitializerService.class, cis);
     }
-    initializeCommunityRelationships(cs, is, agentId, communityConfigs); //recursive
+    // FIXME we just released the community-init-service!
+    initializeCommunityRelationships(cs, cis, agentId, communityConfigs); //recursive
 
     super.load();
   }
@@ -111,18 +113,18 @@ public class CommunityServiceComponent extends ComponentSupport {
 
   /**
    * Adds initial community relationships for this agent to Name Server.
-   * Community relationships are obtained from the InitializerService which
+   * Community relationships are obtained from the CommunityInitializerService which
    * in turn obtains the information from either the Configuration database or
    * an XML file based on a system parameter. This method is recursive in tha this
    * agent, if it creates a community, takes responsibility for determining if the
    * community that it created is a member of other communities and will add that
    * information to the NameServer as well.
    * @param cs       Reference to CommunityService
-   * @param is       Reference to InitializerService
+   * @param cis       Reference to CommunityInitializerService
    * @param agentID  Agent identifier
    * @param communityConfigs  CommunityConfig objects
    */
-  private void initializeCommunityRelationships(CommunityService cs, InitializerService is,
+  private void initializeCommunityRelationships(CommunityService cs, CommunityInitializerService cis,
                                                 Object entId, Collection communityConfigs) {
     Object entityId;
     if (entId instanceof MessageAddress)
@@ -144,9 +146,9 @@ public class CommunityServiceComponent extends ComponentSupport {
           cs.createCommunity(communityName, cc.getAttributes());
           //this agent just created this community so now have responsibility to check if this
           // community is a member of any other communities
-          Collection communityWithCommMember = is.getCommunityDescriptions(communityName, initXmlFile);
+          Collection communityWithCommMember = cis.getCommunityDescriptions(communityName, initXmlFile);
           if (!communityWithCommMember.isEmpty()) {
-            initializeCommunityRelationships(cs, is, communityName, communityWithCommMember);
+            initializeCommunityRelationships(cs, cis, communityName, communityWithCommMember);
           }
         }
         Attributes myAttributes = cc.getEntity(entityId.toString()).getAttributes();
