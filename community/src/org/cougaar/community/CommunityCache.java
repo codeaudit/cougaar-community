@@ -24,13 +24,15 @@ package org.cougaar.community;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import org.cougaar.core.service.ThreadService;
 import org.cougaar.core.service.community.Community;
@@ -45,15 +47,15 @@ import javax.naming.directory.Attributes;
 /**
  * Maintains a local cache of Community objects.
  */
-public class CommunityCache {
-
-  public static final long CACHE_EXPIRATION = 10 * 60 * 1000;
+public class CommunityCache implements CommunityServiceConstants {
 
   protected Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
   protected Map communities = new HashMap();
   protected Map listenerMap = new HashMap();
   protected ThreadService threadService;
-  protected long expirationPeriod = CACHE_EXPIRATION;
+  protected long expirationPeriod = DEFAULT_CACHE_EXPIRATION;
+
+  private static DateFormat df = new SimpleDateFormat("HH:mm:ss,SSS");
 
   public CommunityCache(ThreadService ts) {
     this.threadService = ts;
@@ -62,6 +64,18 @@ public class CommunityCache {
   public CommunityCache(ThreadService ts, long expiration) {
     this(ts);
     this.expirationPeriod = expiration;
+  }
+
+  protected void getSystemProperties() {
+    try {
+      expirationPeriod =
+          Long.parseLong(System.getProperty(CACHE_EXPIRATION_PROPERTY,
+                                            Long.toString(DEFAULT_CACHE_EXPIRATION)));
+    } catch (Exception ex) {
+      if (logger.isWarnEnabled()) {
+        logger.warn("Exception setting parameter from system property", ex);
+      }
+    }
   }
 
   public synchronized Community get(String name) {
@@ -102,8 +116,8 @@ public class CommunityCache {
       System.out.println("Exception in search, filter=" + filter);
       ex.printStackTrace();
     }
-    if (logger.isDebugEnabled())
-      logger.debug("search: matches=" + CommunityUtils.entityNames(matches));
+    if (logger.isDetailEnabled())
+      logger.detail("search: matches=" + CommunityUtils.entityNames(matches));
     return matches;
   }
 
@@ -122,8 +136,8 @@ public class CommunityCache {
                        int     qualifier,
                        boolean recursive) {
     Community community = get(communityName);
-    if (logger.isDebugEnabled()) {
-      logger.debug("search:" +
+    if (logger.isDetailEnabled()) {
+      logger.detail("search:" +
                    " community=" + communityName +
                    " filter=" + filter +
                    " qualifier=" + community.qualifierToString(qualifier) +
@@ -174,7 +188,8 @@ public class CommunityCache {
           logger.debug("update:" +
                        " community=" + community.getName() +
                        " prior=" + (prior == null ? -1 : prior.getEntities().size()) +
-                       " updated=" + ce.community.getEntities().size());
+                       " updated=" + ce.community.getEntities().size() +
+                       " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
         }
         fireChangeNotifications(prior, ce.community);
       }
@@ -182,10 +197,11 @@ public class CommunityCache {
       ce = new CacheEntry(now(), (CommunityImpl)ci.clone());
       communities.put(community.getName(), ce);
       if (logger.isDebugEnabled()) {
-        logger.debug("update:" +
+        logger.debug("add:" +
                      " community=" + community.getName() +
                      " prior=null" +
-                     " updated=" + ce.community.getEntities().size());
+                     " updated=" + ce.community.getEntities().size() +
+                     " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
       }
       fireChangeNotifications(null, ce.community);
     }
@@ -244,8 +260,8 @@ public class CommunityCache {
       if (l == null) {
         communityName = "ALL_COMMUNITIES";
       }
-      if (logger.isDebugEnabled()) {
-        logger.debug("removeListener: community=" + communityName);
+      if (logger.isDetailEnabled()) {
+        logger.detail("removeListener: community=" + communityName);
       }
       synchronized (listenerMap) {
         Set listeners = (Set)listenerMap.get(communityName);
@@ -256,7 +272,7 @@ public class CommunityCache {
     }
   }
 
-  public boolean contains(String name) {
+  public synchronized boolean contains(String name) {
     boolean containsCurrentEntry = false;
     CacheEntry ce = (CacheEntry)communities.get(name);
     if (ce != null) {
@@ -471,8 +487,8 @@ public class CommunityCache {
   private synchronized void addListener(String communityName, CommunityChangeListener l) {
     if (l != null) {
       String cname = (communityName != null ? communityName : "ALL_COMMUNITIES");
-      if (logger.isDebugEnabled()) {
-        logger.debug("addListeners:" +
+      if (logger.isDetailEnabled()) {
+        logger.detail("addListeners:" +
                      " community=" + cname);
       }
       synchronized (listenerMap) {

@@ -36,6 +36,7 @@ import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.RelayAdapter;
 import org.cougaar.community.CommunityUpdateListener;
 import org.cougaar.community.BlackboardClient;
+import org.cougaar.community.CommunityServiceConstants;
 import org.cougaar.core.agent.service.alarm.Alarm;
 import org.cougaar.core.component.BindingSite;
 import org.cougaar.core.component.ServiceBroker;
@@ -58,7 +59,7 @@ import org.cougaar.core.util.UID;
  * Helper class used to distribute new/updated CommunityDescriptor objects to
  * interested nodes and agents.
  */
-public class CommunityDistributer {
+public class CommunityDistributer implements CommunityServiceConstants {
 
   private long updateInterval;
   private long cacheExpiration;
@@ -96,9 +97,6 @@ public class CommunityDistributer {
   /**
    * Constructor.
    * @param bs  BindingSite from CommunityManager.
-   * @param updateInterval  Defines maximum rate that updates are sent
-   * @param cacheExpiration Recipients cache expiration, defines minimum
-   *                        update frequency
    * @param nodesOnly       True if CommunityDescriptors are only sent to node
    *                        agents
    * @param cul             Listener object to receive community descriptor updates
@@ -107,16 +105,12 @@ public class CommunityDistributer {
    *
    */
   public CommunityDistributer(BindingSite             bs,
-                              long                    updateInterval,
-                              long                    cacheExpiration,
                               boolean                 nodesOnly,
                               CommunityUpdateListener cul,
                               BlackboardClient        bc,
                               Map                     communities) {
     this.communities = communities;
     this.bindingSite = bs;
-    this.cacheExpiration = cacheExpiration;
-    this.updateInterval = updateInterval;
     this.nodesOnly = nodesOnly;
     this.updateListener = cul;
     this.blackboardClient = bc;
@@ -128,7 +122,23 @@ public class CommunityDistributer {
         ((AlarmService)serviceBroker.getService(this, AlarmService.class, null));
     this.whitePagesService =
       (WhitePagesService)serviceBroker.getService(this, WhitePagesService.class, null);
+    getSystemProperties();
     initUidService();
+  }
+
+  protected void getSystemProperties() {
+    try {
+      updateInterval =
+          Long.parseLong(System.getProperty(UPDATE_INTERVAL_PROPERTY,
+                                            Long.toString(DEFAULT_UPDATE_INTERVAL)));
+      cacheExpiration =
+          Long.parseLong(System.getProperty(CACHE_EXPIRATION_PROPERTY,
+                                            Long.toString(DEFAULT_CACHE_EXPIRATION)));
+    } catch (Exception ex) {
+      if (logger.isWarnEnabled()) {
+        logger.warn(agentId + ": Exception setting parameter from system property", ex);
+      }
+    }
   }
 
   protected ServiceBroker getServiceBroker() {
@@ -205,7 +215,7 @@ public class CommunityDistributer {
         }
       } else {
         if ((de.didChange && (now > (de.lastSent + updateInterval))) ||
-            (now > (de.lastSent + cacheExpiration))) {
+            (now > (de.lastSent + (cacheExpiration / 2)))) {
           // publish changed descriptor
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
           de.didChange = false;

@@ -35,6 +35,7 @@ import org.cougaar.community.CommunityDescriptor;
 import org.cougaar.community.CommunityUpdateListener;
 import org.cougaar.community.RelayAdapter;
 import org.cougaar.community.AbstractCommunityService;
+import org.cougaar.community.CommunityServiceConstants;
 
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.component.BindingSite;
@@ -56,27 +57,9 @@ import org.cougaar.util.UnaryPredicate;
  * Concrete implementation of CommunityManager interface that uses Blackboard
  * Relays to perform communication with remote nodes/agents.
  */
-public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
-
-  // Defines how long CommunityDescriptor updates should be aggregated before
-  // sending to interested agents.
-  public static final String SEND_INTERVAL_PROPERTY = "org.cougaar.community.updateInterval";
-  private static long SEND_INTERVAL = 30 * 1000;
-
-  // Defines frequency of White Pages read to verify that this agent is still
-  // manager for community
-  public static final String VERIFY_MGR_INTERVAL_PROPERTY = "org.cougaar.community.manager.check.interval";
-  private static long VERIFY_MGR_INTERVAL = 1 * 60 * 1000;
-
-  // Period that a client caches its community descriptors
-  public static final String CACHE_EXPIRATION_PROPERTY = "org.cougaar.community.cache.expiration";
-  private static long CACHE_EXPIRATION = 10 * 60 * 1000;
-
-  // Classname of CommunityAccessManager to use for request authorization
-  public static final String COMMUNITY_ACCESS_MANAGER_PROPERTY =
-      "org.cougaar.community.access.manager.classname";
-  private static String DEFAULT_COMMUNITY_ACCESS_MANAGER_CLASSNAME =
-      "org.cougaar.community.manager.CommunityAccessManager";
+public class DefaultCommunityManagerImpl
+    extends AbstractCommunityManager
+    implements CommunityServiceConstants {
 
   protected BindingSite bindingSite;
   protected MyBlackboardClient myBlackboardClient;
@@ -96,6 +79,8 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
   protected CommunityUpdateListener updateListener;
 
   protected String priorManager = null;
+
+  protected long verifyInterval = DEFAULT_VERIFY_MGR_INTERVAL;
 
   /**
    * Construct CommunityManager component capable of communicating with remote
@@ -119,8 +104,6 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
     getSystemProperties();
     accessManager = getCommunityAccessManager();
     distributer = new CommunityDistributer(bs,
-                                           SEND_INTERVAL,
-                                           CACHE_EXPIRATION,
                                            true,
                                            cul,
                                            myBlackboardClient,
@@ -158,12 +141,9 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
 
   protected void getSystemProperties() {
     try {
-      SEND_INTERVAL =
-          Long.parseLong(System.getProperty(SEND_INTERVAL_PROPERTY, Long.toString(SEND_INTERVAL)));
-      VERIFY_MGR_INTERVAL =
-          Long.parseLong(System.getProperty(VERIFY_MGR_INTERVAL_PROPERTY, Long.toString(VERIFY_MGR_INTERVAL)));
-      CACHE_EXPIRATION =
-          Long.parseLong(System.getProperty(CACHE_EXPIRATION_PROPERTY, Long.toString(CACHE_EXPIRATION)));
+      verifyInterval =
+          Long.parseLong(System.getProperty(VERIFY_MGR_INTERVAL_PROPERTY,
+                                            Long.toString(DEFAULT_VERIFY_MGR_INTERVAL)));
     } catch (Exception ex) {
       if (logger.isWarnEnabled()) {
         logger.warn(agentName + ": Exception setting parameter from system property", ex);
@@ -458,7 +438,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
 
     protected void startVerifyManagerCheck() {
       if (verifyMgrAlarm == null) {
-        verifyMgrAlarm = new BBWakeAlarm(now() + VERIFY_MGR_INTERVAL);
+        verifyMgrAlarm = new BBWakeAlarm(now() + verifyInterval);
         alarmService.addRealTimeAlarm(verifyMgrAlarm);
       }
     }
@@ -474,10 +454,10 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
         for (Iterator it = cds.iterator(); it.hasNext(); ) {
           RelayAdapter ra = (RelayAdapter)it.next();
           CommunityDescriptor cd = (CommunityDescriptor)ra.getContent();
-          if (logger.isDebugEnabled()) {
+          if (logger.isInfoEnabled()) {
             logger.info(agentName +
                         ": Found CommunityDescriptor Relay: community=" +
-                        cd.getName());
+                        cd.getCommunity());
           }
           communities.put(cd.getName(), cd.getCommunity());
           distributer.add(ra);
@@ -495,7 +475,7 @@ public class DefaultCommunityManagerImpl extends AbstractCommunityManager {
       // manager roles for this agent
       if (verifyMgrAlarm != null && verifyMgrAlarm.hasExpired()) {
         verifyManagerRole();
-        verifyMgrAlarm = new BBWakeAlarm(now() + VERIFY_MGR_INTERVAL);
+        verifyMgrAlarm = new BBWakeAlarm(now() + verifyInterval);
         alarmService.addRealTimeAlarm(verifyMgrAlarm);
       }
 
