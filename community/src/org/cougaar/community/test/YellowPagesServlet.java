@@ -39,7 +39,7 @@ import org.cougaar.core.service.community.CommunityMember;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.lib.web.arch.root.GlobalEntry;
 import org.cougaar.core.mts.MTImpl;
-import org.cougaar.core.node.NodeIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 /**
  * The servlet fetch naming service from blackboard and get all information of
@@ -240,9 +240,9 @@ public class YellowPagesServlet extends BaseServletComponent
           String name = ncPair.getName();
           /*MessageAddress o = (MessageAddress)dc.lookup(name);
           table.put(name, o.getAddress());*/
-          if(ncPair.getClassName().equals("org.cougaar.core.node.NodeIdentifier"))
+          if(ncPair.getClassName().equals("org.cougaar.core.mts.MessageAddress"))
           {
-            //NodeIdentifier o = (NodeIdentifier)dc.lookup(name);
+            //MessageAddress o = (MessageAddress)dc.lookup(name);
             table.put(name + " Node", ncPair.getClassName());
           }
           else

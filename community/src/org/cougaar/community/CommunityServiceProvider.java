@@ -23,7 +23,7 @@ import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
 import org.cougaar.core.component.Service;
 
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 /**
  * Returns a reference to a CommunityService.
@@ -33,7 +33,7 @@ public class CommunityServiceProvider implements ServiceProvider {
 
   private CommunityService cs;
 
-  public CommunityServiceProvider (ServiceBroker sb, ClusterIdentifier cid,
+  public CommunityServiceProvider (ServiceBroker sb, MessageAddress cid,
     boolean useCache) {
     cs = CommunityServiceImpl.getInstance(sb, cid, useCache);
   }

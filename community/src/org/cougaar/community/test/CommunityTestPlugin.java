@@ -22,7 +22,7 @@ package org.cougaar.community.test;
 
 import java.util.*;
 
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.plugin.SimplePlugin;
 import org.cougaar.core.service.LoggingService;
@@ -49,7 +49,7 @@ public class CommunityTestPlugin extends SimplePlugin {
   //private static Logger log;
   private LoggingService log;
 
-  private ClusterIdentifier myAgent = null;
+  private MessageAddress myAgent = null;
 
   // Configurable test parameters
   private String testCommunityName = "TestCommunity";
@@ -82,7 +82,7 @@ public class CommunityTestPlugin extends SimplePlugin {
       (LoggingService) getBindingSite().getServiceBroker().
         getService(this, LoggingService.class, null);
 
-    myAgent = getClusterIdentifier();
+    myAgent = getMessageAddress();
 
 
     //////////////////////////////////////////////////////////////////
@@ -193,7 +193,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
     result = cs.addToCommunity(testCommunityName,
-      new ClusterIdentifier(testAgentName), testAgentName, attrs);
+      MessageAddress.getMessageAddress(testAgentName), testAgentName, attrs);
     System.out.println("Method: addToCommunity (to valid community)      " +
       (result ? "pass" : "fail"));
 
@@ -208,7 +208,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Name", testAgentName);
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
-    cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     attrs = new BasicAttributes();
     attrs.put("TestAttribute", "TestValue");
@@ -252,7 +252,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Name", testAgentName);
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
-    cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     ModificationItem mods[] = new ModificationItem[1];
     mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE,
@@ -302,7 +302,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     Collection entities = cs.search(testCommunityName, "(TestAttribute=TestValue)");
     result = (entities != null &&
               entities.size() == 1 &&
-              entities.contains(new ClusterIdentifier(testAgentName)));
+              entities.contains(MessageAddress.getMessageAddress(testAgentName)));
     System.out.println("Method: search for entity                        " +
       (result ? "pass" : "fail"));
 
@@ -311,25 +311,25 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Name", testAgentName);
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
-    result = cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     System.out.println("Method: addToCommunity (to valid community)      " +
       (result ? "pass" : "fail"));
 
     // Test: addMember - add agent multiple times
-    result = cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     System.out.println("Method: addToCommunity (agent already added)     " +
       (result ? "pass" : "fail"));
 
     // Test: addMember - null community name
-    result = cs.addToCommunity(null, new ClusterIdentifier(testAgentName),
+    result = cs.addToCommunity(null, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     System.out.println("Method: addToCommunity (null community name)     " +
       (result ? "fail" : "pass"));
 
     // Test: addMember - null attributes
-    result = cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, null);
     System.out.println("Method: addToCommunity (null attributes)         " +
       (result ? "pass" : "fail"));
@@ -340,13 +340,13 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Name", testAgentName);
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
-    result = cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    result = cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
     roster = cs.getRoster(testCommunityName);
     result = (roster.communityExists() &&
               roster.getMemberAgents().size() == 1 &&
               roster.getCommunityName().equals(testCommunityName) &&
-              roster.getMemberAgents().contains(new ClusterIdentifier(testAgentName)));
+              roster.getMemberAgents().contains(MessageAddress.getMessageAddress(testAgentName)));
     System.out.println("Method: getRoster (community has 1 member)       " +
       (result ? "pass" : "fail"));
 
@@ -394,7 +394,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs.put("Type", "Agent");
     attrs.put("Role", "Member");
     attrs.put("ExternalRole", "TestExternalRole");
-    ClusterIdentifier testAgentCid = new ClusterIdentifier(testAgentName);
+    MessageAddress testAgentCid = MessageAddress.getMessageAddress(testAgentName);
     cs.addToCommunity(testCommunityName, testAgentCid,
       testAgentName, attrs);
     Collection roles = cs.getCommunityRoles(testCommunityName);
@@ -465,7 +465,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     roleAttr.add("TransportProvider");
     roleAttr.add("AmmoSupplyProvider");
     attrs.put(roleAttr);
-    ClusterIdentifier agent1Cid = new ClusterIdentifier("Agent1");
+    MessageAddress agent1Cid = MessageAddress.getMessageAddress("Agent1");
     cs.addToCommunity(testCommunityName, agent1Cid, "Agent1", attrs);
     attrs = new BasicAttributes();
     attrs.put("Name", "Agent2");
@@ -474,7 +474,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     roleAttr.add("Member");
     roleAttr.add("AmmoSupplyProvider");
     attrs.put(roleAttr);
-    ClusterIdentifier agent2Cid = new ClusterIdentifier("Agent2");
+    MessageAddress agent2Cid = MessageAddress.getMessageAddress("Agent2");
     cs.addToCommunity(testCommunityName, agent2Cid, "Agent2", attrs);
     Collection roles1 = cs.getEntityRoles(testCommunityName, "Agent1");
     Collection roles2 = cs.getEntityRoles(testCommunityName, "Agent2");
@@ -524,7 +524,7 @@ public class CommunityTestPlugin extends SimplePlugin {
     roleAttr = new BasicAttribute("Role");
     roleAttr.add("Member");
     roleAttr.add("TestRole");
-    cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+    cs.addToCommunity(testCommunityName, MessageAddress.getMessageAddress(testAgentName),
       testAgentName, attrs);
 
     System.out.println();

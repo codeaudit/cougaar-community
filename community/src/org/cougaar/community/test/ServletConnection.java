@@ -30,7 +30,7 @@ import javax.naming.directory.Attributes;
 import org.apache.log4j.Category;
 
 import org.cougaar.core.service.community.CommunityMember;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 public class ServletConnection
 {
@@ -369,8 +369,8 @@ public class ServletConnection
      for(Iterator it=list.iterator(); it.hasNext();)
      {
        Object o = it.next();
-       if(o instanceof ClusterIdentifier)
-         cs.add(((ClusterIdentifier)o).getAddress());
+       if(o instanceof MessageAddress)
+         cs.add(((MessageAddress)o).getAddress());
        else
          cs.add((String)o);
      }

@@ -23,7 +23,7 @@ package org.cougaar.community;
 import java.util.*;
 
 import org.cougaar.core.service.community.*;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 /**
  * Implementation of a CommunityRoster.
@@ -102,9 +102,9 @@ public class CommunityRosterImpl
   }
 
   /**
-   * Returns a Collection of ClusterIdentifiers identifying the agents that are
+   * Returns a Collection of MessageAddresss identifying the agents that are
    * currently community members.
-   * @return Collection of Agent ClusterIdentifiers
+   * @return Collection of Agent MessageAddresss
    */
   public Collection getMemberAgents() {
     Collection agents = new Vector();

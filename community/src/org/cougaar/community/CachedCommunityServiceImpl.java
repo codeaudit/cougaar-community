@@ -5,7 +5,7 @@ import javax.naming.*;
 import javax.naming.directory.*;
 
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.community.*;
 
 import org.cougaar.core.naming.Filter;

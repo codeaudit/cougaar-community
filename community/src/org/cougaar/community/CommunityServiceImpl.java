@@ -28,7 +28,7 @@ import org.cougaar.core.service.community.*;
 import org.cougaar.core.service.BlackboardService;
 
 import org.cougaar.core.mts.MessageAddress;
-//import org.cougaar.core.agent.ClusterIdentifier;
+//import org.cougaar.core.mts.MessageAddress;
 
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceRevokedListener;
@@ -747,7 +747,7 @@ public class CommunityServiceImpl extends ComponentPlugin
 
 
   /**
-   * Returns a collection of ClusterIdentifiers associated with the agents
+   * Returns a collection of MessageAddresss associated with the agents
    * that are have the attribute "ChangeListener".
    * specified community.
    * @param communityName Community of interest

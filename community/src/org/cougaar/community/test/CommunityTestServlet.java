@@ -38,7 +38,7 @@ import org.apache.log4j.Category;
 import org.cougaar.core.service.community.CommunityRoster;
 import org.cougaar.core.util.PropertyNameValue;
 import org.cougaar.core.service.community.CommunityMember;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 public class CommunityTestServlet extends BaseServletComponent
 {
@@ -178,7 +178,7 @@ public class CommunityTestServlet extends BaseServletComponent
         Collection results = new Vector();
         for(Iterator it = list.iterator(); it.hasNext();)
         {
-          ClusterIdentifier agent = (ClusterIdentifier)it.next();
+          MessageAddress agent = (MessageAddress)it.next();
           results.add(agent.getAddress());
         }
         try{
@@ -196,9 +196,9 @@ public class CommunityTestServlet extends BaseServletComponent
         else if(op.equals("setEntityAttributes"))
           value = cs.setEntityAttributes((String)command.get(1), (String)command.get(2), (Attributes)command.get(3));
         else if(op.equals("addEntity"))
-          value = cs.addToCommunity((String)command.get(1), new ClusterIdentifier((String)command.get(2)), (String)command.get(2), (Attributes)command.get(3));
+          value = cs.addToCommunity((String)command.get(1), MessageAddress.getMessageAddress((String)command.get(2)), (String)command.get(2), (Attributes)command.get(3));
         //else if(op.equals("addAgent"))
-        //  value = cs.addToCommunity((String)command.get(1), new ClusterIdentifier((String)command.get(2)), (Attributes)command.get(3));
+        //  value = cs.addToCommunity((String)command.get(1), MessageAddress.getMessageAddress((String)command.get(2)), (Attributes)command.get(3));
         try{
           oout.writeObject(Boolean.valueOf(value));
         }catch(java.util.NoSuchElementException e){log.error("try to " + op + " in servlet: " + e, e.fillInStackTrace());}
@@ -243,9 +243,9 @@ public class CommunityTestServlet extends BaseServletComponent
         boolean value = false;
         System.out.println(op);
         if(op.equals("addListener"))
-          value = cs.addListener(new ClusterIdentifier((String)command.get(1)), (String)command.get(2));
+          value = cs.addListener(MessageAddress.getMessageAddress((String)command.get(1)), (String)command.get(2));
         else if(op.equals("removeListener"))
-          value = cs.removeListener(new ClusterIdentifier((String)command.get(1)), (String)command.get(2));
+          value = cs.removeListener(MessageAddress.getMessageAddress((String)command.get(1)), (String)command.get(2));
         //else if(op.equals("addMember"))
           //value = cs.addMember((String)command.get(1), (String)command.get(2), Integer.parseInt((String)command.get(3)), (String[])command.get(4));
         //else if(op.equals("removeMember"))

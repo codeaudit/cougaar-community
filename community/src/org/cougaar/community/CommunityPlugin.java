@@ -22,7 +22,7 @@ package org.cougaar.community;
 
 import java.util.*;
 
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.plugin.SimplePlugin;
 import org.cougaar.core.service.LoggingService;
@@ -56,7 +56,7 @@ public class CommunityPlugin extends SimplePlugin {
   // getting community rosters, etc.
   private CommunityService communityService = null;
 
-  private ClusterIdentifier myAgent;
+  private MessageAddress myAgent;
 
   /**
    * @param obj Arguments
@@ -75,7 +75,7 @@ public class CommunityPlugin extends SimplePlugin {
     log = (LoggingService) getBindingSite().getServiceBroker().
         getService(this, LoggingService.class, null);
 
-    myAgent = getClusterIdentifier();
+    myAgent = getMessageAddress();
 
     communityService = getCommunityService();
 

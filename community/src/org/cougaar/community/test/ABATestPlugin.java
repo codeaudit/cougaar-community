@@ -26,7 +26,7 @@ import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.DomainService;
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.multicast.AttributeBasedAddress;
 
 import org.cougaar.util.UnaryPredicate;
@@ -48,7 +48,7 @@ public class ABATestPlugin extends SimplePlugin {
   private LoggingService log;
   private CommunityService cs;
   private BlackboardService bbs = null;
-  private ClusterIdentifier myAgent = null;
+  private MessageAddress myAgent = null;
   private TestRelayFactory testRelayFactory;
 
   private TestRelay myTestRelay;
@@ -85,7 +85,7 @@ public class ABATestPlugin extends SimplePlugin {
 
     bbs = getBlackboardService();
 
-    myAgent = getClusterIdentifier();
+    myAgent = getMessageAddress();
 
     // Find name of community manager
     String communityManager = null;
@@ -109,7 +109,7 @@ public class ABATestPlugin extends SimplePlugin {
       myTestRelay =
         testRelayFactory.newTestRelay("TestRelay published: agent=" +
           myAgent.toString() + " to=" + communityName, myAgent);
-      myTestRelay.addTarget(new AttributeBasedAddress(communityName, "Role", "Member"));
+      myTestRelay.addTarget(AttributeBasedAddress.getAttributeBasedAddress(communityName, "Role", "Member"));
       log.info("TestRelay published");
       publishAdd(myTestRelay);
     }

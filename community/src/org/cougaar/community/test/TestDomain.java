@@ -36,7 +36,7 @@ import org.cougaar.core.domain.DomainBindingSite;
 
 import org.cougaar.core.service.LoggingService;
 
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
@@ -50,7 +50,7 @@ public class TestDomain extends DomainAdapter {
   private static final String TEST = "test".intern();
 
   private LoggingService log;
-  private ClusterIdentifier myAgent = null;
+  private MessageAddress myAgent = null;
 
   /**
    * getDomainName - returns the Domain name. Used as domain identifier in

@@ -30,7 +30,7 @@ import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
 
 import org.cougaar.core.agent.AgentChildBinder;
-import org.cougaar.core.agent.ClusterIdentifier;
+import org.cougaar.core.mts.MessageAddress;
 
 import org.cougaar.core.node.InitializerService;
 import org.cougaar.core.node.CommunityConfig;
@@ -63,7 +63,7 @@ public class CommunityServiceComponent extends ComponentSupport {
     log = (LoggingService)sb.getService(this, LoggingService.class, null);
     if (log.isDebugEnabled())
       log.debug ("Loading CommunityServiceComponent");
-    ClusterIdentifier agentId = (ClusterIdentifier)
+    MessageAddress agentId = (MessageAddress)
       ((AgentChildBinder) getBindingSite()).getAgentIdentifier();
     initXmlFile = System.getProperty("org.cougaar.community.configfile");
     if (initXmlFile != null )
@@ -100,7 +100,7 @@ public class CommunityServiceComponent extends ComponentSupport {
    * @param agentId
    * @return
    */
-  private CommunityService loadCommunityService(ClusterIdentifier agentId) {
+  private CommunityService loadCommunityService(MessageAddress agentId) {
     ServiceBroker sb = ((AgentChildBinder)getBindingSite()).getServiceBroker();
     CommunityServiceProvider csp = new CommunityServiceProvider(sb, agentId, useCache);
     sb.addService(CommunityService.class, csp);
@@ -126,10 +126,10 @@ public class CommunityServiceComponent extends ComponentSupport {
   private void initializeCommunityRelationships(CommunityService cs, InitializerService is,
                                                 Object entId, Collection communityConfigs) {
     Object entityId;
-    if ((entId.getClass().getName())== "org.cougaar.core.agent.ClusterIdentifier")
-      entityId = (ClusterIdentifier) entId;
+    if (entId instanceof MessageAddress)
+      entityId = (MessageAddress) entId;
     else
-      entityId = (String) entId;
+      entityId = entId.toString();
 
     if (log.isDebugEnabled()) {
       log.debug("Setup initial community assignments: agent=" + entityId);
@@ -154,7 +154,7 @@ public class CommunityServiceComponent extends ComponentSupport {
         if (log.isDebugEnabled()) {
           log.debug("Adding Entity " + entityId + " to community " + communityName);
         }
-        // EntityId is either a ClusterIdentifier or a String Object
+        // EntityId is either a MessageAddress or a String Object
         cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
       }
     } catch (Exception ex) {
