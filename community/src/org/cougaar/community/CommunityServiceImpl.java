@@ -177,7 +177,13 @@ public class CommunityServiceImpl extends ComponentPlugin
   public void getCommunity(String                    communityName,
                            long                      timeout,
                            CommunityResponseListener crl) {
-    publishCommunityRequest(new GetCommunity(communityName, getUID(), timeout), crl);
+    if (cache.contains(communityName)) {
+      crl.getResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
+                                                cache.get(communityName)));
+    } else {
+      publishCommunityRequest(new GetCommunity(communityName, getUID(), timeout),
+                              crl);
+    }
   }
 
   /**
@@ -344,6 +350,8 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              True if operation was successful
    */
   public boolean createCommunity(String communityName, Attributes attributes) {
+    log.debug("createCommunity:" +
+              " community=" + communityName);
     final Status status = new Status(false);
     final CommunityHolder ch = new CommunityHolder();
     final Semaphore s = new Semaphore(0);
@@ -407,27 +415,33 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return              Communities attributes
    */
   public Attributes getCommunityAttributes(String communityName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, -1, new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
+    if (cache.contains(communityName)) {
+      return cache.get(communityName).getAttributes();
+    } else {
+      final CommunityHolder ch = new CommunityHolder();
+      final Semaphore s = new Semaphore(0);
+      getCommunity(communityName, -1, new CommunityResponseListener() {
+        public void getResponse(CommunityResponse resp) {
+          ch.setCommunity( (Community) resp.getContent());
+          s.release();
+        }
+      });
+      try {
+        s.acquire();
+        if (ch.getCommunity() != null) {
+          return ch.getCommunity().getAttributes();
+        }
+        else {
+          log.warn("Error in getCommunityAttributes: " +
+                   " community=" + communityName +
+                   " communityExists=" + (ch.getCommunity() != null));
+        }
       }
-    });
-    try {
-      s.acquire();
-      if (ch.getCommunity() != null) {
-        return ch.getCommunity().getAttributes();
-      } else {
-        log.warn("Error in getCommunityAttributes: " +
-                 " community=" + communityName +
-                 " communityExists=" + (ch.getCommunity() != null));
-       }
-    } catch (InterruptedException ie) {
-      log.error("Error in getCommunityAttributes:", ie);
+      catch (InterruptedException ie) {
+        log.error("Error in getCommunityAttributes:", ie);
+      }
+      return new BasicAttributes();
     }
-    return new BasicAttributes();
   }
 
 
@@ -609,30 +623,41 @@ public class CommunityServiceImpl extends ComponentPlugin
   public Attributes getEntityAttributes(String communityName,
                                         String entityName) {
     log.debug("getEntityAttributes");
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, -1, new CommunityResponseListener(){
-      public void getResponse(CommunityResponse resp){
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
-      }
-    });
-    try{
-      s.acquire();
-      if (ch.getCommunity() != null &&
-          ch.getCommunity().hasEntity(entityName)) {
-        return ch.getCommunity().getEntity(entityName).getAttributes();
+    if (cache.contains(communityName)) {
+      Community community = cache.get(communityName);
+      if (community.hasEntity(entityName)) {
+        return community.getEntity(entityName).getAttributes();
       } else {
-        log.warn("Error in getEntityAttributes: " +
-                 " community=" + communityName +
-                 " entity=" + entityName +
-                 " communityExists=" + (ch.getCommunity() != null) +
-                 " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
+        return new BasicAttributes();
       }
-    } catch (Exception ex) {
-      log.debug(ex.getMessage(), ex);
+    } else {
+      final CommunityHolder ch = new CommunityHolder();
+      final Semaphore s = new Semaphore(0);
+      getCommunity(communityName, -1, new CommunityResponseListener() {
+        public void getResponse(CommunityResponse resp) {
+          ch.setCommunity( (Community) resp.getContent());
+          s.release();
+        }
+      });
+      try {
+        s.acquire();
+        if (ch.getCommunity() != null &&
+            ch.getCommunity().hasEntity(entityName)) {
+          return ch.getCommunity().getEntity(entityName).getAttributes();
+        }
+        else {
+          log.warn("Error in getEntityAttributes: " +
+                   " community=" + communityName +
+                   " entity=" + entityName +
+                   " communityExists=" + (ch.getCommunity() != null) +
+                   " entityExists=" + (ch.getCommunity().hasEntity(entityName)));
+        }
+      }
+      catch (Exception ex) {
+        log.debug(ex.getMessage(), ex);
+      }
+      return new BasicAttributes();
     }
-    return new BasicAttributes();
   }
 
   /**
@@ -806,19 +831,29 @@ public class CommunityServiceImpl extends ComponentPlugin
    *                      access)
    */
   public CommunityRoster getRoster(String communityName) {
-    final CommunityHolder ch = new CommunityHolder();
-    final Semaphore s = new Semaphore(0);
-    getCommunity(communityName, 0, new CommunityResponseListener() {
-      public void getResponse(CommunityResponse resp) {
-        ch.setCommunity((Community)resp.getContent());
-        s.release();
+    log.debug("getRoster: community=" + communityName);
+    if (cache.contains(communityName)) {
+      return new CommunityRosterImpl(cache.get(communityName));
+    } else {
+      final CommunityHolder ch = new CommunityHolder();
+      final Semaphore s = new Semaphore(0);
+      getCommunity(communityName, 0, new CommunityResponseListener() {
+        public void getResponse(CommunityResponse resp) {
+          ch.setCommunity( (Community) resp.getContent());
+          s.release();
+        }
+      });
+      try {
+        s.acquire();
       }
-    });
-    try { s.acquire(); } catch (Exception ex) {}
-    if(ch.getCommunity() == null)
-      return new CommunityRosterImpl(communityName, new Vector(), false);
-    CommunityRoster roster = new CommunityRosterImpl(ch.getCommunity());
-    return roster;
+      catch (Exception ex) {}
+      if (ch.getCommunity() == null) {
+        return new CommunityRosterImpl(communityName, new Vector(), false);
+      }
+      else {
+        return new CommunityRosterImpl(ch.getCommunity());
+      }
+    }
   }
 
   /**
@@ -1205,7 +1240,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     Collection communityRequests = bbs.query(communityRequestPredicate);
     for (Iterator it = communityRequests.iterator(); it.hasNext();) {
       CommunityRequest cr = (CommunityRequest)it.next();
-      //log.debug("CommunityRequestPredicate cr=" + cr.getUID() + " response=" + cr.getResponse());
+      //log.debug("CommunityRequestPredicate cr=" + cr + " response=" + cr.getResponse());
       if (myRequests.containsKey(cr.getUID())) {
         if (cr.getResponse() != null) {
           // Remove request
