@@ -28,6 +28,8 @@
   <property name="nshost" value="${host}" />
   <property name="nsport" value="8888:5555" />
   <property name="nameserver" value="${nshost}:${nsport}" />
+  <property name="agent" value=""/>
+  <property name="agentnumber" value="1"/>
 
   <target name="init" >
     <mkdir dir="${classes}"/>
@@ -344,6 +346,8 @@
       </classpath>
       <sysproperty key="org.cougaar.node.name" value="${node}"/>
       <sysproperty key="org.cougaar.name.server" value="${nameserver}"/>
+      <sysproperty key="org.cougaar.core.agent.heartbeat" value="false"/>
+      <sysproperty key="org.cougaar.core.agent.showTraffic" value="false"/>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/examples/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
       <sysproperty key="org.cougaar.community.caching" value="${cache}"/>
@@ -390,5 +394,170 @@
       <arg line="export file=${file} assembly=${assembly}"/>
     </java>
   </target>
+
+  <!-- Runs node -->
+  <target name="node">
+    <java dir="${basedir}" fork="yes"
+      maxmemory="350m"
+      classname="org.cougaar.bootstrap.Bootstrapper">
+      <jvmarg value="-Xms100m" />
+      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
+      <classpath>
+        <pathelement location="${basedir}/${classes}"/>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/lib">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+      </classpath>
+      <sysproperty key="org.cougaar.node.name" value="${node}"/>
+      <sysproperty key="org.cougaar.name.server" value="${nameserver}"/>
+      <sysproperty key="org.cougaar.core.agent.heartbeat" value="false"/>
+      <sysproperty key="org.cougaar.core.agent.showTraffic" value="false"/>
+      <sysproperty key="org.cougaar.config.path" value="${workspace}/configs;$$CWD/examples/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
+      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
+      <sysproperty key="org.cougaar.community.caching" value="${cache}"/>
+      <sysproperty key="org.cougaar.community.caching.mode" value="${cachemode}"/>
+      <sysproperty key="org.cougaar.core.logging.config.filename" value="debug.properties"/>
+      <arg line="org.cougaar.core.node.Node"/>
+    </java>
+  </target>
+
+  <!-- Creates multiple test agents -->
+  <target name="makeagents">
+    <mkdir dir="${workspace}/configs" />
+    <delete file="${workspace}/configs/${node}.ini" />
+    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
+    <antcall target="makeagent" ><param name="agentnumber" value="01"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="02"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="03"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="04"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="05"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="06"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="07"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="08"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="09"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="10"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="11"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="12"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="13"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="14"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="15"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="16"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="17"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="18"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="19"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="20"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="21"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="22"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="23"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="24"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="25"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="26"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="27"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="28"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="29"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="30"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="31"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="32"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="33"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="34"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="35"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="36"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="37"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="38"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="39"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="40"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="41"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="42"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="43"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="44"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="45"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="46"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="47"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="48"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="49"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="50"/></antcall>
+  </target>
+
+  <!-- Creates multiple test agents -->
+  <target name="makeagents1">
+    <mkdir dir="${workspace}/configs" />
+    <delete file="${workspace}/configs/${node}.ini" />
+    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
+    <antcall target="makeagent" ><param name="agentnumber" value="01"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="02"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="03"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="04"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="05"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="06"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="07"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="08"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="09"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="10"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="11"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="12"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="13"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="14"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="15"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="16"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="17"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="18"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="19"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="20"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="21"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="22"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="23"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="24"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="25"/></antcall>
+  </target>
+
+  <!-- Creates multiple test agents -->
+  <target name="makeagents2">
+    <mkdir dir="${workspace}/configs" />
+    <delete file="${workspace}/configs/${node}.ini" />
+    <copy file="examples/configs/common/NodeTemplate.ini" tofile="${workspace}/configs/${node}.ini" />
+    <antcall target="makeagent" ><param name="agentnumber" value="26"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="27"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="28"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="29"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="30"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="31"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="32"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="33"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="34"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="35"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="36"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="37"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="38"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="39"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="40"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="41"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="42"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="43"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="44"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="45"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="46"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="47"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="48"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="49"/></antcall>
+    <antcall target="makeagent" ><param name="agentnumber" value="50"/></antcall>
+  </target>
+
+    <!-- Creates a test agent -->
+  <target name="makeagent">
+    <delete  file="${workspace}/configs/Agent${agentnumber}.ini" />
+    <delete  file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
+    <copy    file="examples/configs/common/AgentTemplate.ini" tofile="${workspace}/configs/Agent${agentnumber}.ini" />
+    <copy    file="examples/configs/common/AgentTemplate-prototype-ini.dat" tofile="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" />
+    <replace file="${workspace}/configs/${node}.ini" token="#cluster=Agent${agentnumber}" value="cluster=Agent${agentnumber}"/>
+    <replace file="${workspace}/configs/Agent${agentnumber}.ini"               token="AgentName" value="Agent${agentnumber}"/>
+    <replace file="${workspace}/configs/Agent${agentnumber}-prototype-ini.dat" token="AgentName" value="Agent${agentnumber}"/>
+  </target>
+
 
   </project>
