@@ -62,21 +62,11 @@ public class ConfigDbUtils {
     try{
       Connection conn = DBUtils.getConnection(selectQFILE);
       Statement st = conn.createStatement();
-      String query = DBUtils.getQuery("queryExperimentID", substitutions, selectQFILE);
+      String query = DBUtils.getQuery("queryAssemblyID", substitutions, selectQFILE);
       ResultSet rs = st.executeQuery(query);
-      while(rs.next()) {
-          result = rs.getString(1);
-      }
-      if(result == null)
-      {
-        log.error("Invalid experiment name " + experimentName);
-        return null;
-      }
-      substitutions.put(":exptID", result);
-      query = DBUtils.getQuery("queryAssemblyID", substitutions, selectQFILE);
-      rs = st.executeQuery(query);
       while(rs.next())
         result = rs.getString(1);
+      rs.close();
       st.close();
       conn.close();
     }catch(Exception e){log.error(e.getMessage(), e.fillInStackTrace());}
@@ -98,7 +88,7 @@ public class ConfigDbUtils {
       doc = xml.loadXMLFile(xmlFile);
     }catch(Exception e)
     {
-      log.error("Error parsing xml file, " + e);
+      log.error("Error when parse xml file ");
       return false;
     }
     Hashtable calist = new Hashtable(); //table saves communities and their attributes
@@ -183,7 +173,11 @@ public class ConfigDbUtils {
     Connection conn = null;
     try{
       conn = DBUtils.getConnection(csmartQFILE);
-    }catch(Exception e){log.error("try to get connection to database.", e.fillInStackTrace());}
+    }catch(Exception e)
+    {
+      log.error("try to get connection to database.", e.fillInStackTrace());
+      return false;
+    }
     Map substitutions = new HashMap();
     String assemblyMatch = DBUtils.getListMatch(assemblyID);
     if (assemblyMatch != null)
@@ -192,6 +186,12 @@ public class ConfigDbUtils {
     if(community_attrs.size() == 0)
       return false;
     Hashtable community_entities = getDataFromEntityTable(assemblyID, conn, substitutions);
+    try{
+      conn.close();
+    }catch(SQLException e)
+    {log.error("try to close connection to database", e.fillInStackTrace());
+      return false;
+    }
     return writeXmlFile(rfile, community_attrs, community_entities);
   }
 
@@ -220,8 +220,10 @@ public class ConfigDbUtils {
         ResultSet rs = st.executeQuery(query);
         while(rs.next())
           attrs.add(new Attribute(rs.getString(2), rs.getString(3)));
+        rs.close();
         communities.put(name, attrs);
       }
+      st.close();
     }catch(Exception e)
     {
       log.error("try to get data from table community_attribute.");
@@ -261,10 +263,12 @@ public class ConfigDbUtils {
           ResultSet rs = st.executeQuery(query);
           while(rs.next())
             attrs.add(new Attribute(rs.getString(2), rs.getString(3)));
+          rs.close();
           entities.put(entityName, attrs);
         }
         communities.put(name, entities);
       }
+      st.close();
     }catch(Exception e){log.error("try to get data from table community_entity_attribute.", e.fillInStackTrace());}
     return communities;
   }
@@ -291,7 +295,8 @@ public class ConfigDbUtils {
         if(community_attrs.containsKey(communityID))
         {
           List attrs = (List)community_attrs.get(communityID);
-          writeAttributes(rfile, attrs, "    ");
+          if(!writeAttributes(rfile, attrs, "    "))
+            return false;
         }
         if(community_entities.containsKey(communityID))
         {
@@ -302,7 +307,8 @@ public class ConfigDbUtils {
              String entityID = (String)entityNames.get(j);
              List entity_attrs = (List)entities.get(entityID);
              rfile.write(new String("    <Entity Name=\"" + entityID + "\" >\n").getBytes());
-             writeAttributes(rfile, entity_attrs, "      ");
+             if(!writeAttributes(rfile, entity_attrs, "      "))
+               return false;
              rfile.write("    </Entity>\n".getBytes());
           }
         }
@@ -311,7 +317,10 @@ public class ConfigDbUtils {
 
       rfile.write("</Communities>\n".getBytes());
       return true;
-    }catch(IOException e){e.printStackTrace(); return false;}
+    }catch(IOException e)
+    {log.error("try to dump to xml file.", e.fillInStackTrace());
+     return false;
+    }
   }
 
   /**
@@ -319,8 +328,9 @@ public class ConfigDbUtils {
    * @param file  the export xml file
    * @param attrs a list of attributes
    * @param space
+   * @return a boolean value indicates if the processing is succeed
    */
-  private static void writeAttributes(RandomAccessFile file, List attrs, String space)
+  private static boolean writeAttributes(RandomAccessFile file, List attrs, String space)
   {
     try{
       for(int i=0; i<attrs.size(); i++) //write attributes of the community
@@ -329,7 +339,11 @@ public class ConfigDbUtils {
           file.write(new String(space + "<Attribute ID=\"" + attr.name + "\" Value=\"" +
             attr.value + "\" />\n").getBytes());
         }
-    }catch(IOException e){e.printStackTrace();}
+    }catch(IOException e)
+    {log.error("try to dump to xml file.", e.fillInStackTrace());
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -361,6 +375,7 @@ public class ConfigDbUtils {
       ResultSet rs = st.executeQuery(query);
       while(rs.next())
         communityNames.add(rs.getString(1));
+      rs.close();
     }catch(Exception e)
     {
       log.error("try to get all communities from table community_attribute");
@@ -389,7 +404,9 @@ public class ConfigDbUtils {
       ResultSet rs = st.executeQuery(query);
       while(rs.next()) //get all entities of this community
         entityNames.add(rs.getString(1));
-    }catch(Exception e){log.error("try to get all entities of community: " + communityName, e.fillInStackTrace());}
+      rs.close();
+    }catch(Exception e)//{log.error("try to get all entities of community: " + communityName, e.fillInStackTrace());}
+    {e.printStackTrace();}
     return entityNames;
   }
 
@@ -420,7 +437,11 @@ public class ConfigDbUtils {
           ResultSet rs = st.executeQuery(query);
           if(rs.next())
             if(rs.getString(1).equals(assemblyID)) //it's a duplicate row, ignore it
+            {
+              rs.close();
               continue;
+            }
+          rs.close();
           query = DBUtils.getQuery("queryInsertCommunityInfo", substitutions, csmartQFILE);
           st.executeUpdate(query);
         }
@@ -466,7 +487,11 @@ public class ConfigDbUtils {
             ResultSet rs = st.executeQuery(query);
             if(rs.next())
               if(rs.getString(1).equals(assemblyID)) //it's a duplicate row, ignore it
+              {
+                rs.close();
                 continue;
+              }
+            rs.close();
             query = DBUtils.getQuery("queryInsertEntityInfo", substitutions, csmartQFILE);
             st.executeUpdate(query);
           }
@@ -518,12 +543,17 @@ public class ConfigDbUtils {
       Connection conn = DBUtils.getConnection(selectQFILE);
       Statement st = conn.createStatement();
       substitutions.put(":assembly_id:", assemblyID);
-      List communities = getAllCommunities(st, substitutions);
+      List communities = new ArrayList();
+      String query = DBUtils.getQuery("queryMyCommunities", substitutions, csmartQFILE);
+      ResultSet rs = st.executeQuery(query);
+      while(rs.next())
+        communities.add(rs.getString(1));
+      rs.close();
       for(int i=0; i<communities.size(); i++)
       {
         String name = (String)communities.get(i);
         substitutions.put(":community_id", name);
-        String query = DBUtils.getQuery("queryDeleteCommunityInfo", substitutions, csmartQFILE);
+        query = DBUtils.getQuery("queryDeleteCommunityInfo", substitutions, csmartQFILE);
         st.executeUpdate(query);
         List entities = getAllEntities(name, st, substitutions);
         for(int j=0; j<entities.size(); j++)
@@ -533,6 +563,8 @@ public class ConfigDbUtils {
           st.executeUpdate(query);
         }
       }
+      st.close();
+      conn.close();
     }catch(Exception e){log.error("try to clear records in community tables. ", e.fillInStackTrace());}
   }
 
@@ -549,9 +581,9 @@ public class ConfigDbUtils {
         "  help                                display this help and exit\n" +
         "  export file=XmlFileName assembly=assemblyID         create an xml file from community associated with assemblyID\n" +
         "  export file=XmlFileName experiment=experimentName   create an xml file from community associated with experiment\n" +
-        "  import file=XmlFileName assembly=assemblyID db=[merge|replace]\n" +
+        "  import file=XmlFileName assembly=assemblyID db='merge'or'replace'\n" +
         "      insert the community defined in the xml file into database with given assemblyID\n" +
-        "  import file=XmlFileName experiment=experimentName db=[merge|replace]\n" +
+        "  import file=XmlFileName experiment=experimentName db='merge'or'replace'\n" +
         "      insert the community defined in the xml file into database with given assemblyID\n");
       System.exit(0);
     }
