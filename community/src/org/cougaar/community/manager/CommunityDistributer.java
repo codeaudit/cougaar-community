@@ -219,7 +219,7 @@ public class CommunityDistributer implements CommunityServiceConstants {
         }
       } else {
         if ((de.didChange && (now > (de.lastSent + updateInterval))) ||
-            (now > (de.lastSent + (cacheExpiration / 2)))) {
+            (cacheExpiration != NEVER && (now > (de.lastSent + (cacheExpiration / 2))))) {
           // publish changed descriptor
           updateTargets(de.ra, nodesOnly ? de.nodeTargets : de.ra.getInterestedAgents());
           de.didChange = false;

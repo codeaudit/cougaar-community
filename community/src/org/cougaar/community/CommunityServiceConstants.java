@@ -38,6 +38,8 @@ public interface CommunityServiceConstants {
   public static final int GET_COMMUNITY_DESCRIPTOR     = 3;
   public static final int LIST                         = 4;
 
+  public static final long NEVER                       = -1;
+
   // Defines how long CommunityDescriptor updates should be aggregated before
   // sending to interested agents.
   public static final String UPDATE_INTERVAL_PROPERTY =
@@ -53,7 +55,7 @@ public interface CommunityServiceConstants {
   // Period that a client caches its community descriptors
   public static final String CACHE_EXPIRATION_PROPERTY =
       "org.cougaar.community.cache.expiration";
-  public static long DEFAULT_CACHE_EXPIRATION = 20 * 60 * 1000;
+  public static long DEFAULT_CACHE_EXPIRATION = NEVER;
 
   // Classname of CommunityAccessManager to use for request authorization
   public static final String COMMUNITY_ACCESS_MANAGER_PROPERTY =
