@@ -35,11 +35,9 @@ public class CommunityChangeNotificationImpl
    * @param communityName  Name of changed community
    */
     public CommunityChangeNotificationImpl(String communityName,
-                                           MessageAddress source,
                                            UID uid) {
     super();
     setCommunityName(communityName);
-    setSource(source);
     super.setUID(uid);
   }
 
@@ -75,8 +73,12 @@ public class CommunityChangeNotificationImpl
     CommunityChangeNotificationImpl ccn =
       (CommunityChangeNotificationImpl) newCCN;
 
-   return (super.contentChanged(ccn) ||
-          !getCommunityName().equals(ccn.getCommunityName()));
+    // Should always return true because since its being used as a
+    // notification event.  The content (community name) of this object
+    // actually doesn't change
+    return true;
+    //return (super.contentChanged(ccn) ||
+    //       !getCommunityName().equals(ccn.getCommunityName()));
   }
 
   /**

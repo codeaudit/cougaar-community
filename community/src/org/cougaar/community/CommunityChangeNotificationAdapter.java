@@ -39,7 +39,7 @@ import org.cougaar.core.util.XMLizable;
  * Extenders are responsible for defining content semantics.
  **/
 abstract public class CommunityChangeNotificationAdapter
-  implements CommunityChangeNotification, XMLizable {
+  implements CommunityChangeNotification, XMLizable, Cloneable {
 
   private transient Set myTargetSet = null;
 
@@ -130,7 +130,6 @@ abstract public class CommunityChangeNotificationAdapter
       RuntimeException rt = new RuntimeException("Attempt to call setSource() more than once.");
       throw rt;
     }
-
     mySource = source;
   }
 
@@ -139,11 +138,10 @@ abstract public class CommunityChangeNotificationAdapter
    * should be sent.
    **/
   public Set getTargets() {
-    if (myTargetSet == null) {
-      return Collections.EMPTY_SET;
-    } else {
-      return Collections.unmodifiableSet(myTargetSet);
-    }
+    Set targets = (myTargetSet == null) ? Collections.EMPTY_SET
+                                        : Collections.unmodifiableSet(myTargetSet);
+    //System.out.println("targets=" + targets);
+    return targets;
   }
 
   /**
@@ -168,10 +166,9 @@ abstract public class CommunityChangeNotificationAdapter
   }
 
   private static final class SimpleRelayFactory
-  implements TargetFactory, java.io.Serializable {
+    implements TargetFactory, java.io.Serializable {
 
-    public static final SimpleRelayFactory INSTANCE =
-      new SimpleRelayFactory();
+    public static final SimpleRelayFactory INSTANCE = new SimpleRelayFactory();
 
     private SimpleRelayFactory() {}
 
@@ -184,10 +181,41 @@ abstract public class CommunityChangeNotificationAdapter
         MessageAddress source,
         Object content,
         Token token) {
-      CommunityChangeNotification ccn = (CommunityChangeNotification)content;
-      return new CommunityChangeNotificationImpl(ccn.getCommunityName(), source, uid);
-      //(
-      //    uid, source, null, content, null);
+      CommunityChangeNotificationAdapter target = null;
+
+      if (content instanceof CommunityChangeNotificationAdapter) {
+        CommunityChangeNotificationAdapter ccn =
+          (CommunityChangeNotificationAdapter) content;
+
+        if (ccn.myTargetSet != null) {
+          // intra-vm case so must clone
+          try {
+            target =
+              (CommunityChangeNotificationAdapter) ((CommunityChangeNotificationAdapter) content).clone();
+
+            // Relay.Target's should not have targets. Causes infinite loops
+            if (target != null) {
+              target.clearTargets();
+            }
+
+          } catch (CloneNotSupportedException cnse) {
+            throw new IllegalArgumentException("content argument: " + content + " does not support clone.");
+          }
+        } else {
+          target = ccn;
+        }
+
+      } else {
+        throw new IllegalArgumentException("content argument must extend CommunityChangeNotificationAdapter.");
+      }
+
+      // Use arguments to customize the target.
+      if (!uid.equals(target.getUID())) {
+        throw new IllegalArgumentException("uid argument does not match source's UID.");
+      }
+      target.setSource(source);
+
+      return target;
     }
 
     private Object readResolve() {
@@ -242,4 +270,16 @@ abstract public class CommunityChangeNotificationAdapter
     return XMLize.getPlanObjectXML(this, doc);
   }
 
+  protected Object clone() throws CloneNotSupportedException {
+    CommunityChangeNotificationAdapter clone;
+
+    clone = (CommunityChangeNotificationAdapter) super.clone();
+
+    // Make sure we have a distinct target hash set
+    clone.clearTargets();
+    if (getTargets().size() > 0) {
+      clone.addAllTargets(getTargets());
+    }
+    return clone;
+  }
 }

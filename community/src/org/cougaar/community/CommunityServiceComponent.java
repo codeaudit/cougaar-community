@@ -18,7 +18,7 @@
 package org.cougaar.community;
 
 import java.util.*;
-import javax.naming.directory.Attributes;
+import javax.naming.directory.*;
 
 import org.cougaar.community.CommunityServiceProvider;
 
@@ -155,32 +155,11 @@ public class CommunityServiceComponent extends ComponentSupport {
           log.debug("Adding Entity " + entityId + " to community " + communityName);
         }
         // EntityId is either a ClusterIdentifier or a String Object
-        // Check to see if entity already exists.  If so, then this agent is
-        // likely being restarted.  Don't overwrite existing attributes.
-        if (!entityExists(cs, communityName, entityId.toString())) {
-          cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
-        } else {
-          cs.setEntityAttributes(communityName, entityId.toString(), myAttributes);
-          if (log.isDebugEnabled()) {
-            log.debug("Entity " + entityId + " already exists in community " +
-              communityName + ", using existing attributes");
-          }
-        }
+        cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
       }
     } catch (Exception ex) {
       log.error("Exception when initializing communities, " + ex, ex);
     }
   }
 
-  /**
-   * Checks for existence of entity within specified community.
-   * @param cs             Reference to CommunityService
-   * @param communityName  Name of parent community
-   * @param entityName     Name of entity to look for
-   * @return               True if an entity with specified name exists in community
-   */
-  private boolean entityExists(CommunityService cs, String communityName, String entityName) {
-    Collection entities = cs.search(communityName, "(Name=" + entityName + ")");
-    return (entities != null && !entities.isEmpty());
-  }
 }

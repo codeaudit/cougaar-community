@@ -213,7 +213,52 @@ public class CommunityTestPlugin extends SimplePlugin {
     attrs = new BasicAttributes();
     attrs.put("TestAttribute", "TestValue");
     result = cs.setEntityAttributes(testCommunityName, testAgentName, attrs);
+    // The 3 attributes created for addToCommunity should have been overwritten
+    // by this single attribute
     System.out.println("Method: setEntityAttributes (valid entity)       " +
+      (result ? "pass" : "fail"));
+
+    // Test: getEntityAttributes
+    attrs = cs.getEntityAttributes(testCommunityName, testAgentName);
+    result = (attrs.size() == 1 &&
+              (attrs.get("TestAttribute").contains("TestValue")));
+    System.out.println("Method: getEntityAttributes (valid entity)       " +
+      (result ? "pass" : "fail"));
+    if (result == false) {
+      if (attrs == null) {
+        log.error("Attributes is null");
+      } else if (attrs.size() == 0) {
+        log.error("Atributes are empty");
+      } else {
+        log.error("Entity has " + attrs.size() +
+          " attributes, expected 1");
+        try {
+          for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
+            attr = (Attribute)enum.next();
+            StringBuffer sb = new StringBuffer(attr.getID() + "=");
+            for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
+              sb.append((String)enum1.next());
+              if (enum1.hasMore()) sb.append(",");
+            }
+            log.error("  " + sb.toString());
+
+          }
+        } catch (NamingException ne) {}
+      }
+    }
+
+    // Test: modifyEntityAttributes
+    attrs = new BasicAttributes();
+    attrs.put("Name", testAgentName);
+    attrs.put("Type", "Agent");
+    attrs.put("Role", "Member");
+    cs.addToCommunity(testCommunityName, new ClusterIdentifier(testAgentName),
+      testAgentName, attrs);
+    ModificationItem mods[] = new ModificationItem[1];
+    mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE,
+              new BasicAttribute("TestAttribute", "TestValue"));
+    result = cs.modifyEntityAttributes(testCommunityName, testAgentName, mods);
+    System.out.println("Method: modifyEntityAttributes (valid entity)    " +
       (result ? "pass" : "fail"));
 
     // Test: getEntityAttributes
@@ -364,6 +409,12 @@ public class CommunityTestPlugin extends SimplePlugin {
     result = (roles != null &&
               roles.size() == 1 &&
               roles.contains("Member"));
+    if (result == false) {
+      System.out.println("Roles:");
+      for (Iterator it = roles.iterator(); it.hasNext();) {
+        System.out.println("Role=" + (String)it.next());
+      }
+    }
     System.out.println("Method: getEntityRoles                           " +
       (result ? "pass" : "fail"));
 

@@ -110,6 +110,15 @@ public class CommunityPlugin extends SimplePlugin {
       CommunityChangeNotification ccn =
         (CommunityChangeNotification)enum.nextElement();
       String communityName = ccn.getCommunityName();
+      log.debug("Added CCN: agent=" + myAgent + " source=" + ccn.getSource());
+      updateRosters(communityName);
+    }
+    enum  = changeNotifications.getChangedList();
+    while (enum.hasMoreElements()) {
+      CommunityChangeNotification ccn =
+        (CommunityChangeNotification)enum.nextElement();
+      String communityName = ccn.getCommunityName();
+      log.debug("Changed CCN: agent=" + myAgent + " source=" + ccn.getSource());
       updateRosters(communityName);
     }
 
@@ -338,7 +347,11 @@ public class CommunityPlugin extends SimplePlugin {
   private IncrementalSubscription changeNotifications;
   private UnaryPredicate changeNotificationPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
-      return (o instanceof CommunityChangeNotification);
+      if (o instanceof CommunityChangeNotification) {
+        CommunityChangeNotification ccn = (CommunityChangeNotification)o;
+        return (ccn.getTargets() == Collections.EMPTY_SET);
+      }
+      return false;
   }};
 
 }

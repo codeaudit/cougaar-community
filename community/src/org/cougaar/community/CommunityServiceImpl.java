@@ -120,6 +120,7 @@ public class CommunityServiceImpl extends ComponentPlugin
       // Check for existence of context
       context =
         (DirContext)getNamingService().getRootContext().lookup(contextName);
+    } catch (NameAlreadyBoundException nabe) {
     } catch (NamingException ne) {
       // Context doesn't exist, try to crate it
       try {
@@ -226,7 +227,7 @@ public class CommunityServiceImpl extends ComponentPlugin
 
 
   /**
-   * Modifies the attributes associated with a community.
+   * Sets the attributes associated with a community.
    * @param communityName Name of community
    * @param attributes    Communities attributes
    * @return              True if operation was successful
@@ -234,8 +235,20 @@ public class CommunityServiceImpl extends ComponentPlugin
   public boolean setCommunityAttributes(String communityName,
                                         Attributes attributes) {
     try {
-      communitiesContext.modifyAttributes(communityName,
-        DirContext.REPLACE_ATTRIBUTE, attributes);
+      Attributes oldAttrs = communitiesContext.getAttributes(communityName);
+      ModificationItem mods[] = new ModificationItem[oldAttrs.size()];
+      int i = 0;
+      for (NamingEnumeration enum = oldAttrs.getAll(); enum.hasMore();) {
+        mods[i++] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, (Attribute)enum.next());
+      }
+      communitiesContext.modifyAttributes(communityName, mods);
+      // Add new attributes
+      communitiesContext.modifyAttributes(communityName, DirContext.ADD_ATTRIBUTE, attributes);
+      if (log.isDebugEnabled()) {
+        log.debug("setCommunityAttributes: community=" + communityName +
+          " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
+          " newAttrs=(" + attrsToString(attributes) + ")");
+      }
       notifyListeners(communityName, "Set community attributes for " + communityName);
       return true;
     } catch (NamingException ne) {
@@ -245,6 +258,34 @@ public class CommunityServiceImpl extends ComponentPlugin
     return false;
   }
 
+
+  /**
+   * Modifies the attributes associated with a community.
+   * @param communityName Name of community
+   * @param mods          Attribute modifications to be performed
+   * @return              True if operation was successful
+   */
+  public boolean modifyCommunityAttributes(String communityName, ModificationItem[] mods) {
+    try {
+      String attrStr = attrsToString(communitiesContext.getAttributes(communityName));
+      if (log.isDebugEnabled()) {
+        Attributes oldAttrs = communitiesContext.getAttributes(communityName);
+        communitiesContext.modifyAttributes(communityName, mods);
+        Attributes newAttrs = communitiesContext.getAttributes(communityName);
+        log.debug("modifyEntityAttributes: community=" + communityName +
+          " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
+          " modifiedAttributes=(" + attrsToString(newAttrs) + ")");
+      } else {
+        communitiesContext.modifyAttributes(communityName, mods);
+      }
+      notifyListeners(communityName, "Modify community attributes for " + communityName);
+      return true;
+    } catch (NamingException ne) {
+      log.error("Exception modifying attributes for community " +
+        communityName + ", " + ne);
+    }
+    return false;
+  }
 
 
   /**
@@ -275,13 +316,18 @@ public class CommunityServiceImpl extends ComponentPlugin
           (DirContext)communitiesContext.lookup(communityName);
         community.rebind(entityName, entity, attrs);
       } else {
-        setEntityAttributes(communityName, entityName, attrs);
+        ModificationItem mods[] = new ModificationItem[attrs.size()];
+        int i = 0;
+        for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
+          mods[i++] = new ModificationItem(DirContext.ADD_ATTRIBUTE, (Attribute)enum.next());
+        }
+        modifyEntityAttributes(communityName, entityName, mods);
       }
       notifyListeners(communityName, "Add " + entityName + " to community " + communityName);
       return true;
     } catch (Exception ex) {
-      log.error("Exception adding entity '" + entityName + "' to community '" +
-        communityName + "', " + ex);
+      //log.error("Exception adding entity '" + entityName + "' to community '" +
+      //  communityName + "', " + ex);
     }
     return false;
   }
@@ -350,49 +396,7 @@ public class CommunityServiceImpl extends ComponentPlugin
   }
 
   /**
-   * Merges two Attribute objects into one.  Use in conjunction with
-   * DirContext.modifyAttributes to preserve multi-valued attributes.
-   * @param a1 Attribute set 1
-   * @param a2 Attribute set 2
-   * @return   Merged attributes
-   */
-  private Attributes mergeAttributes(Attributes a1, Attributes a2) {
-    Attributes newAttrs = new BasicAttributes();
-    try {
-      for (NamingEnumeration a1Enum = a1.getAll(); a1Enum.hasMore();) {
-        Attribute attr1 = (Attribute)a1Enum.next();
-        Attribute attr2 = a2.get(attr1.getID());
-        if (attr2 == null) { // Attribute is unique to a1
-          newAttrs.put(attr1);
-        } else { // Both a1 and a2 contain attribute, merge values
-          Attribute newAttr = new BasicAttribute(attr1.getID());
-          // Add all values from attr1
-          for (NamingEnumeration valEnum = attr1.getAll(); valEnum.hasMore();) {
-            newAttr.add(valEnum.nextElement());
-          }
-          // Add unique values from attr2
-          for (NamingEnumeration valEnum = attr2.getAll(); valEnum.hasMore();) {
-            Object val = valEnum.nextElement();
-            if (!newAttr.contains(val)) newAttr.add(val);
-          }
-          newAttrs.put(newAttr);
-        }
-      }
-      for (NamingEnumeration a2Enum = a2.getAll(); a2Enum.hasMore();) {
-        Attribute attr2 = (Attribute)a2Enum.next();
-        Attribute attr1 = a1.get(attr2.getID());
-        if (attr1 == null) { // Attribute is unique to a2
-          newAttrs.put(attr2);
-        }
-      }
-    } catch (Exception ex) {
-      log.error("Exception merging attributes, " + ex);
-    }
-    return newAttrs;
-  }
-
-  /**
-   * Modifies the attributes associated with specified community entity.
+   * Sets the attributes associated with specified community entity.
    * @param communityName  Entities parent community
    * @param entityName     Name of community entity
    * @param attributes     Attributes to associate with entity
@@ -403,23 +407,64 @@ public class CommunityServiceImpl extends ComponentPlugin
     try {
       DirContext community =
         (DirContext)communitiesContext.lookup(communityName);
+      // Delete any existing attributes
       Attributes oldAttrs = community.getAttributes(entityName);
-      Attributes mergedAttributes = mergeAttributes(oldAttrs, attributes);
-      community.modifyAttributes(entityName,
-        DirContext.REPLACE_ATTRIBUTE, mergedAttributes);
-      String attrStr = attrsToString(mergedAttributes);
+      ModificationItem mods[] = new ModificationItem[oldAttrs.size()];
+      int i = 0;
+      for (NamingEnumeration enum = oldAttrs.getAll(); enum.hasMore();) {
+        mods[i++] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, (Attribute)enum.next());
+      }
+      community.modifyAttributes(entityName, mods);
+      // Add new attributes
+      community.modifyAttributes(entityName, DirContext.ADD_ATTRIBUTE, attributes);
       if (log.isDebugEnabled()) {
         log.debug("setEntityAttributes: entity=" + entityName +
           " community=" + communityName +
           " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
-          " newAttrs=(" + attrsToString(attributes) + ")" +
-          " mergedAttributes=(" + attrStr + ")");
+          " newAttrs=(" + attrsToString(attributes) + ")");
       }
       notifyListeners(communityName, "Set entity attributes for " + entityName +
-        " (" + attrStr + ")");
+        " (" + attrsToString(attributes) + ")");
       return true;
     } catch (Exception ex) {
       log.error("Exception setting attributes for entity '" +
+        entityName + "' in community '" + communityName + "', " + ex);
+    }
+    return false;
+  }
+
+
+  /**
+   * Modifies the attributes associated with specified community entity.
+   * @param communityName  Entities parent community
+   * @param entityName     Name of community entity
+   * @param mods           Attribute modifications to be performed
+   * @return               True if operation was successful
+   */
+  public boolean modifyEntityAttributes(String communityName, String entityName,
+                                 ModificationItem[] mods) {
+    try {
+      DirContext community =
+        (DirContext)communitiesContext.lookup(communityName);
+
+
+      String attrStr = attrsToString(community.getAttributes(entityName));
+      if (log.isDebugEnabled()) {
+        Attributes oldAttrs = community.getAttributes(entityName);
+        community.modifyAttributes(entityName, mods);
+        Attributes newAttrs = community.getAttributes(entityName);
+        log.debug("modifyEntityAttributes: entity=" + entityName +
+          " community=" + communityName +
+          " oldAttrs=(" + attrsToString(oldAttrs) + ")" +
+          " modifiedAttributes=(" + attrsToString(newAttrs) + ")");
+      } else {
+        community.modifyAttributes(entityName, mods);
+      }
+      notifyListeners(communityName, "Modify entity attributes for " + entityName +
+        " (" + attrStr + ")");
+      return true;
+    } catch (Exception ex) {
+      log.error("Exception modifying attributes for entity '" +
         entityName + "' in community '" + communityName + "', " + ex);
     }
     return false;
@@ -652,7 +697,7 @@ public class CommunityServiceImpl extends ComponentPlugin
               roleAttr.add("ChangeListener");
             }
           }
-          community.modifyAttributes(addr.toString(), DirContext.REPLACE_ATTRIBUTE, attrs);
+          community.modifyAttributes(addr.toString(), DirContext.ADD_ATTRIBUTE, attrs);
           return true;
         }
         //return addRole(communityName, addr.toString(), "ChangeListener");
@@ -810,8 +855,10 @@ public class CommunityServiceImpl extends ComponentPlugin
     if (log.isDebugEnabled())
       log.debug("addRole: entity=" + entityName +
         " community=" + communityName + " role=" + roleName);
-    Attributes attrs = new BasicAttributes("Role", roleName);
-    return setEntityAttributes(communityName, entityName, attrs);
+    ModificationItem mods[] = new ModificationItem[1];
+    mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE,
+                                   new BasicAttribute("Role", roleName));
+    return modifyEntityAttributes(communityName, entityName, mods);
   }
 
 
@@ -950,13 +997,12 @@ public class CommunityServiceImpl extends ComponentPlugin
   protected void notifyListeners(final String communityName, final String message) {
     if (communityExists(communityName)) {
       final Collection listeners = getListeners(communityName);
-      //log.debug("NotifyListeners: listeners=" + listeners.size() + " agent=" +
-      //  agentId + " community=" + communityName + " message='" + message + "'");
       if (listeners.size() > 0) {
         Thread notifyThread = new Thread("CommunityChangeNotificationThread") {
           public void run() {
             try {
               BlackboardService bbs = getBlackboardService(serviceBroker);
+              // Look for previously used notification
               CommunityChangeNotification ccn =
                 (CommunityChangeNotification)changeNotifications.get(communityName);
 
@@ -968,27 +1014,29 @@ public class CommunityServiceImpl extends ComponentPlugin
                     ((CommunityChangeNotificationFactory)domainService.getFactory("community"));
                   if (ccnFactory == null) Thread.sleep(500);
                 }
-                ccn = ccnFactory.newCommunityChangeNotification(communityName, agentId);
+                ccn = ccnFactory.newCommunityChangeNotification(communityName);
                 changeNotifications.put(communityName, ccn);
                 updateTargets(ccn, listeners);
                 bbs.openTransaction();
                 if (log.isDebugEnabled())
                   log.debug("notifyListeners publishAdd():" +
-                    " listeners=" + listenersToString(ccn) +
+                    " listeners=" + targetsToString(ccn) +
                     " message='" + message + "'");
                 bbs.publishAdd(ccn);
                 bbs.closeTransaction();
+
               } else {           // Reuse existing notification
                 RelayChangeReport rcr = new RelayChangeReport(ccn);
                 updateTargets(ccn, listeners);
                 if (log.isDebugEnabled())
                   log.debug("notifyListeners publishChange():" +
-                    " listeners=" + listenersToString(ccn) +
+                    " listeners=" + targetsToString(ccn) +
                     " message='" + message + "'");
                 bbs.openTransaction();
                 bbs.publishChange(ccn, Collections.singleton(rcr));
                 bbs.closeTransaction();
               }
+
             } catch (Exception ex) {
               log.error("Exception in NotifyListeners, " + ex, ex);
             }
@@ -999,7 +1047,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     }
   }
 
-  private String listenersToString(CommunityChangeNotification ccn) {
+  private String targetsToString(CommunityChangeNotification ccn) {
     StringBuffer sb = new StringBuffer("[");
     for (Iterator it = ccn.getTargets().iterator(); it.hasNext();) {
       sb.append(it.next().toString());
