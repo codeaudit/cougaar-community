@@ -508,7 +508,7 @@
     <!-- ====================================================================== -->
     <!-- Run the regression tests     				          -->
     <!-- ====================================================================== -->
-    <target name="test-module" depends="compile-all" if="junit.present" description="Run JUnit tests for this module">
+    <target name="test" depends="compile-all" if="junit.present" description="Run JUnit tests for this module">
       <junit printsummary="yes" fork="yes" dir="">
 	<classpath>
 	  <pathelement location="${module.regress}" />
@@ -523,6 +523,8 @@
 	<!--			<test name="Regress" /> -->
       </junit>
     </target>
+
+    <target name="test-module" depends="test" description="alias for test"/>
 
     <!-- ====================================================================== -->
     <!-- Create a Jar for the module     				          -->
