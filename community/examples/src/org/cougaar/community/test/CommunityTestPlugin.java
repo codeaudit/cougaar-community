@@ -154,7 +154,10 @@ public class CommunityTestPlugin extends SimplePlugin {
     // Test: setCommunityAttributes
     attrs = cs.getCommunityAttributes(testCommunityName);
     // Should already have 2 attribute defined (Name. Domain)
-    attrs.put("TestAttribute", "TestValue");
+    Attribute attr = new BasicAttribute("TestAttribute");
+    attr.add("TestValue");
+    attr.add("TestValue1");
+    attrs.put(attr);
     result = cs.setCommunityAttributes(testCommunityName, attrs);
     System.out.println("Method: setCommunityAttributes                   " +
       (result ? "pass" : "fail"));
@@ -163,7 +166,9 @@ public class CommunityTestPlugin extends SimplePlugin {
     // Test: getCommunityAttributes
     attrs = cs.getCommunityAttributes(testCommunityName);
     result = (attrs.size() == 3 &&
-              (attrs.get("TestAttribute").contains("TestValue")));
+              (attrs.get("TestAttribute").contains("TestValue")) &&
+              (attrs.get("TestAttribute").contains("TestValue1"))
+             );
     System.out.println("Method: getCommunityAttributes                   " +
       (result ? "pass" : "fail"));
     if (result == false) {
@@ -173,7 +178,7 @@ public class CommunityTestPlugin extends SimplePlugin {
         log.error("Attributes are empty");
       } else {
         log.error("Community has " + attrs.size() +
-          " attributes, expected 2");
+          " attributes, expected 3");
         try {
           for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
             log.error("  " + (Attribute)enum.next());
@@ -227,7 +232,7 @@ public class CommunityTestPlugin extends SimplePlugin {
           " attributes, expected 4");
         try {
           for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
-            Attribute attr = (Attribute)enum.next();
+            attr = (Attribute)enum.next();
             StringBuffer sb = new StringBuffer(attr.getID() + "=");
             for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
               sb.append((String)enum1.next());
