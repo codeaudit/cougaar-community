@@ -37,7 +37,6 @@ import org.cougaar.core.plugin.ComponentPlugin;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.util.UnaryPredicate;
 import org.cougaar.core.service.*;
-import org.cougaar.core.domain.RootFactory;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
@@ -86,9 +85,6 @@ public class RosterWatcherPlugin extends ComponentPlugin {
    * Subscribe to roster for community of interest.
    */
   protected void setupSubscriptions() {
-    // Get the RootFactory from the DomainService
-    RootFactory factory = getDomainService().getFactory();
-
     log = getLoggingService();
 
     // Subscribe to CommunityRequests to get roster updates

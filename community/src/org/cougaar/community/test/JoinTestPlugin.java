@@ -33,7 +33,6 @@ import org.cougaar.core.plugin.ComponentPlugin;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.util.UnaryPredicate;
 import org.cougaar.core.service.*;
-import org.cougaar.core.domain.RootFactory;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
@@ -87,9 +86,6 @@ public class JoinTestPlugin extends ComponentPlugin {
    * Join community during setup
    */
   protected void setupSubscriptions() {
-    // Get the RootFactory from the DomainService
-    RootFactory factory = getDomainService().getFactory();
-
     // Subscribe to CommunityRequests to receive responses
     requests = (IncrementalSubscription)getBlackboardService()
 	.subscribe(communityRequestPredicate);

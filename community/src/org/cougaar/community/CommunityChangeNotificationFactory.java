@@ -22,9 +22,6 @@
 package org.cougaar.community;
 
 import org.cougaar.core.domain.Factory;
-import org.cougaar.core.domain.RootFactory;
-import org.cougaar.core.domain.LDMServesPlugin;
-
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.UIDServer;
 
@@ -34,14 +31,13 @@ import org.cougaar.core.service.UIDServer;
  **/
 
 public class CommunityChangeNotificationFactory
-  implements org.cougaar.core.domain.Factory {
+implements Factory 
+{
 
-  UIDServer myUIDServer;
+  private final UIDServer myUIDServer;
 
-  public CommunityChangeNotificationFactory(LDMServesPlugin ldm) {
-    RootFactory rf = ldm.getFactory();
-
-    myUIDServer = ldm.getUIDServer();
+  public CommunityChangeNotificationFactory(UIDServer myUIDServer) {
+    this.myUIDServer = myUIDServer;
   }
 
   /**

@@ -30,7 +30,7 @@ import java.io.*;
 import org.cougaar.core.servlet.*;
 import org.cougaar.util.UnaryPredicate;
 import org.cougaar.core.servlet.BaseServletComponent;
-import org.cougaar.core.servlet.ServletService;
+import org.cougaar.core.service.ServletService;
 import org.cougaar.core.service.community.CommunityService;
 
 import org.apache.log4j.Category;

@@ -21,27 +21,20 @@
 
 package org.cougaar.community.test;
 
-import org.cougaar.core.domain.Factory;
-import org.cougaar.core.domain.RootFactory;
-import org.cougaar.core.domain.LDMServesPlugin;
-
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.service.UIDServer;
-
+import org.cougaar.core.domain.Factory;
 
 /**
  * Community factory implementation.
  **/
 
-public class TestRelayFactory
-  implements org.cougaar.core.domain.Factory {
+public class TestRelayFactory implements Factory {
 
-  UIDServer myUIDServer;
+  private final UIDServer myUIDServer;
 
-  public TestRelayFactory(LDMServesPlugin ldm) {
-    RootFactory rf = ldm.getFactory();
-
-    myUIDServer = ldm.getUIDServer();
+  public TestRelayFactory(UIDServer myUIDServer) {
+    this.myUIDServer = myUIDServer;
   }
 
   /**

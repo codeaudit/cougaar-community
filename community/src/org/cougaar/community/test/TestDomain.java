@@ -28,13 +28,15 @@ import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.community.*;
 import org.cougaar.community.util.*;
 
-import org.cougaar.core.blackboard.LogPlan;
-import org.cougaar.core.blackboard.XPlanServesBlackboard;
+import org.cougaar.core.domain.Factory;
+import org.cougaar.core.domain.XPlan;
 
+import org.cougaar.planning.ldm.LDMServesPlugin;
 import org.cougaar.core.domain.DomainAdapter;
 import org.cougaar.core.domain.DomainBindingSite;
 
 import org.cougaar.core.service.LoggingService;
+import org.cougaar.core.service.UIDServer;
 
 import org.cougaar.core.mts.MessageAddress;
 
@@ -47,10 +49,7 @@ import org.cougaar.core.component.ServiceRevokedEvent;
  **/
 
 public class TestDomain extends DomainAdapter {
-  private static final String TEST = "test".intern();
-
-  private LoggingService log;
-  private MessageAddress myAgent = null;
+  private static final String TEST = "test";
 
   /**
    * getDomainName - returns the Domain name. Used as domain identifier in
@@ -66,18 +65,6 @@ public class TestDomain extends DomainAdapter {
     super();
   }
 
-  public void initialize() {
-    super.initialize();
-  }
-
-  public void load() {
-    super.load();
-    log =
-      (LoggingService) getBindingSite().getServiceBroker().
-        getService(this, LoggingService.class, null);
-  }
-
-
   protected void loadFactory() {
     DomainBindingSite bindingSite = (DomainBindingSite) getBindingSite();
 
@@ -86,33 +73,15 @@ public class TestDomain extends DomainAdapter {
                                  "Unable to initialize domain Factory without a binding site.");
     }
 
-    setFactory(new TestRelayFactory(bindingSite.getClusterServesLogicProvider().getLDM()));
+    LDMServesPlugin ldm = 
+      bindingSite.getClusterServesLogicProvider().getLDM();
+    UIDServer myUIDServer = ldm.getUIDServer();
+    Factory f = new TestRelayFactory(myUIDServer);
+    setFactory(f);
   }
 
   protected void loadXPlan() {
-    DomainBindingSite bindingSite = (DomainBindingSite) getBindingSite();
-
-    if (bindingSite == null) {
-      throw new RuntimeException("Binding site for the domain has not be set.\n" +
-                             "Unable to initialize domain XPlan without a binding site.");
-    }
-
-    Collection xPlans = bindingSite.getXPlans();
-    LogPlan logPlan = null;
-
-    for (Iterator iterator = xPlans.iterator(); iterator.hasNext();) {
-      XPlanServesBlackboard  xPlan = (XPlanServesBlackboard) iterator.next();
-      if (xPlan instanceof LogPlan) {
-        logPlan = (LogPlan) logPlan;
-        break;
-      }
-    }
-
-    if (logPlan == null) {
-      logPlan = new LogPlan();
-    }
-
-    setXPlan(logPlan);
+    // no test-specific plan
   }
 
   protected void loadLPs() {
