@@ -101,7 +101,7 @@
     <!-- Include extra debug info in compilations -->
     <property name="build.compiler.debug" value="on"/>
     <!-- Do not include deprecation warnings -->
-    <property name="build.compiler.deprecation" value="off"/>
+    <property name="build.compiler.deprecation" value="on"/>
     <!-- Don't exclude basic debug info -->
     <property name="build.compiler.optimize" value="off"/>
 
@@ -119,8 +119,15 @@
     <!-- Individuals should not need to modify below here. -->
 
     <!-- These are target base directories -->
+    <!-- lib is for cougaar runtime jars -->
     <property name="target.lib" value="${TARGETBASE}/lib" />
+    <!-- sys is for 3rd party jars -->
     <property name="target.sys" value="${TARGETBASE}/sys" />
+    <!-- clib is for cougaar compile-time jars (codegen, etc) -->
+    <property name="target.clib" value="${TARGETBASE}/clib" />
+    <!-- dir is which of lib or clib the jar gets installed to -->
+    <property name="target.dir" value="${TARGETBASE}/lib"/>
+
     <!-- Single module Javadocs go in doc/api.  Not used if is.unified.javadoc -->
     <property name="javadoc.target" value="${TARGETBASE}/${module}/doc/api" />
     <!-- Target tree for modules which contribute to the unified javadoc  -->
@@ -201,7 +208,7 @@
 
     <!-- Define paths for doing codegen stuff -->
     <path id="codegen.path">
-      <pathelement path="${target.lib}/build.jar"/>
+      <pathelement path="${target.clib}/build.jar"/>
       <path refid="compile.classpath"/>
     </path>
     <property name="genpath" refid="codegen.path"/>
@@ -244,6 +251,7 @@
       <property name="zipdir.regress" value="${zipbase}/${module}/regress"/>
       <property name="zipdir.examples" value="${zipbase}/${module}/examples"/>
       <property name="zipdir.lib" value="${zipbase}/lib"/>
+      <property name="zipdir.clib" value="${zipbase}/clib"/>
     </target>
     
     <!-- ========================================================== -->
@@ -358,7 +366,7 @@
 	    if="has.src">
       
       <!-- Need build.jar -->
-      <available property="have.buildjar" file="${target.lib}/build.jar"/>
+      <available property="have.buildjar" file="${target.clib}/build.jar"/>
       
       <!-- Check if defrunner is required -->
       <uptodate property="defrunner.notRequired">
@@ -447,8 +455,8 @@
 
     <!-- Install the Jar file in the target lib directory -->
     <target name="install.jar" depends="jar.build" if="has.build">
-      <mkdir dir="${target.lib}"/>
-      <copy file="${module.jar}" todir="${target.lib}"/>
+      <mkdir dir="${target.dir}"/>
+      <copy file="${module.jar}" todir="${target.dir}"/>
     </target>
 
     <!-- If there are any extra included jar files, install them -->
@@ -471,9 +479,7 @@
     <target name="clean" depends="clean-gencode" description="Delete compiled code">
       <delete dir="${module.classes}" />
       <delete>
-      <!-- FIXME: What about the -(date) jar files? -->
-	<fileset dir="${target.lib}" includes="**/${module.jar}" />
-<!--	<fileset dir="${target.lib}" includes="**/${module}-*.jar" /> -->
+	<fileset dir="${target.dir}" includes="**/${module.jar}" />
       </delete>
     </target>
 
@@ -548,8 +554,8 @@
 	       author="true"
 	       version="true"
 	       doclet="org.cougaar.tools.javadoc.CougaarDoclet"
-	       docletpath="${target.lib}/build.jar"
-	       additionalparam="-breakiterator -source 1.4 -tagletpath ${target.lib}/build.jar -taglet org.cougaar.tools.javadoc.PropertyTaglet -taglet org.cougaar.tools.javadoc.NoteTaglet -taglet org.cougaar.tools.javadoc.ToDoTaglet -taglet org.cougaar.tools.javadoc.GeneratedTaglet"
+	       docletpath="${target.clib}/build.jar"
+	       additionalparam="-breakiterator -source 1.4 -tagletpath ${target.clib}/build.jar -taglet org.cougaar.tools.javadoc.PropertyTaglet -taglet org.cougaar.tools.javadoc.NoteTaglet -taglet org.cougaar.tools.javadoc.ToDoTaglet -taglet org.cougaar.tools.javadoc.GeneratedTaglet"
 	       windowtitle="${moduleUp} API"
 	       doctitle="${moduleUp} API"
 	       bottom="Copyright &#169; 2002 by BBNT Solutions LLC, all rights reserved.">
@@ -646,6 +652,9 @@
       <!-- FIXME: This will get possibly multiple dated version of the
 	jar? And get glmtrans when want just glm -->
 	<fileset dir="${target.lib}" includes="${module}*.jar"/>
+      </copy>
+      <copy todir="${zipdir.clib}">
+	<fileset dir="${target.clib}" includes="${module}*.jar"/>
       </copy>
     <!-- FIXME: Put zip files someplace relative to TARGETBASE? -->
     <!-- FIXME: This fails if no zipbase: If these dirs dont exist. -->
