@@ -29,12 +29,12 @@ import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceRevokedListener;
 import org.cougaar.core.component.ServiceRevokedEvent;
 
-import org.cougaar.core.agent.AgentChildBinder;
 import org.cougaar.core.mts.MessageAddress;
 
 import org.cougaar.community.init.CommunityInitializerService;
 import org.cougaar.community.init.CommunityConfig;
 
+import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.LoggingService;
 
 /**
@@ -59,11 +59,13 @@ public class CommunityServiceComponent extends ComponentSupport {
   public void load() {
     Collection communityConfigs = null;
     ServiceBroker sb = getBindingSite().getServiceBroker();
+    AgentIdentificationService ais = (AgentIdentificationService)
+      sb.getService(this, AgentIdentificationService.class, null);
+    MessageAddress agentId = ais.getMessageAddress();
+    sb.releaseService(this, AgentIdentificationService.class, ais);
     log = (LoggingService)sb.getService(this, LoggingService.class, null);
     if (log.isDebugEnabled())
       log.debug ("Loading CommunityServiceComponent");
-    MessageAddress agentId = (MessageAddress)
-      ((AgentChildBinder) getBindingSite()).getAgentIdentifier();
     initXmlFile = System.getProperty("org.cougaar.community.configfile");
     if (initXmlFile != null )
       if (log.isDebugEnabled())
@@ -102,7 +104,7 @@ public class CommunityServiceComponent extends ComponentSupport {
    * @return
    */
   private CommunityService loadCommunityService(MessageAddress agentId) {
-    ServiceBroker sb = ((AgentChildBinder)getBindingSite()).getServiceBroker();
+    ServiceBroker sb = getBindingSite().getServiceBroker();
     CommunityServiceProvider csp = new CommunityServiceProvider(sb, agentId, useCache);
     sb.addService(CommunityService.class, csp);
     return (CommunityService)sb.getService(this, CommunityService.class,

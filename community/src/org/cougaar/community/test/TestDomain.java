@@ -32,8 +32,8 @@ import org.cougaar.core.domain.Factory;
 import org.cougaar.core.domain.XPlan;
 
 import org.cougaar.planning.ldm.LDMServesPlugin;
+import org.cougaar.planning.service.LDMService;
 import org.cougaar.core.domain.DomainAdapter;
-import org.cougaar.core.domain.DomainBindingSite;
 
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDServer;
@@ -51,6 +51,8 @@ import org.cougaar.core.component.ServiceRevokedEvent;
 public class TestDomain extends DomainAdapter {
   private static final String TEST = "test";
 
+  private LDMService ldmService;
+
   /**
    * getDomainName - returns the Domain name. Used as domain identifier in
    * DomainService.getFactory(String domainName
@@ -65,16 +67,22 @@ public class TestDomain extends DomainAdapter {
     super();
   }
 
-  protected void loadFactory() {
-    DomainBindingSite bindingSite = (DomainBindingSite) getBindingSite();
+  public void setLDMService(LDMService ldmService) {
+    this.ldmService = ldmService;
+  }
 
-    if (bindingSite == null) {
-      throw new RuntimeException("Binding site for the domain has not be set.\n" +
-                                 "Unable to initialize domain Factory without a binding site.");
+  public void unload() {
+    ServiceBroker sb = getBindingSite().getServiceBroker();
+    if (ldmService != null) {
+      sb.releaseService(
+          this, LDMService.class, ldmService);
+      ldmService = null;
     }
+    super.unload();
+  }
 
-    LDMServesPlugin ldm = 
-      bindingSite.getClusterServesLogicProvider().getLDM();
+  protected void loadFactory() {
+    LDMServesPlugin ldm = ldmService.getLDM();
     UIDServer myUIDServer = ldm.getUIDServer();
     Factory f = new TestRelayFactory(myUIDServer);
     setFactory(f);
