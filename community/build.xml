@@ -4,7 +4,7 @@
 <!--     Ultralog Community Components                    -->
 <!-- ==================================================== -->
 
-<project name="mic" default="build" basedir=".">
+<project name="community" default="build" basedir=".">
 
   <!-- set global properties for this build -->
   <property environment="env"/>
@@ -14,6 +14,7 @@
   <property name="classes" value="classes"/>
   <property name="doc" value="doc"/>
   <property name="src" value="src"/>
+  <property name="lib" value="lib"/>
   <property name="examples" value="examples"/>
   <property name="hostname" value="localhost"/>
   <property name="mysql" value="${cougaar}/sys/mm-mysql-2.jar" />
@@ -22,6 +23,7 @@
 
   <target name="init" >
     <mkdir dir="${classes}"/>
+    <mkdir dir="${lib}"/>
   </target>
 
   <target name="build" depends="init, compile, compile-test, jar">
@@ -61,8 +63,8 @@
   <!-- Builds jar file -->
   <target name="jar">
     <!-- Put everything in ${classes} into a jar file -->
-    <delete file="${ant.project.name}.jar" />
-    <jar jarfile="${ant.project.name}.jar">
+    <delete file="${lib}/${ant.project.name}.jar" />
+    <jar jarfile="${lib}/${ant.project.name}.jar">
       <fileset dir="${classes}"
         includes="${packageDir}/**"
         excludes="**/cvs/*,**/*.bak"
@@ -160,46 +162,6 @@
     </java>
   </target>
 
-  <!-- Runs ManagementAgent -->
-    <target name="manager">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m"/>
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
-      <arg line="org.cougaar.core.node.Node ManagerNode"/>
-    </java>
-  </target>
-
-  <!-- Runs ManagementAgent and MiniTestConfig on one node -->
-    <target name="manager-1node">
-    <java dir="${basedir}" fork="yes"
-      maxmemory="350m"
-      classname="org.cougaar.bootstrap.Bootstrapper">
-      <jvmarg value="-Xms100m"/>
-      <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
-      <classpath>
-        <pathelement location="${basedir}/${classes}"/>
-        <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
-        </fileset>
-      </classpath>
-      <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
-      <sysproperty key="org.cougaar.class.path" value="./classes"/>
-      <sysproperty key="org.cougaar.config.path" value="$$CWD/${examples}/data;$$CWD/examples/configs/ma;$$CWD/examples/configs/common;$$INSTALL/configs/common"/>
-      <arg line="org.cougaar.core.node.Node CombinedNode"/>
-    </java>
-  </target>
-
   <!-- Runs demo on 1 node -->
     <target name="demo">
     <java dir="${basedir}" fork="yes"
@@ -210,7 +172,13 @@
       <classpath>
         <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
@@ -231,7 +199,13 @@
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
@@ -250,7 +224,13 @@
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="log4j.rootCategory" value="DEBUG" />
@@ -270,7 +250,13 @@
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.install.path" value="${cougaar}"/>
@@ -306,7 +292,13 @@
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.config.path" value="$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common;$$CWD/examples/configs/common"/>
@@ -325,7 +317,13 @@
       <jvmarg value="-Xbootclasspath/p:${cougaar}/lib/javaiopatch.jar"/>
       <classpath>
         <fileset dir="${cougaar}/lib">
-          <include name="**/*.jar"/>
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${cougaar}/sys">
+          <include name="**/*.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+          <include name="**/*.jar" />
         </fileset>
       </classpath>
       <sysproperty key="org.cougaar.config.path" value="$$CWD/{examples}/data;$$CWD/examples/configs/minitestconfig;$$CWD/examples/configs/common;$$INSTALL/configs/minitestconfig;$$INSTALL/configs/common"/>
