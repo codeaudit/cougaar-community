@@ -40,7 +40,13 @@
      usually COUGAAR_INSTALL_PATH/lib), plus class files
 
      'dist-module' - generate a new jar file TARGETBASE/lib/community-date.jar
-         (ie typically COUGAAR_INSTALL_PATH/lib/community-date.jar)     -->
+         (ie typically COUGAAR_INSTALL_PATH/lib/community-date.jar)     
+
+     'install' - Install module jar in TARGETBASE/lib/community.jar and
+     any jars in lib to TARGETBASE/sys.  This is probably most
+     directly useful for rapid development when you need to actually
+     run the system.
+-->
 
 <!-- Note use of JAVA_HOME, java.class.path, jikes.class.path -->
 
@@ -118,18 +124,23 @@
     <property name="configs" value="${MODSOURCE}/configs" />
     <property name="dev" value="${MODSOURCE}/dev" />
     
-    <!-- These are temporary base directories. -->
-    <property name="examples.build" value="${TMP}/examples" />
-    <property name="build" value="${TMP}/classes" />
-    <property name="testbuild" value="${TMP}/regress" />
+    <!-- These are temporary files and directories -->
+    <property name="module.jar" value="${TMP}/${module}.jar"/>
+    <property name="module.examples" value="${TMP}/examples"/>
+    <property name="module.classes" value="${TMP}/classes"/>
+    <property name="module.regress" value="${TMP}/regress"/>
+    <property name="module.api" value="${TMP}/api"/>
 
     <!-- Set paths for use in creating zip files -->
     <property name="zipbase" value="${TMP}/zip"/>
     
-    <!-- where oh where oh where is java? Used to find tools.jar and such -->
+    <!-- where oh where oh where is java? Can be used to find tools.jar -->
     <!-- Note that JAVA_HOME must have been set in a .properties file -->
-    <!-- Otherwise, the dynamically found version is used (usually OK). -->
-    <property name="java.home" value="${JAVA_HOME}"/>
+    <!-- Otherwise, the dynamically found version is used (usually finds the jre, ugh ). -->
+    <!-- Also note that we're now using a checked-in version of tools.jar -->
+    <property environment="env"/>
+    <property name="java.home" value="${env.JAVA_HOME}"/>
+    <property name="jdk.home" value="${env.JAVA_HOME}"/>
     
     <!-- ================ Parameters ================ -->
     <!-- These properties are filled out by the autobuilder -->
@@ -159,8 +170,8 @@
     
     <!-- Build up classpath for junit.jar and classes when running tests -->
     <path id="junit.classpath">
-      <path location="${build}" />
-      <path location="${testbuild}" />
+      <path location="${module.classes}" />
+      <path location="${module.regress}" />
       <filelist dir="${target.lib}" files="${run.jarlist}"/>
       <pathelement path="${run.abs.jarlist}"/>
       <!-- junit.jar always comes from sys directory -->
@@ -169,8 +180,8 @@
 
     <!-- Define path for doing javadoc: Basically, the runtime path -->
     <path id="javadoc.path">
-      <path location="${build}" />
-      <path location="${testbuild}" />
+      <path location="${module.classes}" />
+      <path location="${module.regress}" />
       <filelist dir="${target.lib}" files="${run.jarlist}"/>
       <pathelement path="${run.abs.jarlist}"/>
     </path>
@@ -219,11 +230,11 @@
     <!-- remove dependency on prepare-rmic cause it is currently broken -->
     <target name="rmic-source" depends="prepare"
 	    unless="rmic.notRequired" if="has.build">
-      <rmic base="${build}" stubversion="1.2" verify="true"
+      <rmic base="${module.classes}" stubversion="1.2" verify="true"
 	    debug="${build.compiler.debug}"
 	    includes="**/*Impl.class"> 
 	<classpath>
-	  <path location="${build}" />
+	  <path location="${module.classes}" />
 	  <path refid="compile.classpath"/>
 	</classpath>
       </rmic>	    
@@ -261,22 +272,22 @@
     <!-- Compiles the example Code			                -->
     <!-- ========================================================== -->	
     <target name="compile-examples" depends="prepare, compile" description="Compiles the example Code" if="has.examples">
-      <mkdir dir="${examples.build}" />
+      <mkdir dir="${module.examples}" />
       <!-- source=1.4 required to allow asserts -->
       <javac srcdir="${examples}"
-	     destdir="${examples.build}"
+	     destdir="${module.examples}"
 	     includeAntRuntime="no"
 	     source="1.4"
 	     debug="${build.compiler.debug}"
 	     optimize="${build.compiler.optimize}"
 	     deprecation="${build.compiler.deprecation}">
 	<classpath>
-	  <path location="${build}" />
+	  <path location="${module.classes}" />
 	  <path refid="compile.classpath" />
 	</classpath>
       </javac>
       <!-- Copy any gifs and HTML help files over as well -->
-      <copy todir="${examples.build}" >
+      <copy todir="${module.examples}" >
 	<fileset dir="${examples}">
 	  <patternset id="images.and.html.and.def"/>
 	</fileset>
@@ -287,7 +298,7 @@
     <!-- Clean up built example code     				    -->
     <!-- ====================================================================== -->	
     <target name="clean-examples" description="Delete compiled example code">
-      <delete dir="${examples.build}" />
+      <delete dir="${module.examples}" />
     </target>
 
     <!-- ============================================================= -->
@@ -295,7 +306,7 @@
     <!-- ============================================================= -->
     <target name="prepare">
       <available property="has.examples" file="${examples}"/>
-      <available property="has.build" file="${build}"/>
+      <available property="has.build" file="${module.classes}"/>
       <available property="has.src" file="${src}"/>
       <available property="has.bin" file="${bin}"/>
       <available property="has.data" file="${data}"/>
@@ -303,6 +314,7 @@
       <available property="has.dev" file="${dev}"/>
       <available property="has.doc" file="${doc}"/>
       <available property="has.Regress" file="${regress}"/>
+      <available property="has.lib" file="${local.lib}"/>
       
       <!-- Create the timestamp -->
       <tstamp/>
@@ -332,7 +344,7 @@
     <!-- FIXME: In the meantime, do not use this!  -->
     <target name="prepare-rmic" depends="prepare" if="has.build">
       <uptodate property="rmic.notRequired">
-	<srcfiles dir="${build}"
+	<srcfiles dir="${module.classes}"
 		  includes="**/*Impl.java"/>
 	<!-- FIXME: What am I looking for here? -->
 	<mapper type="identity"/>
@@ -349,17 +361,17 @@
     <!-- Note that module-date.jar is not checked, just module.jar -->
     <!-- Also the property set here is _not_ currently used. -->
     <target name="check-sources" depends="prepare, defrunner" if="has.src">
-      <uptodate property="jarfile.uptodate" targetfile="${module}.jar">
+      <uptodate property="jarfile.uptodate" targetfile="${module.jar}">
 	<srcfiles dir="${src}" includes="**/*.java"/>
       </uptodate>
     </target>
 
     <!-- This really does the compilation. The above just calls this -->
     <target name="really-compile" depends="prepare, defrunner, check-sources" if="has.src">
-      <mkdir dir="${build}" />
-      <available property="has.build" file="${build}"/>
+      <mkdir dir="${module.classes}" />
+      <available property="has.build" file="${module.classes}"/>
       <!-- source=1.4 required for asserts -->
-      <javac srcdir="${src}" destdir="${build}"
+      <javac srcdir="${src}" destdir="${module.classes}"
 	     source="1.4"
 	     includeAntRuntime="no"
 	     debug="${build.compiler.debug}"
@@ -371,7 +383,7 @@
       </javac>
 
       <!-- Copy any gifs and HTML help files over as well -->
-      <copy todir="${build}" >
+      <copy todir="${module.classes}" >
 	<fileset dir="${src}">
 	  <patternset id="images.and.html.and.def">
 	    <include name="**/*.def"/>
@@ -386,6 +398,28 @@
       </copy>
     </target>
 
+    <target name="jar.build" depends="compile" if="has.src">
+      <!-- create the jarfile -->
+      <jar jarfile="${module.jar}" basedir="${module.classes}" />
+    </target>
+      
+
+    <target name="install" depends="install.jar, install.lib">
+    </target>
+
+    <target name="install.jar" depends="jar.build" if="has.build">
+      <mkdir dir="${target.lib}"/>
+      <copy file="${module.jar}" todir="${target.lib}"/>
+    </target>
+
+    <target name="install.lib" if="has.lib">
+      <mkdir dir="${target.sys}"/>
+      <copy  todir="${target.sys}">
+	<fileset dir="${local.lib}" includes="*.jar"/>
+      </copy>
+    </target>
+
+
     <!-- ========================================================== -->
     <!-- Compile EVERYTHING			                -->
     <!-- ========================================================== -->	
@@ -395,10 +429,10 @@
     <!-- Clean up all built code                    	-->
     <!-- ========================================================== -->
     <target name="clean" depends="clean-gencode" description="Delete compiled code">
-      <delete dir="${build}" />
+      <delete dir="${module.classes}" />
       <delete>
       <!-- FIXME: What about the -(date) jar files? -->
-	<fileset dir="${target.lib}" includes="**/${module}.jar" />
+	<fileset dir="${target.lib}" includes="**/${module.jar}" />
 <!--	<fileset dir="${target.lib}" includes="**/${module}-*.jar" /> -->
       </delete>
     </target>
@@ -407,8 +441,8 @@
     <!-- Compile regression test code     				          -->
     <!-- ====================================================================== -->	
     <target name="compile-tests" depends="prepare, junit, compile" description="Compile unit tests" if="junit.present"> 
-      <mkdir dir="${testbuild}" />
-      <javac srcdir="${regress}" destdir="${testbuild}" source="1.4"
+      <mkdir dir="${module.regress}" />
+      <javac srcdir="${regress}" destdir="${module.regress}" source="1.4"
 	     deprecation="${build.compiler.deprecation}"
 	     optimize="off"
 	     debug="on">
@@ -422,7 +456,7 @@
     <!-- Clean up built regress test code     				    -->
     <!-- ====================================================================== -->	
     <target name="clean-tests" description="Delete compiled junit code">
-      <delete dir="${testbuild}" />
+      <delete dir="${module.regress}" />
     </target>
 
     <!-- ====================================================================== -->
@@ -431,12 +465,12 @@
     <target name="test-module" depends="compile-all" if="junit.present" description="Run JUnit tests for this module">
       <junit printsummary="yes" fork="yes" dir="">
 	<classpath>
-	  <pathelement location="${testbuild}" />
+	  <pathelement location="${module.regress}" />
 	  <path refid="junit.classpath" />
 	</classpath>
 	<formatter type="plain" />
 	<batchtest>				
-	  <fileset dir="${testbuild}">
+	  <fileset dir="${module.regress}">
 	    <include name="**/*Test.class" />
 	  </fileset>  				
 	</batchtest> 
@@ -448,9 +482,9 @@
     <!-- Create a Jar for the module     				          -->
     <!-- ====================================================================== -->	
     <target name="dist-module" depends="compile, clean-tests, clean-examples" description="Jars the module" if="has.build">
-      <jar jarfile="${target.lib}/${module}-${DSTAMP}.jar" basedir="${build}" />
+      <jar jarfile="${target.lib}/${module}-${DSTAMP}.jar" basedir="${module.classes}" />
       <exec dir="${target.lib}" executable="ln" os="Linux">
-	<arg line=" -s ${module}-${DSTAMP}.jar ${module}.jar" />
+	<arg line=" -s ${module}-${DSTAMP}.jar ${module.jar}" />
       </exec>
     </target>
     
