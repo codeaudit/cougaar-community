@@ -354,7 +354,18 @@ public class CommunityServiceImpl extends ComponentPlugin
         (DirContext)communitiesContext.lookup(communityName);
       community.modifyAttributes(entityName,
         DirContext.REPLACE_ATTRIBUTE, attributes);
-      notifyListeners(communityName, "Set community attributes for " + entityName);
+      StringBuffer sb = new StringBuffer();
+      for (NamingEnumeration enum = attributes.getAll(); enum.hasMore();) {
+        Attribute attr = (Attribute)enum.next();
+        sb.append(attr.getID() + "=");
+        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
+          sb.append((String)enum1.next());
+          if (enum1.hasMore()) sb.append(",");
+        }
+        if (enum.hasMore()) sb.append(" ");
+      }
+      notifyListeners(communityName, "Set entity attributes for " + entityName +
+        " (" + sb.toString() + ")");
       return true;
     } catch (Exception ex) {
       log.error("Exception setting attributes for entity '" +
@@ -569,16 +580,16 @@ public class CommunityServiceImpl extends ComponentPlugin
       try {
         DirContext community =
           (DirContext)communitiesContext.lookup(communityName);
-        if (entityExists(communityName, addr.toString())) { // Entity exists
-          addRole(communityName, addr.toString(), "ChangeListener");
-          return true;
-        } else { // Entity doesn't exist, create it
+        if (!entityExists(communityName, addr.toString())) {
+          // Entity doesn't exist, create it
           Attributes attrs = new BasicAttributes();
           attrs.put(new BasicAttribute("Name", addr.toString()));
           attrs.put(new BasicAttribute("Role", "ChangeListener"));
-          community.rebind(addr.toString(), addr, attrs);
-          return true;
+          if (!addToCommunity(communityName, addr, addr.toString(), attrs)) {
+            return false;  // Couldn't add entity to community
+          }
         }
+        return addRole(communityName, addr.toString(), "ChangeListener");
       } catch (Exception ex) {
         log.error("Exception adding listener '" + addr +
           "' to community '" + communityName + "', " + ex);
@@ -803,6 +814,7 @@ public class CommunityServiceImpl extends ComponentPlugin
     if (blackboardService == null) {
       while (!sb.hasService(org.cougaar.core.service.BlackboardService.class)) {
         try { Thread.sleep(500); } catch (Exception ex) {}
+        log.debug("Waiting for BlackboardService");
       }
       if (blackboardClient == null) {
         blackboardClient = new MyBlackboardClient();
@@ -829,9 +841,10 @@ public class CommunityServiceImpl extends ComponentPlugin
    * Notifies interested agents that a change has occurred in community.
    */
   protected void notifyListeners(final String communityName, final String message) {
-    //System.out.println("NotifyListeners");
     if (communityExists(communityName)) {
       final Collection listeners = getListeners(communityName);
+      //log.debug("NotifyListeners: listeners=" + listeners.size() + " agent=" +
+      //  agentId + " community=" + communityName + " message='" + message + "'");
       if (listeners.size() > 0) {
         Thread notifyThread = new Thread("CommunityChangeNotificationThread") {
           public void run() {
@@ -847,22 +860,21 @@ public class CommunityServiceImpl extends ComponentPlugin
               CommunityChangeNotification ccn =
                 ccnFactory.newCommunityChangeNotification(communityName, agentId);
 
-			  /*
-			  log.debug("NotifyListeners: agent=" + agentId + " community=" +
-			  	communityName + " attributeID=Role attributeValue=ChangeListener");
+			        /*
+			        log.debug("NotifyListeners: agent=" + agentId + " community=" +
+			  	      communityName + " attributeID=Role attributeValue=ChangeListener");
               ccn.addTarget(new AttributeBasedAddress(communityName,
                                                 "Role",
                                                 "ChangeListener"));
-			  */
+			        */
 
-			  // Uses explicit addresses for listeners rather than ABA
+			        // Uses explicit addresses for listeners rather than ABA
               for (Iterator it = listeners.iterator(); it.hasNext();) {
                 MessageAddress listener = (MessageAddress)it.next();
-			  	log.debug("NotifyListeners: agent=" + agentId +
-              	  " community=" + communityName + " listener=" + listener);
+			  	      log.debug("NotifyListeners: message='" + message + "' agent=" +
+                  agentId + " community=" + communityName + " listener=" + listener);
                 ccn.addTarget(listener);
               }
-
 
               bbs.openTransaction();
               bbs.publishAdd(ccn);

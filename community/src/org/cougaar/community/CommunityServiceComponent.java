@@ -160,6 +160,7 @@ public class CommunityServiceComponent extends ComponentSupport {
         if (!entityExists(cs, communityName, entityId.toString())) {
           cs.addToCommunity(communityName, entityId, entityId.toString(), myAttributes);
         } else {
+          cs.setEntityAttributes(communityName, entityId.toString(), myAttributes);
           if (log.isDebugEnabled()) {
             log.debug("Entity " + entityId + " already exists in community " +
               communityName + ", using existing attributes");

@@ -54,7 +54,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
     }
   }
   private Map cache = new HashMap();
-
+  Thread initThread = null;
 
   protected CachedCommunityServiceImpl(ServiceBroker sb, MessageAddress addr) {
     super(sb, addr);
@@ -66,15 +66,15 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * are used to trigger a cache update.
    */
   private void initBlackboardSubscriber() {
-    Thread initThread = new Thread("CommunityService-BBSubscriberInit") {
+    initThread = new Thread("CommunityService-BBSubscriberInit") {
       public void run() {
         // Wait for required services to become available
-        while (!serviceBroker.hasService(BlackboardService.class) ||
+        while (getBlackboardService(serviceBroker) == null ||
                !serviceBroker.hasService(SchedulerService.class) ||
                !serviceBroker.hasService(AlarmService.class)) {
           try { Thread.sleep(500); } catch(Exception ex) {}
+          log.debug("initBlackboardSubscriber: waiting for services ...");
         }
-        BlackboardService bbs = getBlackboardService(serviceBroker);
         SchedulerService ss = (SchedulerService)serviceBroker.getService(this,
           SchedulerService.class, new ServiceRevokedListener() {
           public void serviceRevoked(ServiceRevokedEvent re) {}
@@ -83,11 +83,12 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
           AlarmService.class, new ServiceRevokedListener() {
           public void serviceRevoked(ServiceRevokedEvent re) {}
         });
-        setBlackboardService(bbs);
+        setBlackboardService(getBlackboardService(serviceBroker));
         setSchedulerService(ss);
         setAlarmService(as);
         initialize();
         load();
+        CachedCommunityServiceImpl.this.start();
       }
     };
     initThread.start();
@@ -98,8 +99,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    */
   public void setupSubscriptions() {
     changeNotifications =
-      (IncrementalSubscription)getBlackboardService(serviceBroker)
+      (IncrementalSubscription)getBlackboardService()
 	    .subscribe(changeNotificationPredicate);
+    if (log.isDebugEnabled()) log.debug("setupSubscriptions()");
   }
 
   /**
@@ -111,6 +113,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
       CommunityChangeNotification ccn =
         (CommunityChangeNotification)enum.nextElement();
       String communityName = ccn.getCommunityName();
+      if (log.isDebugEnabled())
+        log.debug("Received CommunityChangeNotification: community=" +
+          communityName + " source=" + ccn.getSource());
       if (contains(communityName)) update(communityName);
     }
 
@@ -119,6 +124,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
       CommunityChangeNotification ccn =
         (CommunityChangeNotification)enum.nextElement();
       String communityName = ccn.getCommunityName();
+      if (log.isDebugEnabled())
+        log.debug("Received CommunityChangeNotification: community=" +
+          communityName + " source=" + ccn.getSource());
       if (contains(communityName)) update(communityName);
     }
   }
@@ -139,7 +147,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @param attrs  Community Attributes
    */
   public synchronized void addCommunity(String communityName, Attributes attrs) {
-    if (!contains(communityName)) addListener(agentId, communityName);
+    if (log.isDebugEnabled())
+      log.debug("Adding community: community=" + communityName);
+     if (!contains(communityName)) addListener(agentId, communityName);
     cache.put(communityName, new Community(communityName, attrs));
   }
 
@@ -159,6 +169,9 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    */
   public synchronized void addEntity(String communityName, String entityName,
     Object obj, Attributes attrs) {
+    if (log.isDebugEnabled())
+      log.debug("Adding entity to community: community=" + communityName +
+      " entity=" + entityName);
     Community ce = (Community)cache.get(communityName);
     if (ce != null)
       ce.entities.put(entityName, new Entity(entityName, obj, attrs));
@@ -198,7 +211,7 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
         }
       }
     } catch (Exception ex) {
-      System.err.println("Exception in CommunityCache.search, " + ex);
+      log.error("Exception in CommunityCache.search, " + ex);
       ex.printStackTrace();
     }
     if (log.isDebugEnabled()) {
@@ -244,6 +257,8 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    * @return              Communities attributes
    */
   public Attributes getCommunityAttributes(String communityName) {
+    if (log.isDebugEnabled())
+      log.debug("getCommunityAttributes: community=" + communityName);
     if (!contains(communityName)) update(communityName);
     Community ce = (Community)cache.get(communityName);
     return ce.attrs;
@@ -257,18 +272,34 @@ public class CachedCommunityServiceImpl extends CommunityServiceImpl {
    */
   public Attributes getEntityAttributes(String communityName,
                                         String entityName) {
+    if (log.isDebugEnabled())
+      log.debug("getEntityAttributes: entity=" + entityName +
+        " community=" + communityName);
     if (!contains(communityName)) update(communityName);
     Community ce = (Community)cache.get(communityName);
-    if (ce.entities.containsKey(entityName))
+    if (ce.entities.containsKey(entityName)) {
       return ((Entity)ce.entities.get(entityName)).attrs;
-    else
+    } else {
+      log.debug("Community " + communityName + " does not contain entity " + entityName);
       return new BasicAttributes();
+    }
+  }
+
+  protected void notifyListeners(final String communityName, final String message) {
+    Collection listeners = getListeners(communityName);
+    if (listeners.contains(agentId)) update(communityName);
+    super.notifyListeners(communityName, message);
   }
 
   private IncrementalSubscription changeNotifications;
   private UnaryPredicate changeNotificationPredicate = new UnaryPredicate() {
     public boolean execute (Object o) {
-      return (o instanceof CommunityChangeNotification);
+      //return (o instanceof CommunityChangeNotification);
+      if (o instanceof CommunityChangeNotification) {
+        CommunityChangeNotification ccn = (CommunityChangeNotification)o;
+        return (ccn.getTargets() == Collections.EMPTY_SET);
+      }
+      return false;
   }};
 
 }
