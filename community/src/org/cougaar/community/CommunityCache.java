@@ -1,14 +1,14 @@
 /*
  * <copyright>
- *  
+ *
  *  Copyright 2001-2004 Mobile Intelligence Corp
  *  under sponsorship of the Defense Advanced Research Projects
  *  Agency (DARPA).
- * 
+ *
  *  You can redistribute this software and/or modify it under the
  *  terms of the Cougaar Open Source License as published on the
  *  Cougaar Open Source Website (www.cougaar.org).
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -20,7 +20,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
+ *
  * </copyright>
  */
 
@@ -196,6 +196,9 @@ public class CommunityCache implements CommunityServiceConstants {
                        " updated=" + ce.community.getEntities().size() +
                        " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
         }
+        if (logger.isDetailEnabled()) {
+          logger.detail(this.toString());
+        }
         fireChangeNotifications(prior, ce.community);
       }
     } else {
@@ -207,6 +210,9 @@ public class CommunityCache implements CommunityServiceConstants {
                      " prior=null" +
                      " updated=" + ce.community.getEntities().size() +
                      " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
+      }
+      if (logger.isDetailEnabled()) {
+        logger.detail(this.toString());
       }
       fireChangeNotifications(null, ce.community);
     }
@@ -544,12 +550,10 @@ public class CommunityCache implements CommunityServiceConstants {
    */
   protected Set getListeners(String communityName) {
     synchronized (listenerMap) {
-      Set listeners = (Set)listenerMap.get(communityName);
-      if (listeners == null) {
-        listeners = new HashSet();
-        listenerMap.put(communityName, listeners);
+      if (!listenerMap.containsKey(communityName)) {
+        listenerMap.put(communityName, new HashSet());
       }
-      return listeners;
+      return new HashSet((Set)listenerMap.get(communityName));
     }
   }
 
