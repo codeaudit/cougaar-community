@@ -302,8 +302,9 @@ public abstract class AbstractCommunityService
     final CommunityResponseListener wcrl =
         wrapResponse(Request.LEAVE, crl, communityName, member);
     Community community = getCommunity(communityName, null);
-    if (community != null) {
-      if (entityName == null || agentName.equals(entityName)) {
+    if (community != null && community.hasEntity(entityName)) {
+      Entity entity = community.getEntity(entityName);
+      if (entity instanceof Agent) {
         // Leave request for this agent
         queueCommunityRequest(communityName,
                               Request.LEAVE,
@@ -311,24 +312,28 @@ public abstract class AbstractCommunityService
                               null,
                               wcrl,
                               0);
-      } else {
-        Entity entity = community.getEntity(entityName);
-        if (entity != null && entity instanceof Community) {
-          findCommunity(communityName, new FindCommunityCallback() {
-            public void execute(String managerName) {
-              if (agentName.equals(managerName)) {
-                queueCommunityRequest(communityName,
-                                      Request.LEAVE,
-                                      member,
-                                      null,
-                                      wcrl,
-                                      0);
-                removeParentAttribute(getCommunity(entityName, null), communityName);
-              }
+      } else {  // Entity is a community
+        findCommunity(communityName, new FindCommunityCallback() {
+          public void execute(String managerName) {
+            if (agentName.equals(managerName)) {
+              queueCommunityRequest(communityName,
+                                    Request.LEAVE,
+                                    member,
+                                    null,
+                                    wcrl,
+                                    0);
+              removeParentAttribute(getCommunity(entityName, null),
+                                    communityName);
+            } else {
+              // Failed request, requestor not community manager
+              crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
             }
-          }, -1);
-        }
+          }
+        }, -1);
       }
+    } else {
+      // Failed request, nested community or entity does not exist
+      crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
     }
   }
 
