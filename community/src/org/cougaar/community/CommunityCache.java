@@ -29,6 +29,13 @@ import org.cougaar.core.service.community.CommunityChangeListener;
 import org.cougaar.core.naming.Filter;
 import org.cougaar.core.naming.SearchStringParser;
 
+import org.cougaar.core.component.ServiceBroker;
+import org.cougaar.core.component.ServiceRevokedListener;
+import org.cougaar.core.component.ServiceRevokedEvent;
+
+import org.cougaar.core.service.ThreadService;
+import org.cougaar.core.thread.Schedulable;
+
 import org.cougaar.util.log.*;
 
 import java.util.Collection;
@@ -48,20 +55,21 @@ public class CommunityCache
   implements CommunityChangeListener {
 
   private Logger logger = LoggerFactory.getInstance().createLogger(CommunityCache.class);
-
+  private ServiceBroker serviceBroker;
   private Map communities = new HashMap();
   private Map listenerMap = new HashMap();
   private String cacheId;
 
-  public CommunityCache(String cacheId) {
+  public CommunityCache(ServiceBroker serviceBroker, String cacheId) {
+    this.serviceBroker =serviceBroker;
     this.cacheId = cacheId;
   }
 
-  public CommunityCache() {
-    this("");
+  public CommunityCache(ServiceBroker serviceBroker) {
+    this(serviceBroker, "");
   }
 
-  protected void add(Community community) {
+  protected synchronized void add(Community community) {
     if (logger.isDebugEnabled()) {
       logger.debug(cacheId+": add:" +
                    " community=" + community.getName() +
@@ -70,17 +78,17 @@ public class CommunityCache
     communities.put(community.getName(), new CacheEntry(new Date(), community));
   }
 
-  protected Community get(String name) {
+  protected synchronized Community get(String name) {
     CacheEntry ce = (CacheEntry)communities.get(name);
     return (ce != null ? ce.community : null);
   }
 
-  protected Date getTimeStamp(String name) {
+  protected synchronized Date getTimeStamp(String name) {
     CacheEntry ce = (CacheEntry)communities.get(name);
     return ce.timeStamp;
   }
 
-  protected Collection getExpired(long expirationPeriod) {
+  protected synchronized Collection getExpired(long expirationPeriod) {
     long now = (new Date()).getTime();
     Collection expiredEntries = new Vector();
     for (Iterator it = communities.values().iterator(); it.hasNext();) {
@@ -92,13 +100,13 @@ public class CommunityCache
     return expiredEntries;
   }
 
-  protected Community remove(String communityName) {
+  protected synchronized Community remove(String communityName) {
     if (logger.isDebugEnabled()) {
       logger.debug(cacheId+": remove:" +
                    " community=" + communityName);
     }
     CacheEntry ce = (CacheEntry)communities.remove(communityName);
-    return ce.community;
+    return (ce == null ? null : ce.community);
   }
 
   protected boolean contains(String name) {
@@ -123,7 +131,7 @@ public class CommunityCache
    * @param communityName
    * @param ancestors
    */
-  private void findAncestors(String entityName, Set ancestors, boolean recursive) {
+  private synchronized void findAncestors(String entityName, Set ancestors, boolean recursive) {
     Collection allCommunities = communities.values();
     for (Iterator it = allCommunities.iterator(); it.hasNext();) {
       CacheEntry ce = (CacheEntry)it.next();
@@ -168,11 +176,7 @@ public class CommunityCache
   /**
    * Searches all communities in cache for a community matching search filter
    */
-  protected Set search(String filter) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(cacheId + ": search:" +
-                   " filter=" + filter);
-    }
+  protected synchronized Set search(String filter) {
     if (communities.isEmpty())
       return Collections.EMPTY_SET;
     Set matches = new HashSet();
@@ -189,6 +193,8 @@ public class CommunityCache
       System.out.println("Exception in search, filter=" + filter);
       ex.printStackTrace();
     }
+    if (logger.isDebugEnabled())
+      logger.debug(cacheId+": search: matches=" + entityNames(matches));
     return matches;
   }
 
@@ -284,11 +290,30 @@ public class CommunityCache
                    " community=" + cce.getCommunityName() +
                    " numListeners=" + listenerSet.size());
     }
-    for (Iterator it = listenerSet.iterator(); it.hasNext();) {
-      ((CommunityChangeListener)it.next()).communityChanged(cce);
-    }
+    fireCommunityChangeEvent(listenerSet,  cce);
   }
 
+  protected void fireCommunityChangeEvent(CommunityChangeListener l,
+                                          CommunityChangeEvent cce) {
+    Set listeners = new HashSet();
+    listeners.add(l);
+    fireCommunityChangeEvent(listeners, cce);
+  }
+
+  protected void fireCommunityChangeEvent(final Set listeners,
+                                          final CommunityChangeEvent cce) {
+    ThreadService ts =
+      (ThreadService)serviceBroker.getService(this, ThreadService.class, null);
+    Schedulable notifierThread = ts.getThread(this, new  Runnable() {
+      public void run() {
+        for (Iterator it = listeners.iterator(); it.hasNext(); ) {
+          ( (CommunityChangeListener) it.next()).communityChanged(cce);
+        }
+      }
+    }, "CommunityNotificationThread");
+    serviceBroker.releaseService(this, ThreadService.class, ts);
+    notifierThread.start();
+  }
 
   /**
    * Add listener to be notified when a change occurs to community.
@@ -298,7 +323,7 @@ public class CommunityCache
     addListener(l.getCommunityName(), l);
   }
 
-  protected void addListener(String communityName, CommunityChangeListener l) {
+  protected synchronized void addListener(String communityName, CommunityChangeListener l) {
     if (l != null) {
       String cname = (communityName != null ? communityName : "ALL_COMMUNITIES");
       if (logger.isDebugEnabled()) {
@@ -318,14 +343,14 @@ public class CommunityCache
           for (Iterator it = communities.values().iterator(); it.hasNext();) {
             CacheEntry ce = (CacheEntry)it.next();
             Community community = ce.community;
-            l.communityChanged(new CommunityChangeEvent(community,
-                                                        CommunityChangeEvent.ADD_COMMUNITY,
-                                                        community.getName()));
+            fireCommunityChangeEvent(l, new CommunityChangeEvent(community,
+                                                                 CommunityChangeEvent.ADD_COMMUNITY,
+                                                                 community.getName()));
           }
         } else if (contains(cname)) {
-          l.communityChanged(new CommunityChangeEvent(get(cname),
-                                                      CommunityChangeEvent.ADD_COMMUNITY,
-                                                      cname));
+          fireCommunityChangeEvent(l, new CommunityChangeEvent(get(cname),
+                                                               CommunityChangeEvent.ADD_COMMUNITY,
+                                                               cname));
         }
       }
     }
@@ -364,7 +389,7 @@ public class CommunityCache
   // CommunityChangeListener methods
   public String getCommunityName() { return "ALL_COMMUNITIES"; }
 
-  public void communityChanged(CommunityChangeEvent cce) {
+  public synchronized void communityChanged(CommunityChangeEvent cce) {
     Community affectedCommunity = cce.getCommunity();
     if (logger.isDebugEnabled()) {
       logger.debug(cacheId+": " + cce.toString());
@@ -381,7 +406,7 @@ public class CommunityCache
       case CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED:
       case CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED:
         CacheEntry ce = (CacheEntry)communities.get(affectedCommunity.getName());
-        ce.timeStamp = new Date();
+        if (ce != null) ce.timeStamp = new Date();
         break;
     }
     notifyListeners(cce);
