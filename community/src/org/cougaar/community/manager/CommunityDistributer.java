@@ -102,7 +102,6 @@ public class CommunityDistributer implements CommunityServiceConstants {
    * @param nodesOnly       True if CommunityDescriptors are only sent to node
    *                        agents
    * @param cul             Listener object to receive community descriptor updates
-   * @param bc              BlackboardClient
    * @param communities     Communities managed by CommunityManager
    *
    */

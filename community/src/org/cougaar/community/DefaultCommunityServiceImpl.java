@@ -499,7 +499,6 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
    * obtained from cache.  For any other agent/community a request must be sent
    * to the agent or community manager.
    * @param member String
-   * @param filter String
    * @param crl CommunityResponseListener
    * @return Collection
    */
