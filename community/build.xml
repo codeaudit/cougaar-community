@@ -167,16 +167,16 @@
     
     <!-- jarfiles required by this module, relative to various other paths -->
     <!-- WARNING: Only relative paths work here. -->
-    <property name="compile.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.lib}/planning.jar,${target.lib}/glm.jar,${target.lib}/manager.jar,${target.lib}/webserver.jar,${target.sys}/log4j.jar,${target.sys}/xerces.jar,${target.sys}/servlet.jar"/>
+    <property name="compile.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.lib}/planning.jar,${target.lib}/glm.jar,${target.lib}/manager.jar,${target.lib}/webserver.jar,${target.sys}/log4j.jar,${target.sys}/xerces.jar,${target.sys}/servlet.jar,${target.sys}/concurrent.jar"/>
     <!-- Put absolute paths on this list, in the form of a path. -->
     <property name="compile.abs.jarlist" value=""/>
 
     <!-- javadoc package spec for building javadocs -->
-    <property name="javadoc.packages" value="org.cougaar.community,org.cougaar.community.init,org.cougaar.community.test,org.cougaar.community.util"/>
+    <property name="javadoc.packages" value="org.cougaar.community,org.cougaar.community.init,org.cougaar.community.manager,org.cougaar.community.requests,org.cougaar.community.util"/>
 
     <!-- Extra jars needed at run / unit-test time. -->
     <!-- WARNING: Only relative paths work here. -->
-    <property name="run.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.lib}/planning.jar,${target.lib}/glm.jar,${target.lib}/manager.jar,${target.lib}/webserver.jar,${target.sys}/log4j.jar,${target.sys}/xerces.jar,${target.sys}/servlet.jar"/>
+    <property name="run.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.lib}/planning.jar,${target.lib}/glm.jar,${target.lib}/manager.jar,${target.lib}/webserver.jar,${target.sys}/log4j.jar,${target.sys}/xerces.jar,${target.sys}/servlet.jar,${target.sys}/concurrent.jar"/>
     <!-- Put absolute paths on this list, in the form of a path. -->
     <property name="run.abs.jarlist" value=""/>
     
@@ -214,6 +214,7 @@
     <property name="genpath" refid="codegen.path"/>
 
     <!-- patterns -->
+    <!-- ps.jar.extras are sourcefiles which will be added to the jar -->
     <patternset id="ps.jar.extras">
       <include name="**/*.def"/>
       <include name="**/*.gif"/>
@@ -222,6 +223,10 @@
       <include name="**/*.jpg"/>
       <include name="**/*.bmp"/>
       <include name="**/*.png"/>
+      <include name="**/*.properties"/>
+      <include name="**/*.xml"/>
+      <include name="**/*.wav"/>
+      <include name="**/*.au"/>
     </patternset>
 
     <patternset id="ps.notsources">
