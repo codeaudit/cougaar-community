@@ -358,7 +358,10 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                " community=" + communityName +
                " timeout=" + timeout);
     }
-    long tryUntil = timeout >= 0 ? System.currentTimeMillis() + timeout : -1;
+    long tryUntil = -1;
+    if (timeout >= 0) {
+      tryUntil = timeout == 0 ? 0 : System.currentTimeMillis() + timeout;
+    }
     myBlackboardClient.queueFindManagerRequest(communityName, fccb, 0, tryUntil);
   }
 
@@ -366,6 +369,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                           final FindCommunityCallback fccb,
                           final long tryUntil) {
     Callback cb = new Callback() {
+      long start = System.currentTimeMillis();
       public void execute(Response resp) {
         String name = null;
         if (resp.isAvailable() && resp.isSuccess()) {
@@ -374,10 +378,17 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
             name = entry.getURI().getPath().substring(1);
           }
         }
-        if (log.isDetailEnabled()) {
-          log.detail(agentName + ": findManager:" +
+        long wpRespTime = System.currentTimeMillis() - start;
+        if (log.isInfoEnabled() && wpRespTime > 10000) {
+          log.info(agentName + ": findManager.execute:" +
                      " community=" + communityName +
-                     " manager=" + name);
+                     " manager=" + name +
+                     " wpRespTime=" + wpRespTime);
+        } else if (log.isDebugEnabled()) {
+          log.debug(agentName + ": findManager.execute:" +
+                     " community=" + communityName +
+                     " manager=" + name +
+                     " wpRespTime=" + wpRespTime);
         }
         if (name != null) {
           fccb.execute(name);
@@ -518,14 +529,18 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
                                             FindCommunityCallback fccb,
                                             long delay,
                                             long tryUntil) {
+      if (log.isDetailEnabled()) {
+        log.detail("queueFindManagerRequest: " +
+                   " community=" + communityName +
+                   " delay=" + delay +
+                   " tryUntil=" + tryUntil);
+      }
       findManagerRequests.add(new FindManagerRequest(now() + delay,
                                                      communityName,
                                                      fccb,
                                                      tryUntil));
-      if (findMgrTimer == null) {
-        findMgrTimer = new WakeAlarm(now() + TIMER_INTERVAL);
-        alarmService.addRealTimeAlarm(findMgrTimer);
-      }
+      if (findMgrTimer != null) findMgrTimer.expire();
+      blackboard.signalClientActivity();
     }
 
     protected void queueResponse(CommunityResponse resp,
@@ -591,7 +606,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       sendCommunityResponses();
 
       // Resend queued FindManagerRequests
-      if (findMgrTimer != null && findMgrTimer.hasExpired()) {
+      if (findMgrTimer == null || findMgrTimer.hasExpired()) {
         performFindManagerRetries();
         if (!findManagerRequests.isEmpty()) {
           findMgrTimer = new WakeAlarm(now() + TIMER_INTERVAL);
@@ -704,6 +719,10 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       int n;
       List l;
       long now = now();
+      if (log.isDetailEnabled()) {
+        log.detail("performFindManagerRetries: entries=" +
+                   findManagerRequests.size());
+      }
       synchronized (findManagerRequests) {
         n = findManagerRequests.size();
         if (n <= 0 || blackboard == null) { return; }

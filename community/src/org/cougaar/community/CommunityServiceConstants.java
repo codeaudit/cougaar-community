@@ -44,7 +44,7 @@ public interface CommunityServiceConstants {
   // sending to interested agents.
   public static final String UPDATE_INTERVAL_PROPERTY =
       "org.cougaar.community.update.interval";
-  public static long DEFAULT_UPDATE_INTERVAL = 30 * 1000;
+  public static long DEFAULT_UPDATE_INTERVAL = 5 * 1000;
 
   // Defines frequency of White Pages read to verify that an agent is still
   // manager for community

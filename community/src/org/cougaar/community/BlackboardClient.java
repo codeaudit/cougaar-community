@@ -53,7 +53,7 @@ public class BlackboardClient extends BlackboardClientComponent {
   public static final int REMOVE = 2;
 
   protected LoggingService logger;
-  protected long TIMER_INTERVAL = 10 * 1000;
+  protected long TIMER_INTERVAL = 5 * 1000;
   private BBWakeAlarm wakeAlarm;
   private final List addQueue = new ArrayList(5);
   private final List changeQueue = new ArrayList(5);
