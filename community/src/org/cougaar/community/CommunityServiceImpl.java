@@ -719,8 +719,14 @@ public class CommunityServiceImpl extends ComponentPlugin
     final ResultsHolder rh = new ResultsHolder();
     searchCommunity(null, filter, true, Community.ALL_ENTITIES, new CommunityResponseListener() {
       public void getResponse(CommunityResponse resp){
-        if (resp != null)
-          rh.setResults((Collection)resp.getContent());
+        if (resp != null) {
+          Collection entities = (Collection) resp.getContent();
+          Collection names = new ArrayList();
+          for (Iterator it = entities.iterator(); it.hasNext();) {
+            names.add(((Entity)it.next()).getName());
+          }
+          rh.setResults(names);
+        }
         s.release();
       }
     });
