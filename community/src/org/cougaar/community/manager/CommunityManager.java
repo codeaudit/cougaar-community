@@ -40,8 +40,6 @@ import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDService;
 
 import org.cougaar.core.service.wp.AddressEntry;
-import org.cougaar.core.service.wp.Application;
-import org.cougaar.core.service.wp.Cert;
 import org.cougaar.core.service.wp.WhitePagesService;
 
 import org.cougaar.core.agent.service.alarm.Alarm;
@@ -78,7 +76,7 @@ public class CommunityManager {
   private static final String URN_PREFIX = "urn";
   private static final String NAMESPACE_IDENTIFIER = "agent";
   private static final String URN_PREFIX_AND_NID = URN_PREFIX + ":" +
-                                                   NAMESPACE_IDENTIFIER + ":";
+      NAMESPACE_IDENTIFIER + ":";
 
   // Timeout for calls to WhitePagesService
   private static final long WPS_TIMEOUT = 60000;
@@ -89,10 +87,10 @@ public class CommunityManager {
 
   // Defines how long CommunityDescriptor updates should be aggregated before
   // sending to interested agents.
-  private static final long SEND_INTERVAL  = 10000;
+  private static final long SEND_INTERVAL = 10000;
 
   private MessageAddress agentId;
-  private String communityName;
+  //private String communityName;
   private LoggingService logger;
   private ServiceBroker serviceBroker;
   private BlackboardService bbs;
@@ -117,14 +115,15 @@ public class CommunityManager {
     this.bbs = bbs;
     this.serviceBroker = sb;
     logger =
-      (LoggingService)serviceBroker.getService(this, LoggingService.class, null);
-    logger = org.cougaar.core.logging.LoggingServiceWithPrefix.add(logger, agentId + ": ");
-    uidService = (UIDService)serviceBroker.getService(this, UIDService.class, null);
+        (LoggingService) serviceBroker.getService(this, LoggingService.class, null);
+    logger = org.cougaar.core.logging.LoggingServiceWithPrefix.add(logger,
+        agentId + ": ");
+    uidService = (UIDService) serviceBroker.getService(this, UIDService.class, null);
     AlarmService as = null;
     try {
-      as = (AlarmService)serviceBroker.getService(this,
-                                                  AlarmService.class,
-                                                  null);
+      as = (AlarmService) serviceBroker.getService(this,
+          AlarmService.class,
+          null);
       as.addRealTimeAlarm(new ManagerCheckTimer(TIMER_INTERVAL));
     } catch (Exception e) {
       e.printStackTrace();
@@ -137,9 +136,10 @@ public class CommunityManager {
     //   If any are found we've rehydrated in which case the CommunityDescriptor
     //   may be out of date.  Clients are responsible for checking the
     //   accuracy of contents and resubmitting requests to correct.
-    for (Iterator it = bbs.query(communityDescriptorPredicate).iterator(); it.hasNext();) {
-      RelayAdapter ra = (RelayAdapter)it.next();
-      CommunityDescriptor cd = (CommunityDescriptor)ra.getContent();
+    for (Iterator it = bbs.query(communityDescriptorPredicate).iterator();
+         it.hasNext(); ) {
+      RelayAdapter ra = (RelayAdapter) it.next();
+      CommunityDescriptor cd = (CommunityDescriptor) ra.getContent();
       assertCommunityManagerRole(cd.getName());
       updateCommunityDescriptor(cd.getName());
     }
@@ -152,8 +152,8 @@ public class CommunityManager {
   public void processRequest(CommunityManagerRequest cmr) {
     if (logger.isDebugEnabled())
       logger.debug("CommunityManagerRequest:" + cmr.getRequestTypeAsString() +
-        " community=" + cmr.getCommunityName() +
-        " source=" + cmr.getSource());
+                   " community=" + cmr.getCommunityName() +
+                   " source=" + cmr.getSource());
     String communityName = cmr.getCommunityName();
     RelayAdapter ra = getManagedCommunityRelayAdapter(communityName);
     if (ra == null) {
@@ -162,8 +162,8 @@ public class CommunityManager {
         // persisted.
         // A new CommunityDescriptor relay needs to be created
         logger.debug("Re-creating CommunityDescriptor:" +
-                  " community=" + communityName +
-                  " reason=restart prior to persist");
+                     " community=" + communityName +
+                     " reason=restart prior to persist");
         CommunityDescriptor cd = new CommunityDescriptorImpl(agentId,
             new CommunityImpl(communityName),
             uidService.nextUID());
@@ -191,16 +191,12 @@ public class CommunityManager {
     }
   }
 
-  private void processRequest (RelayAdapter ra, CommunityManagerRequest cmr) {
+  private void processRequest(RelayAdapter ra, CommunityManagerRequest cmr) {
     MessageAddress requester = cmr.getSource();
     CommunityDescriptorImpl cd = (CommunityDescriptorImpl) ra.getContent();
     switch (cmr.getRequestType()) {
       case CommunityManagerRequest.JOIN:
         if (cmr.getEntity() != null) {
-          //boolean requesterIsJoiner = (cmr.getEntity().getName().equals(requester.toString()));
-          //boolean joinerInCommunity = cd.getCommunity().hasEntity(cmr.getEntity().getName());
-          //boolean requesterInCommunity = cd.getCommunity().hasEntity(requester.toString());
-          //if (requesterIsJoiner || (requesterInCommunity && !joinerInCommunity)) {
           String entitiesBeforeAdd = "";
           if (logger.isDebugEnabled()) {
             entitiesBeforeAdd = entityNames(cd.getCommunity().getEntities());
@@ -291,7 +287,7 @@ public class CommunityManager {
         break;
     }
     cmr.setResponse(new CommunityResponseImpl(CommunityResponse.SUCCESS,
-                                        cd.getCommunity()));
+                                              cd.getCommunity()));
     if (logger.isDebugEnabled()) {
       logger.debug("Publishing response to CommunityManagerRequest" +
                    " target=" + cmr.getSource() +
@@ -303,11 +299,11 @@ public class CommunityManager {
   }
 
   private void updateCommunityDescriptor(String communityName) {
-    if(communityDescriptorsToSend.add(communityName)) {
+    if (communityDescriptorsToSend.add(communityName)) {
       AlarmService as = (AlarmService) serviceBroker.getService(this,
-          AlarmService.class,
-          null);
-      as.addRealTimeAlarm(new CommunityDescriptorSendTimer(communityName, SEND_INTERVAL));
+          AlarmService.class, null);
+      as.addRealTimeAlarm(new CommunityDescriptorSendTimer(communityName,
+          SEND_INTERVAL));
       serviceBroker.releaseService(this, AlarmService.class, as);
     }
   }
@@ -317,7 +313,7 @@ public class CommunityManager {
    */
   private void applyAttrMods(Attributes attrs, ModificationItem[] mods) {
     for (int i = 0; i < mods.length; i++) {
-      switch(mods[i].getModificationOp()) {
+      switch (mods[i].getModificationOp()) {
         case DirContext.ADD_ATTRIBUTE:
           attrs.put(mods[i].getAttribute());
           break;
@@ -339,23 +335,72 @@ public class CommunityManager {
    * @return MessageAddress to agent registered as community manager
    */
   public MessageAddress findManager(String communityName) {
-    //logger.debug("findManager: community=" + communityName);
-    MessageAddress communityManager = null;
+    MessageAddress ret = null;
     if (communityName != null) {
-      WhitePagesService wps =
-        (WhitePagesService) serviceBroker.getService(this, WhitePagesService.class, null);
+      WhitePagesService wps = (WhitePagesService)
+          serviceBroker.getService(this, WhitePagesService.class, null);
       try {
-        AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
-        if (ae.length > 0) {
-          communityManager = extractAgentIdFromURI(ae[0].getAddress());
-        }
+        ret = findManager(communityName, wps);
       } catch (Exception ex) {
         ex.printStackTrace();
       } finally {
         serviceBroker.releaseService(this, WhitePagesService.class, wps);
       }
     }
-    return communityManager;
+    return ret;
+  }
+
+  /** find a manager's address by looking in the white pages */
+  private MessageAddress findManager(
+      String communityName, WhitePagesService wps) throws Exception {
+    MessageAddress ret = null;
+    if (communityName != null) {
+
+    // Remove for use with new WPS API
+      AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
+      if (ae.length > 0) {
+        ret = extractAgentIdFromURI(ae[0].getAddress());
+      }
+
+    /* Uncomment for use with new WPS
+      AddressEntry entry = wps.get(communityName + ".comm", "community");
+      if (entry != null) {
+        URI uri = entry.getURI();
+        String agentName = uri.getPath().substring(1);
+        if (agentName != null) {
+          ret = MessageAddress.getMessageAddress(agentName);
+        }
+      }
+    */
+
+    }
+    return ret;
+  }
+
+  /** create a wp entry for white pages binding */
+  private AddressEntry createManagerEntry(
+      String communityName) throws Exception {
+
+  // Remove for use with new WPS API
+  URI cmUri = new java.net.URI(URN_PREFIX + ":" +
+                           NAMESPACE_IDENTIFIER + ":" +
+                           agentId);
+  AddressEntry entry =
+      new AddressEntry(communityName,
+                       org.cougaar.core.service.wp.Application.getApplication("community"),
+                       cmUri,
+                       org.cougaar.core.service.wp.Cert.NULL,
+                       Long.MAX_VALUE);
+
+    /* Uncomment for use with new WPS
+    URI uri = URI.create("agent:///" + agentId);
+    AddressEntry entry =
+        AddressEntry.getAddressEntry(
+        communityName + ".comm",
+        "community",
+        uri);
+    */
+    return entry;
   }
 
   /**
@@ -364,22 +409,13 @@ public class CommunityManager {
    * @param communityName Community to manage
    */
   public void assertCommunityManagerRole(String communityName) {
-    logger.debug("assertCommunityManagerRole: agent=" + agentId.toString() + " community=" + communityName);
+    logger.debug("assertCommunityManagerRole: agent=" + agentId.toString() +
+                 " community=" + communityName);
     WhitePagesService wps =
         (WhitePagesService) serviceBroker.getService(this, WhitePagesService.class, null);
-    URI cmUri = null;
     try {
-      cmUri = new java.net.URI(URN_PREFIX + ":" +
-                               NAMESPACE_IDENTIFIER + ":" +
-                               agentId);
-      AddressEntry communityAE =
-          new AddressEntry(communityName,
-                           Application.getApplication("community"),
-                           cmUri,
-                           Cert.NULL,
-                           Long.MAX_VALUE);
+      AddressEntry communityAE = createManagerEntry(communityName);
       MessageAddress communityManager = findManager(communityName);
-
       // Bind this agent as manager for community
       if (communityManager != null) {
         //logger.error("Invalid request to create multiple CommunityManagers " +
@@ -393,13 +429,12 @@ public class CommunityManager {
               "Unable to bind agent as community manager, attempting rebind:" +
               " error=" + ex.getMessage() +
               " agent=" + agentId +
-              " community=" + communityName);
+              " community=" + communityName +
+              " entry=" + communityAE);
           wps.rebind(communityAE, WPS_TIMEOUT);
         }
       }
       logger.debug("Managing community " + communityName);
-    } catch (URISyntaxException use) {
-      logger.error("Invalid community manager URI: uri=" + cmUri);
     } catch (Throwable ex) {
       logger.error("Unable to (re)bind agent as community manager:" +
                    " error=" + ex.getMessage() +
@@ -444,21 +479,20 @@ public class CommunityManager {
   // Converts a collection of Entities to a compact string representation of names
   private String entityNames(Collection entities) {
     StringBuffer sb = new StringBuffer("[");
-    for (Iterator it = entities.iterator(); it.hasNext();) {
-      Entity entity = (Entity)it.next();
+    for (Iterator it = entities.iterator(); it.hasNext(); ) {
+      Entity entity = (Entity) it.next();
       sb.append(entity.getName() + (it.hasNext() ? "," : ""));
     }
-    return(sb.append("]").toString());
+    return (sb.append("]").toString());
   }
 
   private final int urnPrefixLen = URN_PREFIX.length() +
-                                          NAMESPACE_IDENTIFIER.length() +
-                                          2;  // add 2 for colons
+      NAMESPACE_IDENTIFIER.length() + 2; // add 2 for colons
   private MessageAddress extractAgentIdFromURI(URI uri) {
     String urn = uri.toString();
     if (urn.startsWith(URN_PREFIX + ":" + NAMESPACE_IDENTIFIER + ":"))
       return SimpleMessageAddress.getSimpleMessageAddress(
-        urn.substring(urnPrefixLen, urn.length()));
+          urn.substring(urnPrefixLen, urn.length()));
     else
       return null;
   }
@@ -469,20 +503,22 @@ public class CommunityManager {
   protected String attrsToString(Attributes attrs) {
     StringBuffer sb = new StringBuffer("[");
     try {
-      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore();) {
-        Attribute attr = (Attribute)enum.next();
+      for (NamingEnumeration enum = attrs.getAll(); enum.hasMore(); ) {
+        Attribute attr = (Attribute) enum.next();
         sb.append(attr.getID() + "=(");
-        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore();) {
-          sb.append((String)enum1.next());
+        for (NamingEnumeration enum1 = attr.getAll(); enum1.hasMore(); ) {
+          sb.append( (String) enum1.next());
           if (enum1.hasMore())
             sb.append(",");
           else
             sb.append(")");
         }
-        if (enum.hasMore()) sb.append(",");
+        if (enum.hasMore())
+          sb.append(",");
       }
       sb.append("]");
-    } catch (NamingException ne) {}
+    }
+    catch (NamingException ne) {}
     return sb.toString();
   }
 
@@ -494,97 +530,130 @@ public class CommunityManager {
    * Get RelayAdapter associated with a managed community.
    */
   private RelayAdapter getManagedCommunityRelayAdapter(String communityName) {
-    for (Iterator it = bbs.query(communityDescriptorPredicate).iterator(); it.hasNext();) {
-      RelayAdapter ra = (RelayAdapter)it.next();
-      CommunityDescriptor cd = (CommunityDescriptor)ra.getContent();
-      if (cd.getName().equals(communityName)) return ra;
+    for (Iterator it = bbs.query(communityDescriptorPredicate).iterator();
+         it.hasNext(); ) {
+      RelayAdapter ra = (RelayAdapter) it.next();
+      CommunityDescriptor cd = (CommunityDescriptor) ra.getContent();
+      if (cd.getName().equals(communityName))
+        return ra;
     }
     return null;
   }
 
   private UnaryPredicate communityDescriptorPredicate = new UnaryPredicate() {
-    public boolean execute (Object o) {
+    public boolean execute(Object o) {
       return (o instanceof RelayAdapter &&
-              ((RelayAdapter)o).getContent() instanceof CommunityDescriptor);
-      }
-   };
+              ( (RelayAdapter) o).getContent()instanceof CommunityDescriptor);
+    }
+  };
 
   /**
    * Periodically check the WPS to verity that this agent is still identified
    * as the community manager for all communities it thinks it's managing.  If
    * not it removes the associated CommunityDescriptor relays.
    */
-  private class ManagerCheckTimer implements Alarm {
+  private class ManagerCheckTimer
+      implements Alarm {
     private long expirationTime = -1;
     private boolean expired = false;
     private AlarmService as = null;
     private WhitePagesService wps = null;
-    public ManagerCheckTimer (long delay) {
+    public ManagerCheckTimer(long delay) {
       expirationTime = delay + System.currentTimeMillis();
     }
 
     public void expire() {
       if (!expired) {
+        Collection communityNames = new ArrayList();
         try {
-          wps = (WhitePagesService) serviceBroker.getService(this,
-              WhitePagesService.class,
-              null);
+          // Get names of communities that this agent thinks it is managing
           bbs.openTransaction();
           for (Iterator it = bbs.query(communityDescriptorPredicate).iterator();
                it.hasNext(); ) {
             RelayAdapter ra = (RelayAdapter) it.next();
-            String communityName = ( (CommunityDescriptor) ra.getContent()).
-                getName();
-            AddressEntry ae[] = wps.get(communityName, WPS_TIMEOUT);
-            if (ae.length > 0) {
-              MessageAddress communityManager = extractAgentIdFromURI(ae[0].
-                  getAddress());
-              if (!communityManager.equals(agentId)) {
-                logger.debug("No longer community manager:" +
-                             " community=" + communityName +
-                             " newManager=" + communityManager);
-                bbs.publishRemove(ra);
-              }
+            communityNames.add(((CommunityDescriptor) ra.getContent()).getName());
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+        } finally {
+          bbs.closeTransaction();
+        }
+
+        // See if WP binding lists this agent as manager for each name
+        // in communityNames collection
+        //   If so, remove name
+        try {
+          wps = (WhitePagesService) serviceBroker.getService(this,
+            WhitePagesService.class, null);
+          for (Iterator it = communityNames.iterator(); it.hasNext();) {
+            String communityName = (String)it.next();
+            MessageAddress communityManager = findManager(communityName, wps);
+            if (communityManager != null && communityManager.equals(agentId)) {
+              it.remove();
             }
           }
-          // Check timestamps for last transmission of CommunityDescriptor to
-          // interested agents.  If the period is about to exceed the cache
-          // expiration time set in the CommunityPlugin resend to refresh
-          // client caches.
-          long now = (new Date()).getTime();
-          for (Iterator it = communityTimestamps.entrySet().iterator();
-               it.hasNext(); ) {
-            Map.Entry me = (Map.Entry) it.next();
-            String communityName = (String) me.getKey();
-            long timestamp = ( (Date) me.getValue()).getTime();
-            long FUDGE = 1 * 60 * 1000; // Allowance for transmission delay
-            // due to busy system, etc.
-          }
-
-          as = (AlarmService) serviceBroker.getService(this,
-              AlarmService.class,
-              null);
-          as.addRealTimeAlarm(new ManagerCheckTimer(TIMER_INTERVAL));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           e.printStackTrace();
-        }
-        finally {
-          bbs.closeTransaction();
-          expired = true;
-          if (as != null) {
-            serviceBroker.releaseService(this, AlarmService.class, as);
-          }
+        } finally {
           if (wps != null) {
             serviceBroker.releaseService(this, WhitePagesService.class, wps);
           }
         }
+        // At this point communityNames collection contains names of communities
+        // for which this agent is no longer the community manager.
+        //  Relinquish manager role by removing CommunityDescriptor relay
+        if (!communityNames.isEmpty()) {
+          bbs.openTransaction();
+          try {
+            for (Iterator it = communityNames.iterator(); it.hasNext(); ) {
+              String communityName = (String) it.next();
+              logger.debug(
+                  "No longer community manager:" +
+                  " community=" + communityName);
+              RelayAdapter ra = getManagedCommunityRelayAdapter(communityName);
+              bbs.publishRemove(ra);
+            }
+          } catch (Exception e) {
+            e.printStackTrace();
+          } finally {
+            bbs.closeTransaction();
+          }
+        }
+
+        // Check timestamps for last transmission of CommunityDescriptor to
+        // interested agents.  If the period is about to exceed the cache
+        // expiration time set in the CommunityPlugin resend to refresh
+        // client caches.
+        long now = (new Date()).getTime();
+        for (Iterator it = communityTimestamps.entrySet().iterator();
+             it.hasNext(); ) {
+          Map.Entry me = (Map.Entry) it.next();
+          String communityName = (String) me.getKey();
+          long timestamp = ( (Date) me.getValue()).getTime();
+          long FUDGE = 1 * 60 * 1000; // Allowance for transmission delay
+          // due to busy system, etc.
+          if (now + TIMER_INTERVAL + SEND_INTERVAL + FUDGE >
+              timestamp + CommunityPlugin.CACHE_EXPIRATION) {
+            updateCommunityDescriptor(communityName);
+          }
+        }
+
+        as = (AlarmService) serviceBroker.getService(this,
+            AlarmService.class, null);
+        as.addRealTimeAlarm(new ManagerCheckTimer(TIMER_INTERVAL));
+        serviceBroker.releaseService(this, AlarmService.class, as);
       }
     }
 
-    public long getExpirationTime () { return expirationTime; }
-    public boolean hasExpired () { return expired; }
-    public synchronized boolean cancel () {
+    public long getExpirationTime() {
+      return expirationTime;
+    }
+
+    public boolean hasExpired() {
+      return expired;
+    }
+
+    public synchronized boolean cancel() {
       if (!expired)
         return expired = true;
       return false;
@@ -594,11 +663,12 @@ public class CommunityManager {
   /**
    * Timer used for batching the transmission of CommunityDescriptors.
    */
-  private class CommunityDescriptorSendTimer implements Alarm {
+  private class CommunityDescriptorSendTimer
+      implements Alarm {
     private String cname;
     private long expirationTime = -1;
     private boolean expired = false;
-    public CommunityDescriptorSendTimer (String communityName, long delay) {
+    public CommunityDescriptorSendTimer(String communityName, long delay) {
       expirationTime = delay + System.currentTimeMillis();
       this.cname = communityName;
     }
@@ -621,24 +691,27 @@ public class CommunityManager {
                          entityNames(cd.getCommunity().getEntities()) +
                          " id=" + cd.getUID());
           }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           e.printStackTrace();
-        }
-        finally {
+        } finally {
           bbs.closeTransaction();
           expired = true;
         }
       }
-  }
+    }
 
-  public long getExpirationTime () { return expirationTime; }
-  public boolean hasExpired () { return expired; }
-  public synchronized boolean cancel () {
-    if (!expired)
-      return expired = true;
-    return false;
-  }
-}
+    public long getExpirationTime() {
+      return expirationTime;
+    }
 
+    public boolean hasExpired() {
+      return expired;
+    }
+
+    public synchronized boolean cancel() {
+      if (!expired)
+        return expired = true;
+      return false;
+    }
+  }
 }
