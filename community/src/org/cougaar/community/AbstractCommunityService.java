@@ -252,6 +252,9 @@ public abstract class AbstractCommunityService
     }
   }
 
+  // Scratchpad for pending callbacks to prevent multiple invocations
+  private Set pendingCallbacks = Collections.synchronizedSet(new HashSet());
+
   /**
    * Wrap response enabling to be automatically resent in the event of a timeout.
    * @param type int
@@ -264,6 +267,7 @@ public abstract class AbstractCommunityService
                                                  final CommunityResponseListener crl,
                                                  final String communityName,
                                                  final Entity entity) {
+    if (crl == null) return null;
     membershipWatcher.addPendingOperation(communityName);
     return new CommunityResponseListener() {
       public void getResponse(final CommunityResponse resp) {
@@ -276,54 +280,69 @@ public abstract class AbstractCommunityService
                   myCommunities.add(communityName, entity);
                   membershipWatcher.removePendingOperation(communityName);
                   ((CommunityResponseImpl)resp).setContent(community);
-                  if (crl != null) { crl.getResponse(resp); }
+                  crl.getResponse(resp);
                 } else {
-                  addListener( new CommunityChangeListener() {
+                  CommunityChangeListener ccl = new CommunityChangeListener() {
                     public String getCommunityName() { return communityName; }
                     public void communityChanged(CommunityChangeEvent cce) {
-                      if (cce.getCommunity().hasEntity(entity.getName())) {
-                        removeListener(this);
-                        myCommunities.add(communityName, entity);
-                        membershipWatcher.removePendingOperation(communityName);
-                        ((CommunityResponseImpl)resp).setContent(cce.getCommunity());
-                        if (crl != null) { crl.getResponse(resp); }
+                      synchronized (pendingCallbacks) {
+                        if (cce.getCommunity().hasEntity(entity.getName()) &&
+                            pendingCallbacks.contains(this)) {
+                          removeListener(this);
+                          myCommunities.add(communityName, entity);
+                          membershipWatcher.removePendingOperation(communityName);
+                          ((CommunityResponseImpl) resp).setContent(cce.getCommunity());
+                          crl.getResponse(resp);
+                          pendingCallbacks.remove(this);
+                        }
                       }
                     }
-                  });
+                  };
+                  pendingCallbacks.add(ccl);
+                  addListener(ccl);
                 }
               } else if (type == CommunityServiceConstants.LEAVE) {
                 if (community != null && !community.hasEntity(entity.getName())) {
                   myCommunities.remove(communityName, entity.getName());
                   membershipWatcher.removePendingOperation(communityName);
                   ((CommunityResponseImpl)resp).setContent(community);
-                  if (crl != null) { crl.getResponse(resp); }
+                  crl.getResponse(resp);
                 } else {
-                  addListener( new CommunityChangeListener() {
+                  CommunityChangeListener ccl = new CommunityChangeListener() {
                     public String getCommunityName() { return communityName; }
                     public void communityChanged(CommunityChangeEvent cce) {
-                      if (!cce.getCommunity().hasEntity(entity.getName())) {
+                      if (!cce.getCommunity().hasEntity(entity.getName()) &&
+                          pendingCallbacks.contains(this)) {
                         removeListener(this);
                         myCommunities.remove(communityName, entity.getName());
                         membershipWatcher.removePendingOperation(communityName);
                         ((CommunityResponseImpl)resp).setContent(cce.getCommunity());
-                        if (crl != null) { crl.getResponse(resp); }
+                        crl.getResponse(resp);
+                        pendingCallbacks.remove(this);
                       }
                     }
-                  });
+                  };
+                  pendingCallbacks.add(ccl);
+                  addListener(ccl);
                 }
               } else {
                 if (community != null) {
                   ((CommunityResponseImpl)resp).setContent(community);
-                  if (crl != null) { crl.getResponse(resp); }
+                  crl.getResponse(resp);
                 } else {
-                  addListener( new CommunityChangeListener() {
+                  CommunityChangeListener ccl = new CommunityChangeListener() {
                     public String getCommunityName() { return communityName; }
                     public void communityChanged(CommunityChangeEvent cce) {
-                      removeListener(this);
-                      ((CommunityResponseImpl)resp).setContent(cce.getCommunity());
-                      if (crl != null) { crl.getResponse(resp); }
+                      if (pendingCallbacks.contains(this)) {
+                        ((CommunityResponseImpl)resp).setContent(cce.getCommunity());
+                        crl.getResponse(resp);
+                        pendingCallbacks.remove(this);
+                        removeListener(this);
+                      }
                     }
-                  });
+                  };
+                  pendingCallbacks.add(ccl);
+                  addListener(ccl);
                 }
               }
             } else {  // content != null
@@ -333,14 +352,20 @@ public abstract class AbstractCommunityService
                 myCommunities.remove(communityName, entity.getName());
               }
               membershipWatcher.removePendingOperation(communityName);
-              if (crl != null) { crl.getResponse(resp); }
+              crl.getResponse(resp);
             }
             break;
           case CommunityResponse.FAIL:
             membershipWatcher.removePendingOperation(communityName);
-            if (crl != null) { crl.getResponse(resp); }
+            crl.getResponse(resp);
             break;
           case CommunityResponse.TIMEOUT:
+            if (log.isDebugEnabled()) {
+              log.debug("Community request timeout:" +
+                        " type=" + type +
+                        " entity=" + entity +
+                        " community=" + communityName);
+            }
             // retry
             queueCommunityRequest(communityName,
                                   type,

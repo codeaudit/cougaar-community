@@ -71,7 +71,7 @@ public interface CommunityServiceConstants {
   // community manager.
   public static final String INCLUDE_DESCRIPTOR_IN_RESPONSE_PROPERTY =
       "org.cougaar.community.manager.include.descriptor";
-  public static boolean DEFAULT_INCLUDE_DESCRIPTOR_IN_RESPONSE = false;
+  public static boolean DEFAULT_INCLUDE_DESCRIPTOR_IN_RESPONSE = true;
 
 
 }

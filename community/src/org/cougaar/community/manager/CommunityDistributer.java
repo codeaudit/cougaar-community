@@ -213,7 +213,8 @@ public class CommunityDistributer implements CommunityServiceConstants {
             }
           }
           if (de.nodeTargets.contains(agentId)) {
-            updateListener.updateCommunity((CommunityImpl)community.clone());
+            //updateListener.updateCommunity((CommunityImpl)community.clone());
+            updateListener.updateCommunity(community);
           }
         }
       } else {
@@ -232,7 +233,8 @@ public class CommunityDistributer implements CommunityServiceConstants {
             }
           }
           if (de.nodeTargets.contains(agentId)) {
-            updateListener.updateCommunity((CommunityImpl)community.clone());
+            //updateListener.updateCommunity((CommunityImpl)community.clone());
+            updateListener.updateCommunity(community);
           }
         } else {
           if (de.doRemove) { // remove descriptor
@@ -240,7 +242,8 @@ public class CommunityDistributer implements CommunityServiceConstants {
               blackboardClient.publish(de.ra, BlackboardClient.REMOVE);
             }
             if (de.nodeTargets.contains(agentId)) {
-              updateListener.removeCommunity((CommunityImpl)community.clone());
+              //updateListener.removeCommunity((CommunityImpl)community.clone());
+              updateListener.removeCommunity(community);
             }
             descriptors.remove(de.name);
             if (logger.isDebugEnabled()) {

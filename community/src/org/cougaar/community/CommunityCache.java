@@ -92,7 +92,7 @@ public class CommunityCache implements CommunityServiceConstants {
         // Flush cache entry if expired
         flushCacheEntry(ce);
       } else {
-        community = (CommunityImpl)ce.community.clone();
+        community = (CommunityImpl)ce.community;
       }
     }
     return community;
@@ -114,7 +114,7 @@ public class CommunityCache implements CommunityServiceConstants {
         CacheEntry ce = (CacheEntry)it.next();
         CommunityImpl community = ce.community;
         if (f.match(community.getAttributes()))
-          matches.add(community.clone());
+          matches.add(community);
       }
     }
     catch (Exception ex) {
@@ -187,19 +187,19 @@ public class CommunityCache implements CommunityServiceConstants {
     if (ce != null) {
       if (ci.getLastUpdate() >= ce.community.getLastUpdate()) {
         ce.timeStamp = now();
-        CommunityImpl prior = ce.community;
-        ce.community = (CommunityImpl)ci.clone();
+        //CommunityImpl prior = ce.community;
+        //ce.community = (CommunityImpl)community;
         if (logger.isDebugEnabled()) {
           logger.debug("update:" +
                        " community=" + community.getName() +
-                       " prior=" + (prior == null ? -1 : prior.getEntities().size()) +
+                       " prior=" + (ce.community == null ? -1 : ce.community.getEntities().size()) +
                        " updated=" + ce.community.getEntities().size() +
                        " expires=" + df.format(new Date(ce.timeStamp + expirationPeriod)));
         }
         if (logger.isDetailEnabled()) {
           logger.detail(this.toString());
         }
-        fireChangeNotifications(prior, ce.community);
+        fireChangeNotifications(ce.community, community);
       }
     } else {
       ce = new CacheEntry(now(), (CommunityImpl)ci.clone());
@@ -214,7 +214,7 @@ public class CommunityCache implements CommunityServiceConstants {
       if (logger.isDetailEnabled()) {
         logger.detail(this.toString());
       }
-      fireChangeNotifications(null, ce.community);
+      fireChangeNotifications(ce.community, null);
     }
   }
 
@@ -265,7 +265,7 @@ public class CommunityCache implements CommunityServiceConstants {
    * Removes listener from change notification list.
    * @param l  Listener to be removed
    */
-  public void removeListener(CommunityChangeListener l) {
+  public boolean removeListener(CommunityChangeListener l) {
     if (l != null) {
       String communityName = l.getCommunityName();
       if (l == null) {
@@ -276,11 +276,13 @@ public class CommunityCache implements CommunityServiceConstants {
       }
       synchronized (listenerMap) {
         Set listeners = (Set)listenerMap.get(communityName);
-        if (listeners != null) {
+        if (listeners != null && listeners.contains(l)) {
           listeners.remove(l);
+          return true;
         }
       }
     }
+    return false;
   }
 
   public synchronized boolean contains(String name) {
@@ -306,55 +308,61 @@ public class CommunityCache implements CommunityServiceConstants {
     return (ce == null ? null : ce.community);
   }
 
-  private void fireChangeNotifications(Community prior, Community updated) {
+  private void fireChangeNotifications(Community current, Community updated) {
     if (logger.isDetailEnabled()) {
       logger.detail("fireChangeNotifications: community=" + updated.getName());
     }
-    Community community = get(updated.getName()); // a copy for Change Event
-    if (prior == null) {  // new community
-      notifyListeners(new CommunityChangeEvent(community,
+    //Community community = get(updated.getName()); // a copy for Change Event
+    if (updated == null) {  // new community
+      notifyListeners(new CommunityChangeEvent(current,
                                                CommunityChangeEvent.ADD_COMMUNITY,
-                                               community.getName()));
-      for (Iterator it = updated.getEntities().iterator(); it.hasNext();) {
+                                               current.getName()));
+      for (Iterator it = current.getEntities().iterator(); it.hasNext();) {
         Entity entity = (Entity)it.next();
-        notifyListeners(new CommunityChangeEvent(community,
+        notifyListeners(new CommunityChangeEvent(current,
                                                  CommunityChangeEvent.ADD_ENTITY,
                                                  entity.getName()));
       }
     } else {
 
       // Updated community attributes
-      if (!attributesEqual(prior.getAttributes(), updated.getAttributes())) {
-        notifyListeners(new CommunityChangeEvent(community,
+      if (!attributesEqual(current.getAttributes(), updated.getAttributes())) {
+        current.setAttributes((Attributes)updated.getAttributes().clone());
+        notifyListeners(new CommunityChangeEvent(current,
                                                  CommunityChangeEvent.COMMUNITY_ATTRIBUTES_CHANGED,
-                                                 community.getName()));
+                                                 current.getName()));
       }
 
       // Added Entities
       Collection addedEntities =
-          listAddedEntities(prior.getEntities(), updated.getEntities());
+          listAddedEntities(current.getEntities(), updated.getEntities());
       for (Iterator it = addedEntities.iterator(); it.hasNext();) {
-        notifyListeners(new CommunityChangeEvent(community,
+        String entityName = (String)it.next();
+        current.addEntity(updated.getEntity(entityName));
+        notifyListeners(new CommunityChangeEvent(current,
                                                  CommunityChangeEvent.ADD_ENTITY,
-                                                 (String)it.next()));
+                                                 entityName));
       }
 
       // Removed Entities
       Collection removedEntities =
-          listRemovedEntities(prior.getEntities(), updated.getEntities());
+          listRemovedEntities(current.getEntities(), updated.getEntities());
       for (Iterator it = removedEntities.iterator(); it.hasNext();) {
-        notifyListeners(new CommunityChangeEvent(community,
+        String entityName = (String)it.next();
+        current.removeEntity(entityName);
+        notifyListeners(new CommunityChangeEvent(current,
                                                  CommunityChangeEvent.REMOVE_ENTITY,
-                                                 (String)it.next()));
+                                                 entityName));
       }
 
       // Entities with changed attributes
-      for (Iterator it = updated.getEntities().iterator(); it.hasNext();) {
+      for (Iterator it = current.getEntities().iterator(); it.hasNext();) {
         Entity curEntity = (Entity)it.next();
-        Entity priorEntity = prior.getEntity(curEntity.getName());
-        if (priorEntity != null &&
-            !attributesEqual(curEntity.getAttributes(), priorEntity.getAttributes())) {
-          notifyListeners(new CommunityChangeEvent(community,
+        Entity updatedEntity = updated.getEntity(curEntity.getName());
+        if (updatedEntity != null &&
+            !attributesEqual(curEntity.getAttributes(), updatedEntity.getAttributes())) {
+          curEntity.setAttributes((Attributes)updatedEntity.getAttributes().clone());
+          notifyListeners(new CommunityChangeEvent(current,
                                                    CommunityChangeEvent.ENTITY_ATTRIBUTES_CHANGED,
                                                    curEntity.getName()));
         }

@@ -103,7 +103,8 @@ public abstract class AbstractCommunityManager
     CommunityResponseImpl resp = (CommunityResponseImpl)
         handleRequest(source, communityName, reqType, entity, attrMods);
     if (resp.getContent() != null) {
-      resp.setContent(((CommunityImpl) resp.getContent()).clone());
+      //resp.setContent(((CommunityImpl) resp.getContent()).clone());
+      resp.setContent(resp.getContent());
     }
     return resp;
   }

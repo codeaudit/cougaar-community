@@ -593,11 +593,13 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
        }
        for (int i = 0; i < n; i++) {
          ResponseHolder resp = (ResponseHolder)l.get(i);
-         Set listeners = resp.getListeners();
-         for (Iterator it = listeners.iterator(); it.hasNext();) {
-           CommunityResponseListener crl = (CommunityResponseListener)it.next();
-           if (crl != null) {
-             crl.getResponse(resp.getResponse());
+         if (resp != null) {
+           Set listeners = resp.getListeners();
+           for (Iterator it = listeners.iterator(); it.hasNext(); ) {
+             CommunityResponseListener crl = (CommunityResponseListener) it.next();
+             if (crl != null) {
+               crl.getResponse(resp.getResponse());
+             }
            }
          }
        }
