@@ -1090,7 +1090,6 @@ public class CommunityPlugin extends ComponentPlugin {
      * Called  when clock-time >= getExpirationTime().
      **/
     public void expire () {
-      System.out.print('C');
       if (!expired) {
         List requestsToPublish = new ArrayList();
         List responsesToPublish = new ArrayList();
