@@ -77,7 +77,7 @@ public class CommunityImpl extends EntityImpl
    * community.
    * @return  Collection of Entity objects
    */
-  public Collection getEntities() {
+  public synchronized Collection getEntities() {
     return new ArrayList(entities.values());
   }
 
