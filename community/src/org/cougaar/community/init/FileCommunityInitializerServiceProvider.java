@@ -37,9 +37,11 @@ import org.cougaar.community.CommunityUtils;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.component.ServiceProvider;
 import org.cougaar.util.ConfigFinder;
+import org.cougaar.util.Strings;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
+import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 class FileCommunityInitializerServiceProvider implements ServiceProvider {
@@ -94,7 +96,16 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
         return communityConfigs;
       }
       try {
-        XMLReader xr = new org.apache.xerces.parsers.SAXParser();
+        org.apache.xerces.parsers.SAXParser p=new org.apache.xerces.parsers.SAXParser();
+        /*
+        try {
+          p.setFeature("http://xml.org/sax/features/string-interning", true); 
+        } catch (SAXException e) { 
+          System.out.println("error in setting up string-interning feature");
+        }
+        */
+
+        XMLReader xr = p;
         SaxHandler myHandler = new SaxHandler();
         xr.setContentHandler(myHandler);
         InputSource is =
@@ -185,10 +196,11 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
             if (p3.getLocalName(i).equals("Name")) {
               name = p3.getValue(i).trim();
             } else {
-              attrs.put(p3.getLocalName(i), p3.getValue(i).trim());
+              attrs.put(Strings.intern(p3.getLocalName(i)),
+                        Strings.intern(p3.getValue(i).trim()));
             }
           }
-          community = new CommunityConfig(name);
+          community = new CommunityConfig(Strings.intern(name));
           community.setAttributes(attrs);
         } else if (localname.equals("Entity")) {
           String name = null;
@@ -197,10 +209,11 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
             if (p3.getLocalName(i).equals("Name")) {
               name = p3.getValue(i).trim();
             } else {
-              attrs.put(p3.getLocalName(i), p3.getValue(i).trim());
+              attrs.put(Strings.intern(p3.getLocalName(i)),
+                        Strings.intern(p3.getValue(i).trim()));
             }
           }
-          entity = new EntityConfig(name);
+          entity = new EntityConfig(Strings.intern(name));
           entity.setAttributes(attrs);
         } else if (localname.equals("Attribute")) {
           String id = null;
@@ -213,6 +226,8 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
             }
           }
           if (id != null && value != null) {
+            id = Strings.intern(id);
+            value = Strings.intern(value);
             if (entity != null)
               entity.addAttribute(id, value);
             else
