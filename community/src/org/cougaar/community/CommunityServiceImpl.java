@@ -1137,10 +1137,12 @@ public class CommunityServiceImpl extends BlackboardClientComponent
     List matches = new ArrayList();
     Collection parentNames = listParentCommunities(member);
     Set communitiesMatchingFilter = cache.search(filter);
-    for (Iterator it = communitiesMatchingFilter.iterator(); it.hasNext();) {
-      Community community = (Community)it.next();
-      if (parentNames.contains(community.getName())) {
-        matches.add(community.getName());
+    if (communitiesMatchingFilter != null) {
+      for (Iterator it = communitiesMatchingFilter.iterator(); it.hasNext(); ) {
+        Community community = (Community) it.next();
+        if (parentNames.contains(community.getName())) {
+          matches.add(community.getName());
+        }
       }
     }
     return matches;
