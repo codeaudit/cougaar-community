@@ -19,7 +19,7 @@
  * </copyright>
  */
 
-package org.cougaar.community.examples;
+package org.cougaar.community.test;
 
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.util.UID;

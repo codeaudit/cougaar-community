@@ -19,7 +19,7 @@
  * </copyright>
  */
 
-package org.cougaar.community.examples;
+package org.cougaar.community.test;
 
 import org.cougaar.core.relay.Relay;
 import org.cougaar.core.mts.MessageAddress;
