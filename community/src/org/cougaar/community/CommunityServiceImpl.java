@@ -401,19 +401,47 @@ public class CommunityServiceImpl extends ComponentPlugin
    * @return  Collection of community names
    */
   public Collection listAllCommunities() {
-    Collection communityNames = new Vector();
-    try{
-      WhitePagesService wps = (WhitePagesService)serviceBroker.getService(this, WhitePagesService.class, null);
-      AddressEntry[] entrys = wps.get(".");
-      for(int i=0; i<entrys.length; i++) {
-        if(entrys[i].getApplication().toString().equals("community")){
-          communityNames.add(entrys[i].getName());
-        }
-      }
-    }catch(Exception e){log.error("Error in listAllCommunities: " + e);}
-    return communityNames;
+    List commNames = new ArrayList();
+    try {
+      WhitePagesService wps = (WhitePagesService)
+        serviceBroker.getService(this, WhitePagesService.class, null);
+      recursiveFindCommunities(
+          commNames,
+          wps,
+          ".comm", // all community entries end in ".comm"
+          0,       // no timeout
+          -1);     // no recursion limit
+    } catch (Exception e){
+      log.error("Error in listAllCommunities: " + e);
+    }
+    return commNames;
   }
 
+  private static final void recursiveFindCommunities(
+      Collection toCol,
+      WhitePagesService wps,
+      String suffix,
+      long timeout,
+      int limit) throws Exception {
+    if (limit == 0) {
+      // max recursion depth
+      return;
+    }
+    Set names = wps.list(suffix, timeout);
+    for (Iterator iter = names.iterator(); iter.hasNext(); ) {
+      String s = (String) iter.next();
+      if (s == null || s.length() <= 5) {
+        // never
+      } else if (s.charAt(0) == '.') {
+        // hierarchical community name
+        recursiveFindCommunities(toCol, wps, s, timeout, (limit-1));
+      } else {
+        // trim the ".comm" suffix
+        String commName = s.substring(0, s.length()-5);
+        toCol.add(commName);
+      }
+    }
+  }
 
   /**
    * Returns attributes associated with community.
