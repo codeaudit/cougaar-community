@@ -66,8 +66,8 @@ public class RelayAdapter implements Relay.Source {
    * Set the response that was sent from a target.
    **/
   public int updateResponse(MessageAddress target, Object response) {
-      this.resp = response;
-      return Relay.RESPONSE_CHANGE;
+    this.resp = response;
+    return Relay.RESPONSE_CHANGE;
   }
 
   /**

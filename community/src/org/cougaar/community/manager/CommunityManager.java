@@ -334,7 +334,7 @@ public class CommunityManager {
         RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, cd.getUID());
         //RelayAdapter ra = new RelayAdapter(cd.getSource(), cd, uidService.nextUID());
         myManagingCommunities.put(communityName, ra);
-        logger.info("Managing community " + communityName);
+        logger.debug("Managing community " + communityName);
         ra.addTarget(agentId);
         logger.debug("PublishAdd CommunityDescriptor:" +
                      " targets=" + RelayAdapter.targetsToString(ra) +

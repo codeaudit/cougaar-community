@@ -57,4 +57,9 @@ public class CommunityResponseImpl implements CommunityResponse, java.io.Seriali
     return "INVALID_VALUE";
   }
 
+  public String toString() {
+    return "(" + getStatusAsString() + ":" +
+        (content == null ? "null" : content.getClass().getName()) + ")";
+  }
+
 }
