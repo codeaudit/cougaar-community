@@ -1134,7 +1134,16 @@ public class CommunityServiceImpl extends BlackboardClientComponent
    * @return A collection of community names
    */
   public Collection listParentCommunities(String member, String filter) {
-    return cache.getAncestorNames(member, true);
+    List matches = new ArrayList();
+    Collection parentNames = listParentCommunities(member);
+    Set communitiesMatchingFilter = cache.search(filter);
+    for (Iterator it = communitiesMatchingFilter.iterator(); it.hasNext();) {
+      Community community = (Community)it.next();
+      if (parentNames.contains(community.getName())) {
+        matches.add(community.getName());
+      }
+    }
+    return matches;
   }
 
   /**
@@ -1539,7 +1548,8 @@ public class CommunityServiceImpl extends BlackboardClientComponent
   private class WakeAlarm implements Alarm {
     private long expiresAt;
     private boolean expired = false;
-    public WakeAlarm (long expirationTime) { expiresAt = expirationTime; }
+    public WakeAlarm (long expirationTime) { expiresAt = expirationTime;
+    log.info("wakeAlarm");}
     public long getExpirationTime() { return expiresAt; }
     public synchronized void expire() {
       if (!expired) {
