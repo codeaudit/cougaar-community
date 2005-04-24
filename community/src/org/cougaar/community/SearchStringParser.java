@@ -318,7 +318,14 @@ public class SearchStringParser {
 
         public boolean match(Attributes attrs) throws NamingException {
             try {
-                return value.compareTo(attrs.get(attrdesc).get()) <= 0;
+                Attribute attr = attrs.get(attrdesc);
+                for (int i = 0, n = attr.size(); i < n; i++) {
+                  String attrValue = attr.get(i).toString();
+                  if (attrValue.compareTo((String)attrs.get(attrdesc).get(i)) <=0) {
+                    return true;
+                  }
+                }
+                return false;
             } catch (Exception e) {
                 return false;
             }
@@ -350,7 +357,14 @@ public class SearchStringParser {
 
         public boolean match(Attributes attrs) throws NamingException {
             try {
-                return value.compareTo(attrs.get(attrdesc).get()) >= 0;
+                Attribute attr = attrs.get(attrdesc);
+                for (int i = 0, n = attr.size(); i < n; i++) {
+                  String attrValue = attr.get(i).toString();
+                  if (attrValue.compareTo((String)attrs.get(attrdesc).get(i)) >=0) {
+                    return true;
+                  }
+                }
+                return false;
             } catch (Exception e) {
                 return false;
             }
@@ -470,7 +484,13 @@ public class SearchStringParser {
 
         public boolean match(Attributes attrs) throws NamingException {
             try {
-                return glob.match(attrs.get(attrdesc).get().toString());
+              Attribute attr = attrs.get(attrdesc);
+              for (int i = 0; i < attr.size(); i++) {
+                if (glob.match(attrs.get(attrdesc).get(i).toString())) {
+                  return true;
+                }
+              }
+              return false;
             } catch (Exception e) {
                 return false;
             }
@@ -483,7 +503,7 @@ public class SearchStringParser {
             b.append("(");
             b.append(attrdesc);
             b.append("=");
-            glob.appendString(b);
+		   glob.appendString(b);
             b.append(")");
         }
     }
