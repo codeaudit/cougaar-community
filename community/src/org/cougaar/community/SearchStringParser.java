@@ -503,7 +503,7 @@ public class SearchStringParser {
             b.append("(");
             b.append(attrdesc);
             b.append("=");
-		   glob.appendString(b);
+            glob.appendString(b);
             b.append(")");
         }
     }
