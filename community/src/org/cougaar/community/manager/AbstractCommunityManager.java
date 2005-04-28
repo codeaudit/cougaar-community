@@ -269,7 +269,26 @@ public abstract class AbstractCommunityManager
     for (int i = 0; i < mods.length; i++) {
       switch (mods[i].getModificationOp()) {
         case DirContext.ADD_ATTRIBUTE:
-          attrs.put(mods[i].getAttribute());
+          Attribute newAttr = mods[i].getAttribute();
+          if (newAttr == null) {
+            continue;
+          }
+          Attribute oldAttr = attrs.get(newAttr.getID());
+          if (oldAttr == null) {
+            attrs.put(newAttr);
+          }
+          else {
+            try {
+              NamingEnumeration en = newAttr.getAll();
+              while (en.hasMore()) {
+                oldAttr.add(en.next());
+              }
+            } catch (NamingException e) {
+              if (logger.isWarnEnabled()) {
+                logger.warn("Unable to add attribute", e);
+              }
+            }
+          }
           break;
         case DirContext.REPLACE_ATTRIBUTE:
           attrs.remove(mods[i].getAttribute().getID());
