@@ -209,6 +209,8 @@ public abstract class AbstractCommunityService
                   }
                 
                 });
+              } else {
+                queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 0);   
               }   
             }
           };
