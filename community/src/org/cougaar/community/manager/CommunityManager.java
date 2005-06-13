@@ -28,9 +28,10 @@ package org.cougaar.community.manager;
 import javax.naming.directory.ModificationItem;
 
 import org.cougaar.core.service.community.Community;
-import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityResponse;
+import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.FindCommunityCallback;
+import org.cougaar.core.service.wp.Callback;
 
 /**
  * Interface for a CommunityManager that is responsible for maintaining
@@ -43,6 +44,13 @@ public interface CommunityManager {
    * @param community Community
    */
   public void manageCommunity(Community community);
+  
+  /**
+   * Defines community to manage.
+   * @param community Community
+   * @param callback callback invoked upon completion
+   */
+  public void manageCommunity(Community community, Callback callback);
 
   /**
    * Client request to be handled by manager.

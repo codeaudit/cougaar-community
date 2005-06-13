@@ -46,6 +46,8 @@ import org.cougaar.util.log.Logger;
 import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityResponse;
 import org.cougaar.core.service.community.Entity;
+import org.cougaar.core.service.wp.Callback;
+import org.cougaar.core.service.wp.Response;
 
 import org.cougaar.community.CommunityServiceConstants;
 import org.cougaar.community.CommunityImpl;
@@ -70,27 +72,53 @@ public abstract class AbstractCommunityManager
    * @param community Community to manage
    */
   public void manageCommunity(Community community) {
+    manageCommunity(community, null);
+  }
+  
+  /**
+   * Adds a community to be managed by this community manager.
+   * 
+   * @param community
+   *          Community to manage
+   * @param callback
+   *          Callback to invoke on completion
+   */
+  public void manageCommunity(final Community community, final Callback callback) {
     if (logger.isDebugEnabled()) {
-      logger.debug(agentName + ": manageCommunity: community=" +
-                   community.getName());
+      logger.debug(agentName + ": manageCommunity: community="
+          + community.getName());
     }
-    String communityName = community.getName();
-    if (community.getAttributes() == null) {
-      community.setAttributes(new BasicAttributes());
-    }
-    CommunityUtils.setAttribute(community.getAttributes(), "CommunityManager", agentName);
-    communities.put(communityName, ((CommunityImpl)community).clone());
-    Set targets = new HashSet();
-    for (Iterator it = community.getEntities().iterator(); it.hasNext(); ) {
-      targets.add(((Entity)it.next()).getName());
-    }
-    addTargets(communityName, targets);
+    final String communityName = community.getName();
+
     if (!isManager(communityName)) {
-      assertCommunityManagerRole(communityName);
-      if (logger.isDebugEnabled()) {
-        logger.debug(agentName + ": addCommunity:" +
-                     " name=" + community.getName());
-      }
+      assertCommunityManagerRole(communityName, new Callback() {
+
+        public void execute(Response resp) {
+          Response.Bind respBind = (Response.Bind) resp;      
+          if (respBind.didBind()) {
+            if (logger.isDebugEnabled()) {
+              logger.debug(agentName + ": addCommunity:" + " name="
+                  + community.getName());
+            }
+            if (community.getAttributes() == null) {
+              community.setAttributes(new BasicAttributes());
+            }
+            CommunityUtils.setAttribute(community.getAttributes(),
+                "CommunityManager", agentName);
+            communities.put(communityName, ((CommunityImpl) community).clone());
+            Set targets = new HashSet();
+            for (Iterator it = community.getEntities().iterator(); it.hasNext();) {
+              targets.add(((Entity) it.next()).getName());
+            }
+            addTargets(communityName, targets);
+          }
+          if (callback != null) {
+            callback.execute(resp);
+          }
+        }
+
+      });
+
     }
   }
 
@@ -370,5 +398,15 @@ public abstract class AbstractCommunityManager
    * @param communityName Community to manage
    */
   abstract protected void assertCommunityManagerRole(String communityName);
+  
+  /**
+   * asserts a community manager role in the WP and invokes a callback when the bind
+   * is complete
+   * 
+   * @param communityName Community to manage
+   * @param callback callback to invoke on completion
+   */
+  abstract protected void assertCommunityManagerRole(String communityName,
+      Callback callback);
 
 }

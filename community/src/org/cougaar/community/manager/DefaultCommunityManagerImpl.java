@@ -146,6 +146,10 @@ public class DefaultCommunityManagerImpl
   public void manageCommunity(Community community) {
     super.manageCommunity(community);
   }
+  
+  public void manageCommunity(Community community, Callback callback) {
+    super.manageCommunity(community, callback);
+  }
 
   protected void getSystemProperties() {
     try {
@@ -259,6 +263,11 @@ public class DefaultCommunityManagerImpl
   protected void assertCommunityManagerRole(String communityName) {
     assertCommunityManagerRole(communityName, false);
   }
+  
+  protected void assertCommunityManagerRole(String communityName,
+      Callback callback) {
+    assertCommunityManagerRole(communityName, false, callback);
+  }
 
   /**
    * Asserts community manager role by binding address to community name in
@@ -269,24 +278,38 @@ public class DefaultCommunityManagerImpl
    */
   protected void assertCommunityManagerRole(String communityName,
                                             boolean override) {
+    assertCommunityManagerRole(communityName, override, null);
+  }
+  
+  /**
+   * Asserts community manager role by binding address to community name in
+   * White Pages
+   * 
+   * @param communityName
+   *          Community to manage
+   * @param override
+   *          If true any existing binding will be removed and replaced with new
+   * @param callback
+   *          Invoked when the assertion is completed
+   */
+  protected void assertCommunityManagerRole(String communityName,
+      boolean override, Callback callback) {
     if (logger.isDetailEnabled()) {
-      logger.detail(agentName + ": assertCommunityManagerRole: agent=" +
-                    agentId.toString() +
-                    " community=" + communityName);
+      logger.detail(agentName + ": assertCommunityManagerRole: agent="
+          + agentId.toString() + " community=" + communityName);
     }
     try {
-      bindCommunityManager(communityName, override);
+      bindCommunityManager(communityName, override, callback);
       communitiesToCheck.add(communityName);
       myBlackboardClient.startVerifyManagerCheck();
     } catch (Throwable ex) {
       if (logger.isWarnEnabled()) {
-        logger.warn(agentName +
-                    ": Unable to (re)bind agent as community manager:" +
-                    " error=" + ex +
-                    " agent=" + agentId +
-                    " community=" + communityName);
+        logger.warn(agentName
+            + ": Unable to (re)bind agent as community manager:" + " error="
+            + ex + " agent=" + agentId + " community=" + communityName);
       }
     }
+
   }
 
   /**
@@ -316,7 +339,7 @@ public class DefaultCommunityManagerImpl
    * @throws Exception
    */
   private void bindCommunityManager(final String communityName,
-                                    final boolean override) throws Exception {
+                                    final boolean override, final Callback callback) throws Exception {
     final AddressEntry communityAE = createManagerEntry(communityName);
     Callback cb = new Callback() {
       public void execute(Response resp) {
@@ -347,6 +370,9 @@ public class DefaultCommunityManagerImpl
             }
           }
           resp.removeCallback(this);
+          if (callback != null) {
+            callback.execute(resp);
+          }
         }
       }
     };

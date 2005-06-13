@@ -40,9 +40,9 @@ import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 
+import org.cougaar.community.manager.CommunityManager;
+import org.cougaar.community.manager.Request;
 import org.cougaar.core.mts.MessageAddress;
-import org.cougaar.util.log.Logger;
-
 import org.cougaar.core.service.community.Agent;
 import org.cougaar.core.service.community.Community;
 import org.cougaar.core.service.community.CommunityChangeEvent;
@@ -52,9 +52,9 @@ import org.cougaar.core.service.community.CommunityResponseListener;
 import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.FindCommunityCallback;
-
-import org.cougaar.community.manager.CommunityManager;
-import org.cougaar.community.manager.Request;
+import org.cougaar.core.service.wp.Callback;
+import org.cougaar.core.service.wp.Response;
+import org.cougaar.util.log.Logger;
 
 /** 
  * Base class for implementations of CommunityService API.  Methods that 
@@ -201,11 +201,15 @@ public abstract class AbstractCommunityService
             public void execute(String name) {
               if (name == null) { // community not found
                 Community community =
-                    new CommunityImpl(communityName, newCommunityAttrs);
-                communityManager.manageCommunity(community);
-              }
-              queueCommunityRequest(communityName, Request.JOIN, agent, null,
-                                    wcrl, timeout, 0);
+                    new CommunityImpl(communityName, newCommunityAttrs);                
+                communityManager.manageCommunity(community, new Callback() {
+                  
+                  public void execute(Response resp) {
+                    queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 0);                
+                  }
+                
+                });
+              }   
             }
           };
           findCommunity(communityName, fmcb, 0);
