@@ -205,7 +205,12 @@ public abstract class AbstractCommunityService
                 communityManager.manageCommunity(community, new Callback() {
                   
                   public void execute(Response resp) {
-                    queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 0);                
+                    Response.Bind respBind = (Response.Bind) resp;
+                    if (respBind.didBind()) {                      
+                      queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 0);
+                    } else {             
+                      queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl, timeout, 1000);
+                    }                 
                   }
                 
                 });
