@@ -118,7 +118,11 @@ public abstract class AbstractCommunityService implements CommunityService,
           + " inCache=" + cache.contains(communityName));
     }
     if (cache.contains(communityName)) {
-      return cache.get(communityName);
+      Community value = cache.get(communityName);
+      if (value == null) {
+        crl.getResponse(new CommunityResponseImpl(CommunityResponse.FAIL, null));
+      }
+      return value;
     } else {
       queueCommunityRequest(communityName, Request.GET_COMMUNITY_DESCRIPTOR,
           null, null, crl, -1, // No timeout
@@ -193,6 +197,16 @@ public abstract class AbstractCommunityService implements CommunityService,
         final CommunityResponseListener wcrl = wrapResponse(Request.JOIN, crl,
             communityName, agent);
         if (createIfNotFound) {
+          if (createIfNotFound && !entityName.equals(agentName)) {
+            if (log.isWarnEnabled()) {
+              log.warn("Cannot create community by proxy. " + agentName
+                  + " cannot create community and set " + entityName
+                  + " as the manager.  Will try to join " + communityName
+                  + " for " + entityName + " if the community already exists");
+            }
+            queueCommunityRequest(communityName, Request.JOIN, agent, null, wcrl,
+                timeout, 0);
+          }
           FindCommunityCallback fmcb = new FindCommunityCallback() {
 
             public void execute(String name) {
@@ -228,6 +242,13 @@ public abstract class AbstractCommunityService implements CommunityService,
       case COMMUNITY:
         // Submit join request to add nested community iff nested community
         // already exists
+        if (createIfNotFound) {
+          if (log.isWarnEnabled()) {
+            log.warn("createIfNotFound true but value is ignored "
+                + " for joining nested communities. " + entityName
+                + " will only join " + communityName + " if it already exists");
+          }
+        }
         FindCommunityCallback fmcb = new FindCommunityCallback() {
 
           public void execute(final String nestedCommunityMgr) {
