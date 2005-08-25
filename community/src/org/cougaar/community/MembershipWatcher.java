@@ -98,8 +98,8 @@ public class MembershipWatcher {
       final String communityName = (String)it.next();
       Collection entities = myCommunities.getEntities(communityName);
       for (Iterator it1 = entities.iterator(); it1.hasNext(); ) {
-        Entity entity = (Entity)it1.next();
-        if (!pendingOperations.contains(communityName)) {
+        Entity entity = (Entity)it1.next();        
+        if ((entity.getName().equals(thisAgent)) && !pendingOperations.contains(communityName)) {
           checkCommunity(communityName, entity, true);
         }
       }
@@ -113,7 +113,19 @@ public class MembershipWatcher {
       if (parentCommunity != null &&
           parentCommunity.hasEntity(thisAgent) &&
           !pendingOperations.contains(parentName)) {
-        checkCommunity(parentName, new AgentImpl(thisAgent), myCommunities.contains(parentName, thisAgent));
+        // a problem occurs when a remote agent (AgentA) joins a community on behalf
+        // of another agent (AgentB).  In this case AgentB's myCommunities
+        // is not aware that it has joined the community and attempts to 
+        // leave the community at this point.  At some point in the future
+        // AgentA will see that AgentB has left the community and because
+        // AgentA's myCommunity list says that AgentB should be in the community
+        // it will try to re-join the community for AgentB.  Updating the 
+        // myCommunities list at this point resolves the problem but I am
+        // not sure if it is the correct solution
+        if (!myCommunities.contains(parentName, thisAgent)) {
+          myCommunities.add(parentName, new AgentImpl(thisAgent));
+        }
+        checkCommunity(parentName, new AgentImpl(thisAgent), true);
       }
     }
 
