@@ -36,8 +36,6 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.BasicAttributes;
 
-import EDU.oswego.cs.dl.util.concurrent.Semaphore;
-
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.service.community.Community;
@@ -46,6 +44,7 @@ import org.cougaar.core.service.community.CommunityResponseListener;
 
 import org.cougaar.community.CommunityImpl;
 import org.cougaar.community.AgentImpl;
+import org.cougaar.community.util.Semaphore;
 
 import org.apache.log4j.PropertyConfigurator;
 

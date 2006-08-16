@@ -52,7 +52,7 @@ import org.cougaar.core.servlet.BaseServletComponent;
 import org.cougaar.core.servlet.ServletUtil;
 import org.cougaar.util.UnaryPredicate;
 
-import EDU.oswego.cs.dl.util.concurrent.Semaphore;
+import org.cougaar.community.util.Semaphore;
 
 import java.util.*;
 
