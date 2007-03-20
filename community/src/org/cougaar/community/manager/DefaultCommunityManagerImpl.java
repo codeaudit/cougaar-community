@@ -405,12 +405,14 @@ public class DefaultCommunityManagerImpl
     whitePagesService.rebind(ae, cb);
   }
 
-  private UnaryPredicate communityDescriptorPredicate = new UnaryPredicate() {
+  private static final UnaryPredicate communityDescriptorPredicate = 
+    new CommunityDescriptorPredicate();
+  private static final class CommunityDescriptorPredicate implements UnaryPredicate {
     public boolean execute(Object o) {
       return (o instanceof RelayAdapter &&
               ((RelayAdapter)o).getContent() instanceof CommunityDescriptor);
     }
-  };
+  }
 
   /**
    * Check WPS binding to verify that the state of this community manager
@@ -468,10 +470,12 @@ public class DefaultCommunityManagerImpl
    * agents.
    */
   private IncrementalSubscription requestSub;
-  private UnaryPredicate RequestPredicate = new UnaryPredicate() {
+  private static final UnaryPredicate requestPredicate = new RequestPredicate();
+  private static final class RequestPredicate implements UnaryPredicate {
     public boolean execute (Object o) {
       return (o instanceof Request);
-  }};
+    }
+  };
 
   class MyBlackboardClient extends BlackboardClient {
 
@@ -491,7 +495,7 @@ public class DefaultCommunityManagerImpl
     public void setupSubscriptions() {
       // Subscribe to CommunityManagerRequests
       requestSub =
-          (IncrementalSubscription)blackboard.subscribe(RequestPredicate);
+          (IncrementalSubscription)blackboard.subscribe(requestPredicate);
 
       // Re-publish any CommunityDescriptor Relays found on BB
       if (blackboard.didRehydrate()) {

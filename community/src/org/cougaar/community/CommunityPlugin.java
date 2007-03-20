@@ -412,10 +412,13 @@ public class CommunityPlugin extends ComponentPlugin {
   }
 
   private IncrementalSubscription communityRequestSub;
-  private UnaryPredicate communityRequestPredicate = new UnaryPredicate() {
+  private static final UnaryPredicate communityRequestPredicate =
+    new CommunityRequestPredicate();
+  private static class CommunityRequestPredicate implements UnaryPredicate {
     public boolean execute (Object o) {
       return (o instanceof CommunityRequest);
-  }};
+    }
+  }
 
 // Updates CommunityRequest with response from CommunityService and
 // publishes change to requester.

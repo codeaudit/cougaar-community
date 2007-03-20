@@ -611,11 +611,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
         // Look for a persisted CommunityMemberships instance
         // This is used to determine what communities this agent previously joined
         // in order to ensure that correct memberships are maintained after a restart.
-        Collection cms = blackboard.query(new UnaryPredicate() {
-          public boolean execute(Object o) {
-            return (o instanceof CommunityMemberships);
-          }
-        });
+        Collection cms = blackboard.query(communityMembershipsPredicate);
         if (cms.isEmpty()) {
           blackboard.publishAdd(myCommunities);
         } else {
@@ -820,42 +816,58 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
       }
     }
 
+    private final UnaryPredicate communityMembershipsPredicate = 
+      new CommunityMembershipsPredicate();
+    private class CommunityMembershipsPredicate implements UnaryPredicate {
+      public boolean execute(Object o) {
+        return (o instanceof CommunityMemberships);
+      }
+    }
+
     /**
      * Predicate used to list parent communities.
      */
     private IncrementalSubscription listParentCommunitiesSub;
-    private UnaryPredicate listParentCommunitiesPredicate = new UnaryPredicate() {
+    private final UnaryPredicate listParentCommunitiesPredicate =
+      new ListParentCommunitiesPredicate();
+    private class ListParentCommunitiesPredicate implements UnaryPredicate {
       public boolean execute(Object o) {
         return (o instanceof ListAgentParentCommunities);
       }
-    };
+    }
 
     /**
      * Predicate used to select CommunityRequests.
      */
     private IncrementalSubscription communityRequestSub;
-    private UnaryPredicate communityRequestPredicate = new UnaryPredicate() {
+    private final UnaryPredicate communityRequestPredicate =
+      new CommunityRequestPredicate();
+    private class CommunityRequestPredicate implements UnaryPredicate {
       public boolean execute(Object o) {
         return (o instanceof Request);
       }
-    };
+    }
 
     /**
      * Selects CommunityDescriptors that are sent by remote community manager
      * agent.
      */
     private IncrementalSubscription communityDescriptorSub;
-    private UnaryPredicate communityDescriptorPredicate = new UnaryPredicate() {
+    private final UnaryPredicate communityDescriptorPredicate =
+      new CommunityDescriptorPredicate();
+    private class CommunityDescriptorPredicate implements UnaryPredicate {
       public boolean execute(Object o) {
         return (o instanceof CommunityDescriptor);
       }
-    };
+    }
 
     /**
      * Selects RelayAdapters containing ListParentCommunities request
      */
     private IncrementalSubscription listParentCommunitiesResponseSub;
-    private UnaryPredicate listParentCommunitiesResponsePredicate = new UnaryPredicate() {
+    private final UnaryPredicate listParentCommunitiesResponsePredicate =
+      new ListParentCommunitiesResponsePredicate();
+    private class ListParentCommunitiesResponsePredicate implements UnaryPredicate {
       public boolean execute(Object o) {
         if (o instanceof RelayAdapter) {
           RelayAdapter ra = (RelayAdapter)o;
@@ -863,7 +875,7 @@ public class DefaultCommunityServiceImpl extends AbstractCommunityService
         }
         return false;
       }
-    };
+    }
 
     // Timer for periodically checking blackboard availability.
     // Blackboard activity is signaled once the blackboard service is available
