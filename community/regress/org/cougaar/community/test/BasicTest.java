@@ -37,8 +37,6 @@ import org.cougaar.community.CommunityImpl;
 import org.cougaar.community.AgentImpl;
 import org.cougaar.community.util.Semaphore;
 
-import org.apache.log4j.PropertyConfigurator;
-
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.ModificationItem;
@@ -51,7 +49,7 @@ import java.util.*;
  * Test basic CommunityService operations.
  *
  */
-public class BasicTest extends TestCase {
+public class BasicTest extends TestBase {
 
   protected static final long TIMEOUT = 5000;
   protected static final String AGENT = "Test_Agent";
@@ -61,22 +59,13 @@ public class BasicTest extends TestCase {
   protected CommunityManagerTestImpl commMgr;
   protected CommunityResponse commResp; // Callback response
 
-  protected String loggingProps[][] = {
+  protected static final String loggingProps[][] = {
       {"log4j.category.org.cougaar.community","INFO"},
       {"log4j.category.org.cougaar.community.test","INFO"}
   };
 
   public BasicTest(String name) {
-    super(name);
-    PropertyConfigurator.configure(getLoggingProps());
-  }
-
-  protected Properties getLoggingProps() {
-    Properties props = new Properties();
-    for (int i = 0; i < loggingProps.length; i++) {
-      props.put(loggingProps[i][0], loggingProps[i][1]);
-    }
-    return props;
+    super(name, loggingProps);
   }
 
   protected void setUp() {

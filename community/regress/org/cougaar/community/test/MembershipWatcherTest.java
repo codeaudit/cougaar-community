@@ -45,14 +45,12 @@ import org.cougaar.community.CommunityMembershipsListener;
 import org.cougaar.community.CommunityUtils;
 import org.cougaar.community.util.Semaphore;
 
-import org.apache.log4j.PropertyConfigurator;
-
 /**
  * Test automatic re-join capability when community memberships are unexpectedly
  * lost.
  *
  */
-public class MembershipWatcherTest extends TestCase {
+public class MembershipWatcherTest extends TestBase {
 
   protected static final long TIMEOUT = 5000;
   protected static final String AGENT = "Test_Agent";
@@ -63,24 +61,14 @@ public class MembershipWatcherTest extends TestCase {
   protected CommunityResponse commResp; // Callback response
   protected CommunityChangeEvent commChangeEvent;
 
-  protected String loggingProps[][] = {
+  protected static final String loggingProps[][] = {
       {"log4j.category.org.cougaar.community","INFO"},
       {"log4j.category.org.cougaar.community.MembershipWatcher","WARN"},
       {"log4j.category.org.cougaar.community.test","INFO"}
   };
 
   public MembershipWatcherTest(String name) {
-    super(name);
-    //PropertyConfigurator.configure("configs/loggingConfig.conf");
-    PropertyConfigurator.configure(getLoggingProps());
-  }
-
-  protected Properties getLoggingProps() {
-    Properties props = new Properties();
-    for (int i = 0; i < loggingProps.length; i++) {
-      props.put(loggingProps[i][0], loggingProps[i][1]);
-    }
-    return props;
+    super(name, loggingProps);
   }
 
   protected void setUp() {

@@ -42,6 +42,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.XMLReaderFactory;
 
 /**
  * Generates a community config from xml file.
@@ -98,16 +99,7 @@ class FileCommunityInitializerServiceProvider implements ServiceProvider {
         return communityConfigs;
       }
       try {
-        org.apache.xerces.parsers.SAXParser p=new org.apache.xerces.parsers.SAXParser();
-        /*
-        try {
-          p.setFeature("http://xml.org/sax/features/string-interning", true); 
-        } catch (SAXException e) { 
-          System.out.println("error in setting up string-interning feature");
-        }
-        */
-
-        XMLReader xr = p;
+        XMLReader xr = XMLReaderFactory.createXMLReader();
         SaxHandler myHandler = new SaxHandler();
         xr.setContentHandler(myHandler);
         InputSource is =

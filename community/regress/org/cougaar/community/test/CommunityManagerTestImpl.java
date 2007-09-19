@@ -32,6 +32,7 @@ import org.cougaar.util.log.LoggerFactory;
 import org.cougaar.community.CommunityCache;
 import org.cougaar.community.CommunityImpl;
 import org.cougaar.core.service.community.FindCommunityCallback;
+import org.cougaar.core.service.wp.Callback;
 import org.cougaar.community.CommunityUpdateListener;
 
 import org.cougaar.community.manager.AbstractCommunityManager;

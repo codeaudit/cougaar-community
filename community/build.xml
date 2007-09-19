@@ -169,7 +169,7 @@
     
     <!-- jarfiles required by this module, relative to various other paths -->
     <!-- WARNING: Only relative paths work here. -->
-    <property name="compile.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.sys}/log4j.jar,${target.sys}/xercesImpl.jar,${target.sys}/servlet.jar"/>
+    <property name="compile.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.sys}/servlet.jar"/>
     <!-- Put absolute paths on this list, in the form of a path. -->
     <property name="compile.abs.jarlist" value=""/>
 
@@ -178,7 +178,7 @@
 
     <!-- Extra jars needed at run / unit-test time. -->
     <!-- WARNING: Only relative paths work here. -->
-    <property name="run.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.sys}/log4j.jar,${target.sys}/xercesImpl.jar,${target.sys}/servlet.jar,${target.lib}/bootstrap.jar"/>
+    <property name="run.jarlist" value="${target.lib}/util.jar,${target.lib}/core.jar,${target.sys}/log4j.jar,${target.sys}/servlet.jar,${target.lib}/bootstrap.jar"/>
     <!-- Put absolute paths on this list, in the form of a path. -->
     <property name="run.abs.jarlist" value=""/>
     
