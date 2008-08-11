@@ -120,6 +120,10 @@ public class CommunityManagerTestImpl extends AbstractCommunityManager {
     // Intentionally empty
   }
 
+  protected void assertCommunityManagerRole(String communityName, Callback callback) {
+   // Intentionally empty
+  }
+  
   protected static CommunityManagerTestImpl getInstance(String agentName,
                                                         CommunityCache cache,
                                                         CommunityUpdateListener cul) {
@@ -150,5 +154,6 @@ public class CommunityManagerTestImpl extends AbstractCommunityManager {
     communities.remove(communityName);
     distributeUpdates(communityName);
   }
+
 
 }

@@ -6,7 +6,8 @@
 .nfs000d3a030000008b
 .nfs000d3a1400000087
 CommunityServiceIntf.library
-Default Workspace.bin
+Default
+Workspace.bin
 bak
 build-communities.xml
 build-robustness.xml
@@ -24,7 +25,8 @@ cougaar-src.library
 csmart.log
 debug.properties
 dist
-java 1.4.0-b92.library
+java
+1.4.0-b92.library
 lib
 log4j.library
 log4j.properties
@@ -34,3 +36,4 @@ queries.log
 run
 servlet.library
 tmpdir
+tmp
