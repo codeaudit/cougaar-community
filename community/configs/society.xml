@@ -68,9 +68,6 @@
         -Djava.class.path=$COUGAAR_INSTALL_PATH/lib/bootstrap.jar
       </vm_parameter>
       <vm_parameter>
-        -Xbootclasspath/p:$COUGAAR_INSTALL_PATH/lib/javaiopatch.jar
-      </vm_parameter>
-      <vm_parameter>
         -Dorg.cougaar.core.agent.heartbeat=false
       </vm_parameter>
       <vm_parameter>
