@@ -85,12 +85,12 @@ public class CommunityViewerServlet extends BaseServletComponent implements Blac
    * @return Servlet
    */
   protected Servlet createServlet() {
-    log =  (LoggingService) serviceBroker.getService(this, LoggingService.class, null);
-    AgentIdentificationService ais = (AgentIdentificationService)serviceBroker.getService(
+    log =  getService(this, LoggingService.class, null);
+    AgentIdentificationService ais = getService(
         this, AgentIdentificationService.class, null);
     if (ais != null) {
       this.agentId = ais.getMessageAddress().toString();
-      serviceBroker.releaseService(this, AgentIdentificationService.class, ais);
+      releaseService(this, AgentIdentificationService.class, ais);
     }
     log = org.cougaar.core.logging.LoggingServiceWithPrefix.add(log, agentId + ": ");
     return new MyServlet();
