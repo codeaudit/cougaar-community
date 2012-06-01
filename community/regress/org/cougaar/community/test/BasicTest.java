@@ -401,6 +401,8 @@ public class BasicTest extends TestBase {
         s1.release();
       }
     });
+System.out.println("failing instead of hanging in s1.acquire()  FIXME bug 2321");
+fail();
       s1.acquire();
     }catch(Exception ex) {
       ex.printStackTrace();
