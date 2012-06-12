@@ -47,7 +47,7 @@
   <target name="compile" description="Compile source code">
     <!-- Compile the java code into ${classes} -->
     <mkdir dir="${classes}" />
-    <javac srcdir="${src}" source="1.4" destdir="${classes}" debug="on">
+    <javac srcdir="${src}" source="1.6" destdir="${classes}" debug="on">
       <classpath>
         <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
@@ -63,7 +63,7 @@
 
   <target name="compile-regress" description="Compile test source code">
     <mkdir dir="${classes}" />
-    <javac srcdir="${regress}" source="1.4" destdir="${classes}" debug="on">
+    <javac srcdir="${regress}" source="1.6" destdir="${classes}" debug="on">
       <classpath>
         <pathelement location="${basedir}/${classes}"/>
         <fileset dir="${cougaar}/lib">
